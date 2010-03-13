@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Create ElasticSearch connection
-
+>>> import time
 >>> conn = ElasticSearch('http://localhost:9200/')
 
 Add a few documents
@@ -11,18 +11,21 @@ Add a few documents
 >>> conn.index({"name":"Bill Baloney"}, "test-index", "test-type", 2)
 {'_type': 'test-type', '_id': '2', 'ok': True, '_index': 'test-index'}
 
+
 Get one
 
+>>> time.sleep(2) # need to give it some time to become available
 >>> conn.get("test-index", "test-type", 1)
 {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}
 
 Get a count
 >>> conn.count("name:joe")
-{'count': 1, '_shards': {'successful': 0, 'failed': 5, 'total': 5}}
+{'count': 1, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 
 Search
 
 >>> conn.search("name:joe")
+{'hits': {'hits': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 
 Delete Bill
 
@@ -53,7 +56,7 @@ Put mapping
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
-__version__ = (0, 0, 1)
+__version__ = (0, 0, 2)
 
 def get_version():
     return "%s.%s.%s" % __version__
@@ -68,6 +71,7 @@ except ImportError:
 from httplib import HTTPConnection
 from urlparse import urlsplit
 from urllib import urlencode
+import logging
 
 class ElasticSearch(object):
     """
@@ -84,18 +88,20 @@ class ElasticSearch(object):
         else:
             self.host, self.port = netloc
         
-    def _send_request(self, method, path, body=None, querystring_args={}):
+    def _send_request(self, method, path, body="", querystring_args={}):
         if querystring_args:
-            #path = "?".join([path, urlencode(querystring_args)])
-            pass
+            path = "?".join([path, urlencode(querystring_args)])
 
         conn = HTTPConnection(self.host, self.port)
-        body = self._prep_request(body)
-        #print "making request to path: %s %s %s with body: %s" % (self.host, self.port, path, body)
+        if body:
+            body = self._prep_request(body)
+        logging.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
         conn.request(method, path, body)
         response = conn.getresponse()
         http_status = response.status
+        logging.debug("response status: %s" % http_status)
         response = self._prep_response(response.read())
+        logging.debug("got response %s" % response)
         return response
     
     def _make_path(self, path_components):
@@ -103,7 +109,10 @@ class ElasticSearch(object):
         Smush together the path components. Empty components will be ignored.
         """
         path_components = [str(component) for component in path_components if component]
-        return '/'.join(path_components)
+        path = '/'.join(path_components)
+        if not path.startswith('/'):
+            path = '/'+path
+        return path
     
     def _prep_request(self, body):
         """
@@ -200,6 +209,7 @@ class ElasticSearch(object):
     # TODO
         
 if __name__ == "__main__":
-    print 'testing'
+    logging.basicConfig(level=logging.DEBUG)
+    logging.debug("testing")
     import doctest
     doctest.testmod()
