@@ -4,4 +4,4 @@ Python client for elasticsearch. http://www.elasticsearch.com
 
 See doctests for sample usage.
 
-Used pysolr (http://github.com/jkocherhans/pysolr) as a jumping off point - thanks guys.
+Used pysolr - http://github.com/jkocherhans/pysolr - as a jumping off point - thanks guys.
