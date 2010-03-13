@@ -7,18 +7,18 @@ Create ElasticSearch connection
 Add a few documents
 
 >>> conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
-{u'_type': u'test-type', u'_id': u'1', u'ok': True, u'_index': u'test-index'}
+{'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'}
 >>> conn.index({"name":"Bill Baloney"}, "test-index", "test-type", 2)
-{u'_type': u'test-type', u'_id': u'2', u'ok': True, u'_index': u'test-index'}
+{'_type': 'test-type', '_id': '2', 'ok': True, '_index': 'test-index'}
 
 Get one
 
 >>> conn.get("test-index", "test-type", 1)
-{u'_type': u'test-type', u'_id': u'1', u'_source': {u'name': u'Joe Tester'}, u'_index': u'test-index'}
+{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}
 
 Get a count
 >>> conn.count("name:joe")
-{u'count': 1, u'_shards': {u'successful': 0, u'failed': 5, u'total': 5}}
+{'count': 1, '_shards': {'successful': 0, 'failed': 5, 'total': 5}}
 
 Search
 
@@ -27,32 +27,32 @@ Search
 Delete Bill
 
 >>> conn.delete("test-index", "test-type", 2)
-{u'_type': u'test-type', u'_id': u'2', u'ok': True, u'_index': u'test-index'}
+{'_type': 'test-type', '_id': '2', 'ok': True, '_index': 'test-index'}
 
 Delete the index
 
 >>> conn.delete_index("test-index")
-{u'ok': True}
+{'acknowledged': True, 'ok': True}
 
 Create the index anew
 
 >>> conn.create_index("test-index")
-{u'ok': True}
+{'acknowledged': True, 'ok': True}
 
 Try (and fail) to create an existing index
 
 >>> conn.create_index("test-index")
-{u'error': u'Index[test-index] Already exists'}
+{'error': '[test-index] Already exists'}
 
 Put mapping
 
 >>> conn.put_mapping("test-type", {"test-type" : {"properties" : {"name" : {"type" : "string", "store" : "yes"}}}})
-{u'ok': True}
+{'acknowledged': True, 'ok': True}
 
 """
 
 __author__ = 'Robert Eanes'
-__all__ = ['Elasticsearch']
+__all__ = ['ElasticSearch']
 __version__ = (0, 0, 1)
 
 def get_version():
