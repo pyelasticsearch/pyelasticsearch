@@ -11,7 +11,6 @@ Add a few documents
 >>> conn.index({"name":"Bill Baloney"}, "test-index", "test-type", 2)
 {'_type': 'test-type', '_id': '2', 'ok': True, '_index': 'test-index'}
 
-
 Get one
 
 >>> time.sleep(2) # need to give it some time to become available
@@ -26,6 +25,24 @@ Search
 
 >>> conn.search("name:joe")
 {'hits': {'hits': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+
+Terms
+
+>>> conn.terms(['name'])
+{'docs': {'numDocs': 2, 'deletedDocs': 0, 'maxDoc': 2}, 'fields': {'name': {'terms': [{'term': 'baloney', 'docFreq': 1}, {'term': 'bill', 'docFreq': 1}, {'term': 'joe', 'docFreq': 1}, {'term': 'tester', 'docFreq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+>>> conn.terms(['name'], indexes=['test-index'])
+{'docs': {'numDocs': 2, 'deletedDocs': 0, 'maxDoc': 2}, 'fields': {'name': {'terms': [{'term': 'baloney', 'docFreq': 1}, {'term': 'bill', 'docFreq': 1}, {'term': 'joe', 'docFreq': 1}, {'term': 'tester', 'docFreq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+>>> conn.terms(['name'], minFreq=2)
+{'docs': {'numDocs': 2, 'deletedDocs': 0, 'maxDoc': 2}, 'fields': {'name': {'terms': []}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+
+More Like This
+>>> conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
+{'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
+>>> time.sleep(2)
+>>> conn.morelikethis("test-index", "test-type", 1, ['name'], minTermFrequency=1, minDocFreq=1)
+{'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+>>> conn.delete("test-index", "test-type", 3)
+{'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
 
 Delete Bill
 
@@ -203,7 +220,28 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), doc_type,"_mapping"])
         response = self._send_request('PUT', path, mapping)
         return response
-        
+    
+    def terms(self, fields, indexes=['_all'], **query_params):
+        """
+        Extract terms and their document frequencies from one or more fields.
+        The fields argument must be a list or tuple of fields.
+        For valid query params see: 
+        http://www.elasticsearch.com/docs/elasticsearch/rest_api/terms/
+        """
+        path = self._make_path([','.join(indexes), "_terms"])
+        query_params['fields'] = ','.join(fields)
+        response = self._send_request('GET', path, querystring_args=query_params)
+        return response
+    
+    def morelikethis(self, index, doc_type, id, fields, **query_params):
+        """
+        Execute a "more like this" search query against one or more fields and get back search hits.
+        """
+        path = self._make_path([index, doc_type, id, '_moreLikeThis'])
+        query_params['fields'] = ','.join(fields)
+        response = self._send_request('GET', path, querystring_args=query_params)
+        return response
+    
     ## Admin API
     
     # TODO
