@@ -69,6 +69,22 @@ Put mapping
 >>> conn.put_mapping("test-type", {"test-type" : {"properties" : {"name" : {"type" : "string", "store" : "yes"}}}})
 {'acknowledged': True, 'ok': True}
 
+Get status
+
+>>> conn.status(["test-index"]) # doctest: +ELLIPSIS
+{'indices': {'test-index': ...}}
+
+>>> conn.flush(["test-index"]) # doctest: +ELLIPSIS
+{'ok': True, '_shards': {...}}
+
+>>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
+{'ok': True, '_shards': {...}}
+
+>>> conn.optimize(["test-index"]) # doctest: +ELLIPSIS
+{'ok': True, '_shards': {...}}
+
+
+
 """
 
 __author__ = 'Robert Eanes'
@@ -196,23 +212,7 @@ class ElasticSearch(object):
         Execute a query against one or more indices and get hits count.
         """
         return self._query_call("_count", query, body, indexes, doc_types, **query_params)
-        
-    def create_index(self, index, settings=None):
-        """
-        Creates an index with optional settings.
-        Settings must be a dictionary which will be converted to JSON.
-        Elasticsearch also accepts yaml, but we are only passing JSON.
-        """
-        response = self._send_request('PUT', index, settings)
-        return response
-        
-    def delete_index(self, index):
-        """
-        Deletes an index.
-        """
-        response = self._send_request('DELETE', index)
-        return response
-        
+                
     def put_mapping(self, doc_type, mapping, indexes=['_all']):
         """
         Register specific mapping definition for a specific type against one or more indices.
@@ -242,9 +242,67 @@ class ElasticSearch(object):
         response = self._send_request('GET', path, querystring_args=query_params)
         return response
     
-    ## Admin API
+    ## Index Admin API
     
-    # TODO
+    def status(self, indexes=['_all']):
+        """
+        Retrieve the status of one or more indices
+        """
+        path = self._make_path([','.join(indexes), '_status'])
+        response = self._send_request('GET', path)
+        return response
+
+    def create_index(self, index, settings=None):
+        """
+        Creates an index with optional settings.
+        Settings must be a dictionary which will be converted to JSON.
+        Elasticsearch also accepts yaml, but we are only passing JSON.
+        """
+        response = self._send_request('PUT', index, settings)
+        return response
+        
+    def delete_index(self, index):
+        """
+        Deletes an index.
+        """
+        response = self._send_request('DELETE', index)
+        return response
+        
+    def flush(self, indexes=['_all'], refresh=None):
+        """
+        Flushes one or more indices (clear memory)
+        """
+        path = self._make_path([','.join(indexes), '_flush'])
+        args = {}
+        if refresh is not None:
+            args['refresh'] = refresh
+        response = self._send_request('POST', path, querystring_args=args)
+        return response
+
+    def refresh(self, indexes=['_all']):
+        """
+        Refresh one or more indices
+        """
+        path = self._make_path([','.join(indexes), '_refresh'])
+        response = self._send_request('POST', path)
+        return response
+
+    def gateway_snapshot(self, indexes=['_all']):
+        """
+        Gateway snapshot one or more indices
+        """
+        path = self._make_path([','.join(indexes), '_gateway', 'snapshot'])
+        response = self._send_request('POST', path)
+        return response
+        
+
+    def optimize(self, indexes=['_all'], **args):
+        """
+        Optimize one ore more indices
+        """
+        path = self._make_path([','.join(indexes), '_optimize'])
+        response = self._send_request('POST', path, querystring_args=args)
+        return response
         
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
