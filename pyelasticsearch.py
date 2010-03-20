@@ -13,7 +13,8 @@ Add a few documents
 
 Get one
 
->>> time.sleep(2) # need to give it some time to become available
+>>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
+{'ok': True, '_shards': {...}}
 >>> conn.get("test-index", "test-type", 1)
 {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}
 
@@ -38,7 +39,8 @@ Terms
 More Like This
 >>> conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
->>> time.sleep(2)
+>>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
+{'ok': True, '_shards': {...}}
 >>> conn.morelikethis("test-index", "test-type", 1, ['name'], minTermFrequency=1, minDocFreq=1)
 {'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 >>> conn.delete("test-index", "test-type", 3)
