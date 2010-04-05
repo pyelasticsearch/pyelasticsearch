@@ -3,7 +3,7 @@ import setuptools
 
 setup(
     name = "pyelasticsearch",
-    version = "0.0.2",
+    version = "0.0.3",
     description = "Lightweight python wrapper for elastic search.",
     author = 'Robert Eanes',
     author_email = 'python@robsinbox.com',

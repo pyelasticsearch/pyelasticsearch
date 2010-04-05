@@ -30,18 +30,18 @@ Search
 Terms
 
 >>> conn.terms(['name'])
-{'docs': {'numDocs': 2, 'deletedDocs': 0, 'maxDoc': 2}, 'fields': {'name': {'terms': [{'term': 'baloney', 'docFreq': 1}, {'term': 'bill', 'docFreq': 1}, {'term': 'joe', 'docFreq': 1}, {'term': 'tester', 'docFreq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+{'docs': {'max_doc': 2, 'num_docs': 2, 'deleted_docs': 0}, 'fields': {'name': {'terms': [{'term': 'baloney', 'doc_freq': 1}, {'term': 'bill', 'doc_freq': 1}, {'term': 'joe', 'doc_freq': 1}, {'term': 'tester', 'doc_freq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 >>> conn.terms(['name'], indexes=['test-index'])
-{'docs': {'numDocs': 2, 'deletedDocs': 0, 'maxDoc': 2}, 'fields': {'name': {'terms': [{'term': 'baloney', 'docFreq': 1}, {'term': 'bill', 'docFreq': 1}, {'term': 'joe', 'docFreq': 1}, {'term': 'tester', 'docFreq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
->>> conn.terms(['name'], minFreq=2)
-{'docs': {'numDocs': 2, 'deletedDocs': 0, 'maxDoc': 2}, 'fields': {'name': {'terms': []}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+{'docs': {'max_doc': 2, 'num_docs': 2, 'deleted_docs': 0}, 'fields': {'name': {'terms': [{'term': 'baloney', 'doc_freq': 1}, {'term': 'bill', 'doc_freq': 1}, {'term': 'joe', 'doc_freq': 1}, {'term': 'tester', 'doc_freq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
+>>> conn.terms(['name'], min_freq=2)
+{'docs': {'max_doc': 2, 'num_docs': 2, 'deleted_docs': 0}, 'fields': {'name': {'terms': []}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 
 More Like This
 >>> conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
 >>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
 {'ok': True, '_shards': {...}}
->>> conn.morelikethis("test-index", "test-type", 1, ['name'], minTermFrequency=1, minDocFreq=1)
+>>> conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_frequency=1, min_doc_freq=1)
 {'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 >>> conn.delete("test-index", "test-type", 3)
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
@@ -91,7 +91,7 @@ Get status
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
-__version__ = (0, 0, 2)
+__version__ = (0, 0, 3)
 
 def get_version():
     return "%s.%s.%s" % __version__
@@ -166,8 +166,9 @@ class ElasticSearch(object):
         This can be used for search and count calls.
         These are identical api calls, except for the type of query.
         """
-        querystring_args = {'q':query}
-        querystring_args.update(**query_params)
+        querystring_args = query_params
+        if query:
+            querystring_args['q'] = query
         path = self._make_path([','.join(indexes), ','.join(doc_types),query_type])
         response = self._send_request('GET', path, body, querystring_args)
         return response
@@ -206,6 +207,7 @@ class ElasticSearch(object):
         """
         Execute a search query against one or more indices and get back search hits.
         query must be a dictionary that will convert to Query DSL
+        TODO: better api to reflect that the query can be either 'query' or 'body' argument.
         """
         return self._query_call("_search", query, body, indexes, doc_types, **query_params)
         
@@ -239,7 +241,7 @@ class ElasticSearch(object):
         """
         Execute a "more like this" search query against one or more fields and get back search hits.
         """
-        path = self._make_path([index, doc_type, id, '_moreLikeThis'])
+        path = self._make_path([index, doc_type, id, '_mlt'])
         query_params['fields'] = ','.join(fields)
         response = self._send_request('GET', path, querystring_args=query_params)
         return response
