@@ -85,6 +85,9 @@ Get status
 >>> conn.optimize(["test-index"]) # doctest: +ELLIPSIS
 {'ok': True, '_shards': {...}}
 
+Test adding with automatic id generation
+>>> conn.index({"name":"Joe Tester"}, "test-index", "test-type") # doctest: +ELLIPSIS
+{'_type': 'test-type', '_id': '...', 'ok': True, '_index': 'test-index'}
 
 
 """
@@ -183,8 +186,13 @@ class ElasticSearch(object):
             querystring_args = {'opType':'create'}
         else:
             querystring_args = {}
+            
+        if id is None:
+            request_method = 'POST'
+        else:
+            request_method = 'PUT'
         path = self._make_path([index, doc_type, id])
-        response = self._send_request('PUT', path, doc, querystring_args)
+        response = self._send_request(request_method, path, doc, querystring_args)
         return response
         
     def delete(self, index, doc_type, id):
