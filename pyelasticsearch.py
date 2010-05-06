@@ -130,7 +130,7 @@ class ElasticSearch(object):
         if querystring_args:
             path = "?".join([path, urlencode(querystring_args)])
 
-        conn = HTTPConnection(self.host, self.port)
+        conn = HTTPConnection(self.host, int(self.port))
         if body:
             body = self._prep_request(body)
         logging.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
