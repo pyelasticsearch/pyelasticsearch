@@ -112,8 +112,7 @@ class SearchTestCase(ElasticSearchTestCase):
     def testMLT(self):
         self.conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
         self.conn.refresh(["test-index"])
-        import time
-        result = self.conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_frequency=1, min_doc_freq=1)
+        result = self.conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
         self.assertResultContains(result, {'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}})
         
 if __name__ == "__main__":
