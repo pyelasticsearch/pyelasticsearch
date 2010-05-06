@@ -1,7 +1,8 @@
+"""
+Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
+"""
 import unittest
 from pyelasticsearch import ElasticSearch
-import logging
-logging.basicConfig(filename="test.log", level=logging.DEBUG)
 
 class ElasticSearchTestCase(unittest.TestCase):
     def setUp(self):

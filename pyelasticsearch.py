@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
+NOTE: You should use the unit tests, not these doctests, which are harder to get running consistently.
+I've left them here as documentation only, they are accurate as usage examples.
+
 Create ElasticSearch connection
->>> import time
 >>> conn = ElasticSearch('http://localhost:9200/')
 
 Add a few documents
@@ -41,7 +43,7 @@ More Like This
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
 >>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
 {'ok': True, '_shards': {...}}
->>> conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_frequency=1, min_doc_freq=1)
+>>> conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
 {'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 >>> conn.delete("test-index", "test-type", 3)
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
