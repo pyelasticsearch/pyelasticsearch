@@ -127,15 +127,20 @@ class ElasticSearch(object):
             self.host, self.port = netloc[0], None
         else:
             self.host, self.port = netloc
-        
+        self.conn = None
+    
+    def _conn(self):
+        if not self.conn:
+            self.conn = HTTPConnection(self.host, int(self.port))
+        return self.conn
+    
     def _send_request(self, method, path, body="", querystring_args={}):
         if querystring_args:
             path = "?".join([path, urlencode(querystring_args)])
-
-        conn = HTTPConnection(self.host, int(self.port))
         if body:
             body = self._prep_request(body)
         logging.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
+        conn = self._conn()
         conn.request(method, path, body)
         response = conn.getresponse()
         http_status = response.status
