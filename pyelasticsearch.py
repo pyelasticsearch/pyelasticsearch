@@ -190,7 +190,7 @@ class ElasticSearch(object):
     	Index a typed JSON document into a specific index and make it searchable.
         """
         if force_insert:
-            querystring_args = {'opType':'create'}
+            querystring_args = {'op_type':'create'}
         else:
             querystring_args = {}
             
