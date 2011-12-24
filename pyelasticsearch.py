@@ -6,6 +6,16 @@ I've left them here as documentation only, they are accurate as usage examples.
 Create ElasticSearch connection
 >>> conn = ElasticSearch('http://localhost:9200/')
 
+Or a more verbose log level.
+>>> import logging
+>>> class VerboseElasticSearch(ElasticSearch):
+...     def setup_logging(self):
+...         log = super(VerboseElasticSearch, self).setup_logging()
+...         log.addHandler(logging.StreamHandler())
+...         log.setLevel(logging.DEBUG)
+...         return log
+>>> conn = VerboseElasticSearch('http://localhost:9200/')
+
 Add a few documents
 
 >>> conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
@@ -117,6 +127,11 @@ from urllib import urlencode
 import logging
 
 
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+
+
 class ElasticSearch(object):
     """
     ElasticSearch connection object.
@@ -131,25 +146,39 @@ class ElasticSearch(object):
         else:
             self.host, self.port = netloc
         self.conn = None
+        self.log = self.setup_logging()
 
     def _conn(self):
         if not self.conn:
             self.conn = HTTPConnection(self.host, int(self.port))
         return self.conn
 
+    def setup_logging(self):
+        """
+        Sets up the logging.
+
+        Done as a method so others can override as needed without complex
+        setup.
+        """
+        log = logging.getLogger('pyelasticsearch')
+        null = NullHandler()
+        log.addHandler(null)
+        log.setLevel(logging.ERROR)
+        return log
+
     def _send_request(self, method, path, body="", querystring_args={}):
         if querystring_args:
             path = "?".join([path, urlencode(querystring_args)])
         if body:
             body = self._prep_request(body)
-        logging.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
+        self.log.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
         conn = self._conn()
         conn.request(method, path, body)
         response = conn.getresponse()
         http_status = response.status
-        logging.debug("response status: %s" % http_status)
+        self.log.debug("response status: %s" % http_status)
         response = self._prep_response(response.read())
-        logging.debug("got response %s" % response)
+        self.log.debug("got response %s" % response)
         return response
 
     def _make_path(self, path_components):
@@ -325,7 +354,6 @@ class ElasticSearch(object):
         response = self._send_request('POST', path)
         return response
 
-
     def optimize(self, indexes=['_all'], **args):
         """
         Optimize one ore more indices
@@ -334,8 +362,7 @@ class ElasticSearch(object):
         response = self._send_request('POST', path, querystring_args=args)
         return response
 
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logging.debug("testing")
     import doctest
     doctest.testmod()
