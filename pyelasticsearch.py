@@ -53,6 +53,9 @@ Delete Bill
 >>> conn.delete("test-index", "test-type", 2)
 {'_type': 'test-type', '_id': '2', 'ok': True, '_index': 'test-index'}
 
+>>> conn.delete_by_query("test-index, "test-type", {"query_string": {"query": "name:joe OR name:bill"}})
+{'ok': True, '_indices': {'test-index': {'_shards': {'successful': 5, 'failed': 0, 'total': 5}}}}
+
 Delete the index
 
 >>> conn.delete_index("test-index")
@@ -107,33 +110,33 @@ try:
 except ImportError:
     # For Python >= 2.6
     import json
-    
+
 from httplib import HTTPConnection
 from urlparse import urlsplit
 from urllib import urlencode
 import logging
 
+
 class ElasticSearch(object):
     """
     ElasticSearch connection object.
     """
-    
     def __init__(self, url):
         self.url = url
         self.scheme, netloc, path, query, fragment = urlsplit(url)
         netloc = netloc.split(':')
         self.host = netloc[0]
         if len(netloc) == 1:
-            self.host, self.port = netloc[0], None
+            self.host, self.port = netloc[0], 9200
         else:
             self.host, self.port = netloc
         self.conn = None
-    
+
     def _conn(self):
         if not self.conn:
             self.conn = HTTPConnection(self.host, int(self.port))
         return self.conn
-    
+
     def _send_request(self, method, path, body="", querystring_args={}):
         if querystring_args:
             path = "?".join([path, urlencode(querystring_args)])
@@ -148,7 +151,7 @@ class ElasticSearch(object):
         response = self._prep_response(response.read())
         logging.debug("got response %s" % response)
         return response
-    
+
     def _make_path(self, path_components):
         """
         Smush together the path components. Empty components will be ignored.
@@ -158,19 +161,19 @@ class ElasticSearch(object):
         if not path.startswith('/'):
             path = '/'+path
         return path
-    
+
     def _prep_request(self, body):
         """
         Encodes body as json.
         """
         return json.dumps(body)
-        
+
     def _prep_response(self, response):
         """
         Parses json to a native python object.
         """
         return json.loads(response)
-        
+
     def _query_call(self, query_type, query, body=None, indexes=['_all'], doc_types=[], **query_params):
         """
         This can be used for search and count calls.
@@ -182,9 +185,9 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), ','.join(doc_types),query_type])
         response = self._send_request('GET', path, body, querystring_args)
         return response
-        
+
     ## REST API
-    
+
     def index(self, doc, index, doc_type, id=None, force_insert=False):
         """
     	Index a typed JSON document into a specific index and make it searchable.
@@ -193,7 +196,7 @@ class ElasticSearch(object):
             querystring_args = {'op_type':'create'}
         else:
             querystring_args = {}
-            
+
         if id is None:
             request_method = 'POST'
         else:
@@ -201,7 +204,7 @@ class ElasticSearch(object):
         path = self._make_path([index, doc_type, id])
         response = self._send_request(request_method, path, doc, querystring_args)
         return response
-        
+
     def delete(self, index, doc_type, id):
         """
         Delete a typed JSON document from a specific index based on its id.
@@ -209,7 +212,15 @@ class ElasticSearch(object):
         path = self._make_path([index, doc_type, id])
         response = self._send_request('DELETE', path)
         return response
-        
+
+    def delete_by_query(self, index, doc_type, query):
+        """
+        Delete a typed JSON documents from a specific index based on query
+        """
+        path = self._make_path([index, doc_type, '_query'])
+        response = self._send_request('DELETE', path, query)
+        return response
+
     def get(self, index, doc_type, id):
         """
         Get a typed JSON document from an index based on its id.
@@ -217,7 +228,7 @@ class ElasticSearch(object):
         path = self._make_path([index, doc_type, id])
         response = self._send_request('GET', path)
         return response
-        
+
     def search(self, query, body=None, indexes=['_all'], doc_types=[], **query_params):
         """
         Execute a search query against one or more indices and get back search hits.
@@ -225,13 +236,13 @@ class ElasticSearch(object):
         TODO: better api to reflect that the query can be either 'query' or 'body' argument.
         """
         return self._query_call("_search", query, body, indexes, doc_types, **query_params)
-        
+
     def count(self, query, body=None, indexes=['_all'], doc_types=[], **query_params):
         """
         Execute a query against one or more indices and get hits count.
         """
         return self._query_call("_count", query, body, indexes, doc_types, **query_params)
-                
+
     def put_mapping(self, doc_type, mapping, indexes=['_all']):
         """
         Register specific mapping definition for a specific type against one or more indices.
@@ -239,19 +250,19 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), doc_type,"_mapping"])
         response = self._send_request('PUT', path, mapping)
         return response
-    
+
     def terms(self, fields, indexes=['_all'], **query_params):
         """
         Extract terms and their document frequencies from one or more fields.
         The fields argument must be a list or tuple of fields.
-        For valid query params see: 
+        For valid query params see:
         http://www.elasticsearch.com/docs/elasticsearch/rest_api/terms/
         """
         path = self._make_path([','.join(indexes), "_terms"])
         query_params['fields'] = ','.join(fields)
         response = self._send_request('GET', path, querystring_args=query_params)
         return response
-    
+
     def morelikethis(self, index, doc_type, id, fields, **query_params):
         """
         Execute a "more like this" search query against one or more fields and get back search hits.
@@ -260,9 +271,9 @@ class ElasticSearch(object):
         query_params['fields'] = ','.join(fields)
         response = self._send_request('GET', path, querystring_args=query_params)
         return response
-    
+
     ## Index Admin API
-    
+
     def status(self, indexes=['_all']):
         """
         Retrieve the status of one or more indices
@@ -279,14 +290,14 @@ class ElasticSearch(object):
         """
         response = self._send_request('PUT', index, settings)
         return response
-        
+
     def delete_index(self, index):
         """
         Deletes an index.
         """
         response = self._send_request('DELETE', index)
         return response
-        
+
     def flush(self, indexes=['_all'], refresh=None):
         """
         Flushes one or more indices (clear memory)
@@ -313,7 +324,7 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), '_gateway', 'snapshot'])
         response = self._send_request('POST', path)
         return response
-        
+
 
     def optimize(self, indexes=['_all'], **args):
         """
@@ -322,7 +333,7 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), '_optimize'])
         response = self._send_request('POST', path, querystring_args=args)
         return response
-        
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     logging.debug("testing")
