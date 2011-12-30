@@ -16,5 +16,11 @@ setup(
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
+    requires=[
+        'requests(>=0.9.0)',
+    ],
+    install_requires=[
+        'requests>=0.9.0',
+    ],
     url = 'http://github.com/rhec/pyelasticsearch'
 )
