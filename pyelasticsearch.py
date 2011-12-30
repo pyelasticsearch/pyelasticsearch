@@ -118,10 +118,14 @@ except ImportError:
     # For Python >= 2.6
     import json
 
-from httplib import HTTPConnection
-from urlparse import urlsplit
 from urllib import urlencode
 import logging
+import requests
+
+
+class ElasticSearchError(Exception):
+    pass
+
 
 
 class NullHandler(logging.Handler):
@@ -133,22 +137,14 @@ class ElasticSearch(object):
     """
     ElasticSearch connection object.
     """
-    def __init__(self, url):
-        self.url = url
-        self.scheme, netloc, path, query, fragment = urlsplit(url)
-        netloc = netloc.split(':')
-        self.host = netloc[0]
-        if len(netloc) == 1:
-            self.host, self.port = netloc[0], None
-        else:
-            self.host, self.port = netloc
-        self.conn = None
-        self.log = self.setup_logging()
 
-    def _conn(self):
-        if not self.conn:
-            self.conn = HTTPConnection(self.host, int(self.port))
-        return self.conn
+
+    def __init__(self, url, timeout=60):
+        self.url = url
+        self.timeout = timeout
+
+        if self.url.endswith('/'):
+            self.url = self.url[:-1]
 
     def setup_logging(self):
         """
@@ -162,22 +158,7 @@ class ElasticSearch(object):
         log.addHandler(null)
         log.setLevel(logging.ERROR)
         return log
-
-    def _send_request(self, method, path, body="", querystring_args={}):
-        if querystring_args:
-            path = "?".join([path, urlencode(querystring_args)])
-        if body:
-            body = self._prep_request(body)
-        self.log.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
-        conn = self._conn()
-        conn.request(method, path, body)
-        response = conn.getresponse()
-        http_status = response.status
-        self.log.debug("response status: %s" % http_status)
-        response = self._prep_response(response.read())
-        self.log.debug("got response %s" % response)
-        return response
-
+    
     def _make_path(self, path_components):
         """
         Smush together the path components. Empty components will be ignored.
@@ -187,6 +168,32 @@ class ElasticSearch(object):
         if not path.startswith('/'):
             path = '/'+path
         return path
+
+    def _build_url(self, path):
+        return self.url + path
+
+    def _send_request(self, method, path, body="", querystring_args={}):
+        if querystring_args:
+            path = "?".join([path, urlencode(querystring_args)])
+
+        kwargs = {
+            'timeout': self.timeout,
+        }
+        url = self._build_url(path)
+
+        if body:
+            kwargs['data'] = self._prep_request(body)
+
+        if not hasattr(requests, method.lower()):
+            raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
+
+        logging.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
+        req_method = getattr(requests, method.lower())
+        resp = req_method(url, **kwargs)
+        logging.debug("response status: %s" % resp.status_code)
+        prepped_response = self._prep_response(resp.content)
+        logging.debug("got response %s" % prepped_response)
+        return prepped_response
 
     def _prep_request(self, body):
         """
@@ -306,14 +313,14 @@ class ElasticSearch(object):
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        response = self._send_request('PUT', index, settings)
+        response = self._send_request('PUT', self._make_path([index]), settings)
         return response
 
     def delete_index(self, index):
         """
         Deletes an index.
         """
-        response = self._send_request('DELETE', index)
+        response = self._send_request('DELETE', self._make_path([index]))
         return response
 
     def flush(self, indexes=['_all'], refresh=None):
@@ -343,6 +350,7 @@ class ElasticSearch(object):
         response = self._send_request('POST', path)
         return response
 
+
     def optimize(self, indexes=['_all'], **args):
         """
         Optimize one ore more indices
@@ -350,7 +358,6 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), '_optimize'])
         response = self._send_request('POST', path, querystring_args=args)
         return response
-
 
 if __name__ == "__main__":
     import doctest
