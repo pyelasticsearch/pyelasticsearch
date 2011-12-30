@@ -138,7 +138,6 @@ class ElasticSearch(object):
     ElasticSearch connection object.
     """
 
-
     def __init__(self, url, timeout=60):
         self.url = url
         self.timeout = timeout
@@ -158,7 +157,7 @@ class ElasticSearch(object):
         log.addHandler(null)
         log.setLevel(logging.ERROR)
         return log
-    
+
     def _make_path(self, path_components):
         """
         Smush together the path components. Empty components will be ignored.
