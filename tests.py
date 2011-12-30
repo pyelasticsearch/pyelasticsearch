@@ -65,7 +65,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.create_index("another-index")
         result = self.conn.create_index("another-index")
         self.conn.delete_index("another-index")
-        self.assertResultContains(result, {'error': '[another-index] Already exists'})
+        self.assertResultContains(result, {'error': 'IndexAlreadyExistsException[[another-index] Already exists]'})
 
     def testPutMapping(self):
         result = self.conn.create_index("test-index")
