@@ -106,6 +106,18 @@ Test adding with automatic id generation
 
 
 """
+import datetime
+import logging
+import re
+import requests
+from urllib import urlencode
+try:
+    # For Python < 2.6 or people using a newer version of simplejson
+    import simplejson as json
+except ImportError:
+    # For Python >= 2.6
+    import json
+
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
@@ -114,16 +126,8 @@ __version__ = (0, 0, 3)
 def get_version():
     return "%s.%s.%s" % __version__
 
-try:
-    # For Python < 2.6 or people using a newer version of simplejson
-    import simplejson as json
-except ImportError:
-    # For Python >= 2.6
-    import json
 
-from urllib import urlencode
-import logging
-import requests
+DATETIME_REGEX = re.compile('^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
 
 
 class ElasticSearchError(Exception):
@@ -226,7 +230,7 @@ class ElasticSearch(object):
 
     def index(self, doc, index, doc_type, id=None, force_insert=False):
         """
-    	Index a typed JSON document into a specific index and make it searchable.
+        Index a typed JSON document into a specific index and make it searchable.
         """
         if force_insert:
             querystring_args = {'op_type':'create'}
@@ -368,6 +372,53 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), '_optimize'])
         response = self._send_request('POST', path, querystring_args=args)
         return response
+
+    def from_python(self, value):
+        """
+        Converts Python values to a form suitable for ElasticSearch's JSON.
+        """
+        if hasattr(value, 'strftime'):
+            if hasattr(value, 'hour'):
+                value = value.isoformat()
+            else:
+                value = "%sT00:00:00" % value.isoformat()
+        elif isinstance(value, str):
+            value = unicode(value, errors='replace')
+
+        return value
+
+    def to_python(self, value):
+        """
+        Converts values from ElasticSearch to native Python values.
+        """
+        if isinstance(value, (int, float, long, complex, list, tuple, bool)):
+            return value
+
+        if isinstance(value, basestring):
+            possible_datetime = DATETIME_REGEX.search(value)
+
+            if possible_datetime:
+                date_values = possible_datetime.groupdict()
+
+                for dk, dv in date_values.items():
+                    date_values[dk] = int(dv)
+
+                return datetime.datetime(date_values['year'], date_values['month'], date_values['day'], date_values['hour'], date_values['minute'], date_values['second'])
+
+        try:
+            # This is slightly gross but it's hard to tell otherwise what the
+            # string's original type might have been. Be careful who you trust.
+            converted_value = eval(value)
+
+            # Try to handle most built-in types.
+            if isinstance(converted_value, (list, tuple, set, dict, int, float, long, complex)):
+                return converted_value
+        except:
+            # If it fails (SyntaxError or its ilk) or we don't trust it,
+            # continue on.
+            pass
+
+        return value
 
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 """
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
+import datetime
 import logging
 import unittest
 from pyelasticsearch import ElasticSearch
@@ -114,6 +116,32 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.optimize(["another-index"])
         self.conn.delete_index("another-index")
         self.assertResultContains(result, {'ok': True})
+
+    def testFromPython(self):
+        self.assertEqual(self.conn.from_python('abc'), u'abc')
+        self.assertEqual(self.conn.from_python(u'☃'), u'☃')
+        self.assertEqual(self.conn.from_python(123), 123)
+        self.assertEqual(self.conn.from_python(12.2), 12.2)
+        self.assertEqual(self.conn.from_python(True), True)
+        self.assertEqual(self.conn.from_python(False), False)
+        self.assertEqual(self.conn.from_python(datetime.date(2011, 12, 30)), '2011-12-30T00:00:00')
+        self.assertEqual(self.conn.from_python(datetime.datetime(2011, 12, 30, 11, 59, 32)), '2011-12-30T11:59:32')
+        self.assertEqual(self.conn.from_python([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(self.conn.from_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
+        self.assertEqual(self.conn.from_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
+
+    def testToPython(self):
+        self.assertEqual(self.conn.to_python(u'abc'), u'abc')
+        self.assertEqual(self.conn.to_python(u'☃'), u'☃')
+        self.assertEqual(self.conn.to_python(123), 123)
+        self.assertEqual(self.conn.to_python(12.2), 12.2)
+        self.assertEqual(self.conn.to_python(True), True)
+        self.assertEqual(self.conn.to_python(False), False)
+        self.assertEqual(self.conn.to_python('2011-12-30T00:00:00'), datetime.datetime(2011, 12, 30))
+        self.assertEqual(self.conn.to_python('2011-12-30T11:59:32'), datetime.datetime(2011, 12, 30, 11, 59, 32))
+        self.assertEqual(self.conn.to_python([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(self.conn.to_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
+        self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
 
 
 class SearchTestCase(ElasticSearchTestCase):
