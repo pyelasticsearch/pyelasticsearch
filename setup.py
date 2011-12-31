@@ -4,7 +4,8 @@ import setuptools
 setup(
     name = "pyelasticsearch",
     version = "0.0.4",
-    description = "Lightweight python wrapper for elastic search.",
+    description = "Lightweight python wrapper for elasticsearch.",
+    long_description=open('README.rst', 'r').read(),
     author = 'Robert Eanes',
     author_email = 'python@robsinbox.com',
     py_modules = ['pyelasticsearch'],
@@ -15,6 +16,12 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
+    ],
+    requires=[
+        'requests(>=0.9.0)',
+    ],
+    install_requires=[
+        'requests>=0.9.0',
     ],
     url = 'http://github.com/rhec/pyelasticsearch'
 )

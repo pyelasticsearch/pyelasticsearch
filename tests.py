@@ -1,8 +1,19 @@
+# -*- coding: utf-8 -*-
 """
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
+import datetime
+import logging
 import unittest
 from pyelasticsearch import ElasticSearch
+
+
+class VerboseElasticSearch(ElasticSearch):
+     def setup_logging(self):
+         log = super(VerboseElasticSearch, self).setup_logging()
+         log.setLevel(logging.DEBUG)
+         return log
+
 
 class ElasticSearchTestCase(unittest.TestCase):
     def setUp(self):
@@ -15,7 +26,18 @@ class ElasticSearchTestCase(unittest.TestCase):
         for (key, value) in expected.items():
             self.assertEquals(value, result[key])
 
+
 class IndexingTestCase(ElasticSearchTestCase):
+    def testSetupLogging(self):
+        log = self.conn.setup_logging()
+        self.assertTrue(isinstance(log, logging.Logger))
+        self.assertEqual(log.level, logging.ERROR)
+
+    def testOverriddenSetupLogging(self):
+        conn = VerboseElasticSearch('http://localhost:9200/')
+        log = conn.setup_logging()
+        self.assertTrue(isinstance(log, logging.Logger))
+        self.assertEqual(log.level, logging.DEBUG)
 
     def testIndexingWithID(self):
         result = self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
@@ -95,6 +117,32 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.delete_index("another-index")
         self.assertResultContains(result, {'ok': True})
 
+    def testFromPython(self):
+        self.assertEqual(self.conn.from_python('abc'), u'abc')
+        self.assertEqual(self.conn.from_python(u'☃'), u'☃')
+        self.assertEqual(self.conn.from_python(123), 123)
+        self.assertEqual(self.conn.from_python(12.2), 12.2)
+        self.assertEqual(self.conn.from_python(True), True)
+        self.assertEqual(self.conn.from_python(False), False)
+        self.assertEqual(self.conn.from_python(datetime.date(2011, 12, 30)), '2011-12-30T00:00:00')
+        self.assertEqual(self.conn.from_python(datetime.datetime(2011, 12, 30, 11, 59, 32)), '2011-12-30T11:59:32')
+        self.assertEqual(self.conn.from_python([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(self.conn.from_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
+        self.assertEqual(self.conn.from_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
+
+    def testToPython(self):
+        self.assertEqual(self.conn.to_python(u'abc'), u'abc')
+        self.assertEqual(self.conn.to_python(u'☃'), u'☃')
+        self.assertEqual(self.conn.to_python(123), 123)
+        self.assertEqual(self.conn.to_python(12.2), 12.2)
+        self.assertEqual(self.conn.to_python(True), True)
+        self.assertEqual(self.conn.to_python(False), False)
+        self.assertEqual(self.conn.to_python('2011-12-30T00:00:00'), datetime.datetime(2011, 12, 30))
+        self.assertEqual(self.conn.to_python('2011-12-30T11:59:32'), datetime.datetime(2011, 12, 30, 11, 59, 32))
+        self.assertEqual(self.conn.to_python([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(self.conn.to_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
+        self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
+
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):
@@ -132,6 +180,7 @@ class SearchTestCase(ElasticSearchTestCase):
         self.conn.refresh(["test-index"])
         result = self.conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
         self.assertResultContains(result, {'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}})
+
 
 if __name__ == "__main__":
     unittest.main()
