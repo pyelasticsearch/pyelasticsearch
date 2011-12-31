@@ -1,8 +1,17 @@
 """
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
+import logging
 import unittest
 from pyelasticsearch import ElasticSearch
+
+
+class VerboseElasticSearch(ElasticSearch):
+     def setup_logging(self):
+         log = super(VerboseElasticSearch, self).setup_logging()
+         log.setLevel(logging.DEBUG)
+         return log
+
 
 class ElasticSearchTestCase(unittest.TestCase):
     def setUp(self):
@@ -16,6 +25,16 @@ class ElasticSearchTestCase(unittest.TestCase):
             self.assertEquals(value, result[key])
 
 class IndexingTestCase(ElasticSearchTestCase):
+    def testSetupLogging(self):
+        log = self.conn.setup_logging()
+        self.assertTrue(isinstance(log, logging.Logger))
+        self.assertEqual(log.level, logging.ERROR)
+
+    def testOverriddenSetupLogging(self):
+        conn = VerboseElasticSearch('http://localhost:9200/')
+        log = conn.setup_logging()
+        self.assertTrue(isinstance(log, logging.Logger))
+        self.assertEqual(log.level, logging.DEBUG)
 
     def testIndexingWithID(self):
         result = self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
