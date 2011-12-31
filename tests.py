@@ -1,8 +1,17 @@
 """
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
+import logging
 import unittest
 from pyelasticsearch import ElasticSearch
+
+
+class VerboseElasticSearch(ElasticSearch):
+     def setup_logging(self):
+         log = super(VerboseElasticSearch, self).setup_logging()
+         log.setLevel(logging.DEBUG)
+         return log
+
 
 class ElasticSearchTestCase(unittest.TestCase):
     def setUp(self):
@@ -15,7 +24,18 @@ class ElasticSearchTestCase(unittest.TestCase):
         for (key, value) in expected.items():
             self.assertEquals(value, result[key])
 
+
 class IndexingTestCase(ElasticSearchTestCase):
+    def testSetupLogging(self):
+        log = self.conn.setup_logging()
+        self.assertTrue(isinstance(log, logging.Logger))
+        self.assertEqual(log.level, logging.ERROR)
+
+    def testOverriddenSetupLogging(self):
+        conn = VerboseElasticSearch('http://localhost:9200/')
+        log = conn.setup_logging()
+        self.assertTrue(isinstance(log, logging.Logger))
+        self.assertEqual(log.level, logging.DEBUG)
 
     def testIndexingWithID(self):
         result = self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
@@ -132,6 +152,7 @@ class SearchTestCase(ElasticSearchTestCase):
         self.conn.refresh(["test-index"])
         result = self.conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
         self.assertResultContains(result, {'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}})
+
 
 if __name__ == "__main__":
     unittest.main()
