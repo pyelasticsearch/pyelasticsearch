@@ -6,6 +6,16 @@ I've left them here as documentation only, they are accurate as usage examples.
 Create ElasticSearch connection
 >>> conn = ElasticSearch('http://localhost:9200/')
 
+Or a more verbose log level.
+>>> import logging
+>>> class VerboseElasticSearch(ElasticSearch):
+...     def setup_logging(self):
+...         log = super(VerboseElasticSearch, self).setup_logging()
+...         log.addHandler(logging.StreamHandler())
+...         log.setLevel(logging.DEBUG)
+...         return log
+>>> conn = VerboseElasticSearch('http://localhost:9200/')
+
 Add a few documents
 
 >>> conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
@@ -96,6 +106,18 @@ Test adding with automatic id generation
 
 
 """
+import datetime
+import logging
+import re
+import requests
+from urllib import urlencode
+try:
+    # For Python < 2.6 or people using a newer version of simplejson
+    import simplejson as json
+except ImportError:
+    # For Python >= 2.6
+    import json
+
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
@@ -104,53 +126,45 @@ __version__ = (0, 0, 3)
 def get_version():
     return "%s.%s.%s" % __version__
 
-try:
-    # For Python < 2.6 or people using a newer version of simplejson
-    import simplejson as json
-except ImportError:
-    # For Python >= 2.6
-    import json
 
-from httplib import HTTPConnection
-from urlparse import urlsplit
-from urllib import urlencode
-import logging
+DATETIME_REGEX = re.compile('^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
+
+
+class ElasticSearchError(Exception):
+    pass
+
+
+
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
 
 
 class ElasticSearch(object):
     """
     ElasticSearch connection object.
     """
-    def __init__(self, url):
+    def __init__(self, url, timeout=60):
         self.url = url
-        self.scheme, netloc, path, query, fragment = urlsplit(url)
-        netloc = netloc.split(':')
-        self.host = netloc[0]
-        if len(netloc) == 1:
-            self.host, self.port = netloc[0], 9200
-        else:
-            self.host, self.port = netloc
-        self.conn = None
+        self.timeout = timeout
 
-    def _conn(self):
-        if not self.conn:
-            self.conn = HTTPConnection(self.host, int(self.port))
-        return self.conn
+        if self.url.endswith('/'):
+            self.url = self.url[:-1]
 
-    def _send_request(self, method, path, body="", querystring_args={}):
-        if querystring_args:
-            path = "?".join([path, urlencode(querystring_args)])
-        if body:
-            body = self._prep_request(body)
-        logging.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
-        conn = self._conn()
-        conn.request(method, path, body)
-        response = conn.getresponse()
-        http_status = response.status
-        logging.debug("response status: %s" % http_status)
-        response = self._prep_response(response.read())
-        logging.debug("got response %s" % response)
-        return response
+        self.log = self.setup_logging()
+
+    def setup_logging(self):
+        """
+        Sets up the logging.
+
+        Done as a method so others can override as needed without complex
+        setup.
+        """
+        log = logging.getLogger('pyelasticsearch')
+        null = NullHandler()
+        log.addHandler(null)
+        log.setLevel(logging.ERROR)
+        return log
 
     def _make_path(self, path_components):
         """
@@ -161,6 +175,35 @@ class ElasticSearch(object):
         if not path.startswith('/'):
             path = '/'+path
         return path
+
+    def _build_url(self, path):
+        return self.url + path
+
+    def _send_request(self, method, path, body="", querystring_args=None, prepare_body=True):
+        if querystring_args:
+            path = "?".join([path, urlencode(querystring_args)])
+
+        kwargs = {
+            'timeout': self.timeout,
+        }
+        url = self._build_url(path)
+
+        if body:
+            if prepare_body:
+                body = self._prep_request(body)
+
+            kwargs['data'] = body
+
+        if not hasattr(requests, method.lower()):
+            raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
+
+        logging.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
+        req_method = getattr(requests, method.lower())
+        resp = req_method(url, **kwargs)
+        logging.debug("response status: %s" % resp.status_code)
+        prepped_response = self._prep_response(resp.content)
+        logging.debug("got response %s" % prepped_response)
+        return prepped_response
 
     def _prep_request(self, body):
         """
@@ -190,7 +233,7 @@ class ElasticSearch(object):
 
     def index(self, doc, index, doc_type, id=None, force_insert=False):
         """
-    	Index a typed JSON document into a specific index and make it searchable.
+        Index a typed JSON document into a specific index and make it searchable.
         """
         if force_insert:
             querystring_args = {'op_type':'create'}
@@ -203,6 +246,30 @@ class ElasticSearch(object):
             request_method = 'PUT'
         path = self._make_path([index, doc_type, id])
         response = self._send_request(request_method, path, doc, querystring_args)
+        return response
+
+    def bulk_index(self, index, doc_type, docs, id_field="id"):
+        """
+        Indexes a list of documents as efficiently as possible.
+        """
+        body_bits = []
+
+        if not len(docs):
+            raise ElasticSearchError("No documents provided for bulk indexing!")
+
+        for doc in docs:
+            action = {"create": {"_index": index, "_type": doc_type}}
+
+            if doc.get(id_field):
+                action['create']['_id'] = doc[id_field]
+
+            body_bits.append(self._prep_request(action))
+            body_bits.append(self._prep_request(doc))
+
+        path = self._make_path(['_bulk'])
+        # Need the trailing newline.
+        body = '\n'.join(body_bits) + '\n'
+        response = self._send_request('POST', path, body, prepare_body=False)
         return response
 
     def delete(self, index, doc_type, id):
@@ -288,14 +355,14 @@ class ElasticSearch(object):
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        response = self._send_request('PUT', index, settings)
+        response = self._send_request('PUT', self._make_path([index]), settings)
         return response
 
     def delete_index(self, index):
         """
         Deletes an index.
         """
-        response = self._send_request('DELETE', index)
+        response = self._send_request('DELETE', self._make_path([index]))
         return response
 
     def flush(self, indexes=['_all'], refresh=None):
@@ -325,7 +392,6 @@ class ElasticSearch(object):
         response = self._send_request('POST', path)
         return response
 
-
     def optimize(self, indexes=['_all'], **args):
         """
         Optimize one ore more indices
@@ -334,8 +400,54 @@ class ElasticSearch(object):
         response = self._send_request('POST', path, querystring_args=args)
         return response
 
+    def from_python(self, value):
+        """
+        Converts Python values to a form suitable for ElasticSearch's JSON.
+        """
+        if hasattr(value, 'strftime'):
+            if hasattr(value, 'hour'):
+                value = value.isoformat()
+            else:
+                value = "%sT00:00:00" % value.isoformat()
+        elif isinstance(value, str):
+            value = unicode(value, errors='replace')
+
+        return value
+
+    def to_python(self, value):
+        """
+        Converts values from ElasticSearch to native Python values.
+        """
+        if isinstance(value, (int, float, long, complex, list, tuple, bool)):
+            return value
+
+        if isinstance(value, basestring):
+            possible_datetime = DATETIME_REGEX.search(value)
+
+            if possible_datetime:
+                date_values = possible_datetime.groupdict()
+
+                for dk, dv in date_values.items():
+                    date_values[dk] = int(dv)
+
+                return datetime.datetime(date_values['year'], date_values['month'], date_values['day'], date_values['hour'], date_values['minute'], date_values['second'])
+
+        try:
+            # This is slightly gross but it's hard to tell otherwise what the
+            # string's original type might have been. Be careful who you trust.
+            converted_value = eval(value)
+
+            # Try to handle most built-in types.
+            if isinstance(converted_value, (list, tuple, set, dict, int, float, long, complex)):
+                return converted_value
+        except:
+            # If it fails (SyntaxError or its ilk) or we don't trust it,
+            # continue on.
+            pass
+
+        return value
+
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logging.debug("testing")
     import doctest
     doctest.testmod()

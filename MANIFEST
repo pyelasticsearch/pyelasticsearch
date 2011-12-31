@@ -1,0 +1,5 @@
+LICENSE
+README.rst
+pyelasticsearch.py
+setup.py
+tests.py
