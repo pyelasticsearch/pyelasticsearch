@@ -144,12 +144,18 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
 
     def testBulkIndex(self):
+        self.assertEqual(self.conn.count("*:*", indexes=['test-index'])['status'], 404)
         docs = [
             {"name":"Joe Tester"},
             {"name":"Bill Baloney", "id": 303},
         ]
         result = self.conn.bulk_index("test-index", "test-type", docs)
-        self.assertResultContains(result, {u'_type': u'test-type', u'_id': u'_bulk', u'ok': True, u'_index': u'test-index'})
+        self.assertEqual(len(result['items']), 2)
+        self.assertEqual(result['items'][0]['create']['ok'], True)
+        self.assertEqual(result['items'][1]['create']['ok'], True)
+        self.assertEqual(result['items'][1]['create']['_id'], '303')
+        self.conn.refresh()
+        self.assertEqual(self.conn.count("*:*", indexes=['test-index'])['count'], 2)
 
 
 class SearchTestCase(ElasticSearchTestCase):
