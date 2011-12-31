@@ -248,7 +248,7 @@ class ElasticSearch(object):
         response = self._send_request(request_method, path, doc, querystring_args)
         return response
 
-    def bulk_index(self, index, doc_type, docs):
+    def bulk_index(self, index, doc_type, docs, id_field="id"):
         """
         Indexes a list of documents as efficiently as possible.
         """
@@ -260,8 +260,8 @@ class ElasticSearch(object):
         for doc in docs:
             action = {"insert": {"_index": index, "_type": doc_type}}
 
-            if doc.get('id'):
-                action['_id'] = doc['id']
+            if doc.get(id_field):
+                action['_id'] = doc[id_field]
 
             body_bits.append(self._prep_request(action))
             body_bits.append(self._prep_request(doc))
