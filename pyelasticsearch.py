@@ -179,7 +179,7 @@ class ElasticSearch(object):
     def _build_url(self, path):
         return self.url + path
 
-    def _send_request(self, method, path, body="", querystring_args={}):
+    def _send_request(self, method, path, body="", querystring_args=None, prepare_body=True):
         if querystring_args:
             path = "?".join([path, urlencode(querystring_args)])
 
@@ -189,7 +189,10 @@ class ElasticSearch(object):
         url = self._build_url(path)
 
         if body:
-            kwargs['data'] = self._prep_request(body)
+            if prepare_body:
+                body = self._prep_request(body)
+
+            kwargs['data'] = body
 
         if not hasattr(requests, method.lower()):
             raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
@@ -243,6 +246,28 @@ class ElasticSearch(object):
             request_method = 'PUT'
         path = self._make_path([index, doc_type, id])
         response = self._send_request(request_method, path, doc, querystring_args)
+        return response
+
+    def bulk_index(self, index, doc_type, docs):
+        """
+        Indexes a list of documents as efficiently as possible.
+        """
+        body_bits = []
+
+        if not len(docs):
+            raise ElasticSearchError("No documents provided for bulk indexing!")
+
+        for doc in docs:
+            action = {"insert": {"_index": index, "_type": doc_type}}
+
+            if doc.get('id'):
+                action['_id'] = doc['id']
+
+            body_bits.append(self._prep_request(action))
+            body_bits.append(self._prep_request(doc))
+
+        path = self._make_path([index, doc_type, '_bulk'])
+        response = self._send_request('POST', path, '\n'.join(body_bits), prepare_body=False)
         return response
 
     def delete(self, index, doc_type, id):
