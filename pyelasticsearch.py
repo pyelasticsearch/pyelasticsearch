@@ -267,7 +267,7 @@ class ElasticSearch(object):
             body_bits.append(self._prep_request(doc))
 
         path = self._make_path([index, doc_type, '_bulk'])
-        response = self._send_request('POST', path, '\n'.join(body_bits), prepare_body=False)
+        response = self._send_request('POST', path, '\n'.join(body_bits), {'op_type':'create'}, prepare_body=False)
         return response
 
     def delete(self, index, doc_type, id):
