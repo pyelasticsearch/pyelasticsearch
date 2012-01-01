@@ -310,6 +310,14 @@ class ElasticSearch(object):
         """
         return self._query_call("_count", query, body, indexes, doc_types, **query_params)
 
+    def get_mapping(self, indexes=['_all'], doc_types=[]):
+        """
+        Fetches the existing mapping definition for a specific index & type.
+        """
+        path = self._make_path([','.join(indexes), ','.join(doc_types), "_mapping"])
+        response = self._send_request('GET', path)
+        return response
+
     def put_mapping(self, doc_type, mapping, indexes=['_all']):
         """
         Register specific mapping definition for a specific type against one or more indices.

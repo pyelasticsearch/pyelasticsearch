@@ -92,6 +92,14 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.put_mapping("test-type", {"test-type" : {"properties" : {"name" : {"type" : "string", "store" : "yes"}}}}, indexes=["test-index"])
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
+    def testGettMapping(self):
+        result = self.conn.create_index("test-index")
+        mapping = {"test-type" : {"properties" : {"name" : {"type" : "string", "store" : "yes"}}}}
+        self.conn.put_mapping("test-type", mapping, indexes=["test-index"])
+
+        result = self.conn.get_mapping(indexes=["test-index"], doc_types=["test-type"])
+        self.assertEqual(result, mapping)
+
     def testIndexStatus(self):
         self.conn.create_index("another-index")
         result = self.conn.status(["another-index"])
