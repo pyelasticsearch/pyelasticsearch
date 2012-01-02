@@ -258,10 +258,10 @@ class ElasticSearch(object):
             raise ElasticSearchError("No documents provided for bulk indexing!")
 
         for doc in docs:
-            action = {"create": {"_index": index, "_type": doc_type}}
+            action = {"index": {"_index": index, "_type": doc_type}}
 
             if doc.get(id_field):
-                action['create']['_id'] = doc[id_field]
+                action['index']['_id'] = doc[id_field]
 
             body_bits.append(self._prep_request(action))
             body_bits.append(self._prep_request(doc))
@@ -269,7 +269,7 @@ class ElasticSearch(object):
         path = self._make_path(['_bulk'])
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        response = self._send_request('POST', path, body, prepare_body=False)
+        response = self._send_request('POST', path, body, {'op_type':'create'}, prepare_body=False)
         return response
 
     def delete(self, index, doc_type, id):
