@@ -276,18 +276,6 @@ class ElasticSearch(object):
         response = self._send_request('PUT', path, mapping)
         return response
 
-    def terms(self, fields, indexes=['_all'], **query_params):
-        """
-        Extract terms and their document frequencies from one or more fields.
-        The fields argument must be a list or tuple of fields.
-        For valid query params see:
-        http://www.elasticsearch.com/docs/elasticsearch/rest_api/terms/
-        """
-        path = self._make_path([','.join(indexes), "_terms"])
-        query_params['fields'] = ','.join(fields)
-        response = self._send_request('GET', path, querystring_args=query_params)
-        return response
-
     def morelikethis(self, index, doc_type, id, fields, **query_params):
         """
         Execute a "more like this" search query against one or more fields and get back search hits.
