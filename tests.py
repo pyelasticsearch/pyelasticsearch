@@ -5,7 +5,7 @@ Unit tests for pyelasticsearch.  These require an elasticsearch server running o
 import datetime
 import logging
 import unittest
-from pyelasticsearch import ElasticSearch
+from pyelasticsearch import ElasticSearch, ElasticSearchError
 
 
 class VerboseElasticSearch(ElasticSearch):
@@ -20,7 +20,10 @@ class ElasticSearchTestCase(unittest.TestCase):
         self.conn = ElasticSearch('http://localhost:9200/')
 
     def tearDown(self):
-        self.conn.delete_index("test-index")
+        try:
+            self.conn.delete_index("test-index")
+        except:
+            pass
 
     def assertResultContains(self, result, expected):
         for (key, value) in expected.items():
@@ -85,7 +88,8 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.create_index("another-index")
         result = self.conn.create_index("another-index")
         self.conn.delete_index("another-index")
-        self.assertResultContains(result, {'error': '[another-index] Already exists'})
+        self.assertEqual(result, {'message': "Index 'another-index' already exists."})
+        self.assertRaises(ElasticSearchError, self.conn.delete_index, "another-index", quiet=False)
 
     def testPutMapping(self):
         result = self.conn.create_index("test-index")
@@ -152,7 +156,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
 
     def testBulkIndex(self):
-        self.assertEqual(self.conn.count("*:*", indexes=['test-index'])['status'], 404)
+        self.assertRaises(ElasticSearchError, self.conn.count, "*:*", indexes=['test-index'])
         docs = [
             {"name":"Joe Tester"},
             {"name":"Bill Baloney", "id": 303},
@@ -160,10 +164,19 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.bulk_index("test-index", "test-type", docs)
         self.assertEqual(len(result['items']), 2)
         self.assertEqual(result['items'][0]['create']['ok'], True)
-        self.assertEqual(result['items'][1]['create']['ok'], True)
-        self.assertEqual(result['items'][1]['create']['_id'], '303')
+        self.assertEqual(result['items'][1]['index']['ok'], True)
+        self.assertEqual(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
         self.assertEqual(self.conn.count("*:*", indexes=['test-index'])['count'], 2)
+
+    def testErrorHandling(self):
+        # Wrong port.
+        conn = ElasticSearch('http://example.com:1009200/')
+        self.assertRaises(ElasticSearchError, conn.count, "*:*")
+
+        # Test invalid JSON.
+        self.assertRaises(ElasticSearchError, conn._prep_request, unittest.TestCase)
+        self.assertRaises(ElasticSearchError, conn._prep_response, '{"busted" "json" "that": ["is] " wrong')
 
 
 class SearchTestCase(ElasticSearchTestCase):

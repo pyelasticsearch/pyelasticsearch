@@ -199,9 +199,18 @@ class ElasticSearch(object):
 
         logging.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
         req_method = getattr(requests, method.lower())
-        resp = req_method(url, **kwargs)
+
+        try:
+            resp = req_method(url, **kwargs)
+        except requests.ConnectionError, e:
+            raise ElasticSearchError("Connecting to %s failed: %s." % (url, e))
+
         logging.debug("response status: %s" % resp.status_code)
         prepped_response = self._prep_response(resp.content)
+
+        if resp.status_code >= 400:
+            raise ElasticSearchError("Non-OK status code returned (%d) containing %r." % (resp.status_code, prepped_response.get('error', prepped_response)))
+
         logging.debug("got response %s" % prepped_response)
         return prepped_response
 
@@ -209,13 +218,19 @@ class ElasticSearch(object):
         """
         Encodes body as json.
         """
-        return json.dumps(body)
+        try:
+            return json.dumps(body)
+        except (TypeError, json.JSONDecodeError), e:
+            raise ElasticSearchError('Invalid JSON %r' % body, e)
 
     def _prep_response(self, response):
         """
         Parses json to a native python object.
         """
-        return json.loads(response)
+        try:
+            return json.loads(response)
+        except (TypeError, json.JSONDecodeError), e:
+            raise ElasticSearchError('Invalid JSON %r' % response, e)
 
     def _query_call(self, query_type, query, body=None, indexes=['_all'], doc_types=[], **query_params):
         """
@@ -357,20 +372,30 @@ class ElasticSearch(object):
         response = self._send_request('GET', path)
         return response
 
-    def create_index(self, index, settings=None):
+    def create_index(self, index, settings=None, quiet=True):
         """
         Creates an index with optional settings.
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        response = self._send_request('PUT', self._make_path([index]), settings)
+        try:
+            response = self._send_request('PUT', self._make_path([index]), settings)
+        except ElasticSearchError, e:
+            if not quiet:
+                raise
+            response = {"message": "Index '%s' already exists." % index}
         return response
 
-    def delete_index(self, index):
+    def delete_index(self, index, quiet=True):
         """
         Deletes an index.
         """
-        response = self._send_request('DELETE', self._make_path([index]))
+        try:
+            response = self._send_request('DELETE', self._make_path([index]))
+        except ElasticSearchError, e:
+            if not quiet:
+                raise
+            response = {"message": "Index '%s' doesn't exist." % index}
         return response
 
     def flush(self, indexes=['_all'], refresh=None):
