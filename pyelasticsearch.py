@@ -6,6 +6,16 @@ I've left them here as documentation only, they are accurate as usage examples.
 Create ElasticSearch connection
 >>> conn = ElasticSearch('http://localhost:9200/')
 
+Or a more verbose log level.
+>>> import logging
+>>> class VerboseElasticSearch(ElasticSearch):
+...     def setup_logging(self):
+...         log = super(VerboseElasticSearch, self).setup_logging()
+...         log.addHandler(logging.StreamHandler())
+...         log.setLevel(logging.DEBUG)
+...         return log
+>>> conn = VerboseElasticSearch('http://localhost:9200/')
+
 Add a few documents
 
 >>> conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
@@ -111,46 +121,46 @@ except ImportError:
     # For Python >= 2.6
     import json
 
-from httplib import HTTPConnection
-from urlparse import urlsplit
 from urllib import urlencode
 import logging
+import requests
+
+
+class ElasticSearchError(Exception):
+    pass
+
+
+
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+
 
 
 class ElasticSearch(object):
     """
     ElasticSearch connection object.
     """
-    def __init__(self, url):
+
+    def __init__(self, url, timeout=60):
         self.url = url
-        self.scheme, netloc, path, query, fragment = urlsplit(url)
-        netloc = netloc.split(':')
-        self.host = netloc[0]
-        if len(netloc) == 1:
-            self.host, self.port = netloc[0], 9200
-        else:
-            self.host, self.port = netloc
-        self.conn = None
+        self.timeout = timeout
 
-    def _conn(self):
-        if not self.conn:
-            self.conn = HTTPConnection(self.host, int(self.port))
-        return self.conn
+        if self.url.endswith('/'):
+            self.url = self.url[:-1]
 
-    def _send_request(self, method, path, body="", querystring_args={}):
-        if querystring_args:
-            path = "?".join([path, urlencode(querystring_args)])
-        if body:
-            body = self._prep_request(body)
-        logging.debug("making %s request to path: %s %s %s with body: %s" % (method, self.host, self.port, path, body))
-        conn = self._conn()
-        conn.request(method, path, body)
-        response = conn.getresponse()
-        http_status = response.status
-        logging.debug("response status: %s" % http_status)
-        response = self._prep_response(response.read())
-        logging.debug("got response %s" % response)
-        return response
+    def setup_logging(self):
+        """
+        Sets up the logging.
+
+        Done as a method so others can override as needed without complex
+        setup.
+        """
+        log = logging.getLogger('pyelasticsearch')
+        null = NullHandler()
+        log.addHandler(null)
+        log.setLevel(logging.ERROR)
+        return log
 
     def _make_path(self, path_components):
         """
@@ -161,6 +171,32 @@ class ElasticSearch(object):
         if not path.startswith('/'):
             path = '/'+path
         return path
+
+    def _build_url(self, path):
+        return self.url + path
+
+    def _send_request(self, method, path, body="", querystring_args={}):
+        if querystring_args:
+            path = "?".join([path, urlencode(querystring_args)])
+
+        kwargs = {
+            'timeout': self.timeout,
+        }
+        url = self._build_url(path)
+
+        if body:
+            kwargs['data'] = self._prep_request(body)
+
+        if not hasattr(requests, method.lower()):
+            raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
+
+        logging.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
+        req_method = getattr(requests, method.lower())
+        resp = req_method(url, **kwargs)
+        logging.debug("response status: %s" % resp.status_code)
+        prepped_response = self._prep_response(resp.content)
+        logging.debug("got response %s" % prepped_response)
+        return prepped_response
 
     def _prep_request(self, body):
         """
@@ -251,18 +287,6 @@ class ElasticSearch(object):
         response = self._send_request('PUT', path, mapping)
         return response
 
-    def terms(self, fields, indexes=['_all'], **query_params):
-        """
-        Extract terms and their document frequencies from one or more fields.
-        The fields argument must be a list or tuple of fields.
-        For valid query params see:
-        http://www.elasticsearch.com/docs/elasticsearch/rest_api/terms/
-        """
-        path = self._make_path([','.join(indexes), "_terms"])
-        query_params['fields'] = ','.join(fields)
-        response = self._send_request('GET', path, querystring_args=query_params)
-        return response
-
     def morelikethis(self, index, doc_type, id, fields, **query_params):
         """
         Execute a "more like this" search query against one or more fields and get back search hits.
@@ -288,14 +312,14 @@ class ElasticSearch(object):
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        response = self._send_request('PUT', index, settings)
+        response = self._send_request('PUT', self._make_path([index]), settings)
         return response
 
     def delete_index(self, index):
         """
         Deletes an index.
         """
-        response = self._send_request('DELETE', index)
+        response = self._send_request('DELETE', self._make_path([index]))
         return response
 
     def flush(self, indexes=['_all'], refresh=None):
@@ -335,7 +359,5 @@ class ElasticSearch(object):
         return response
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logging.debug("testing")
     import doctest
     doctest.testmod()
