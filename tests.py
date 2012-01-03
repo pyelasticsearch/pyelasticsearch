@@ -88,7 +88,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.create_index("another-index")
         result = self.conn.create_index("another-index")
         self.conn.delete_index("another-index")
-        self.assertEqual(result, {'message': "Index 'another-index' already exists."})
+        self.assertEqual(result, {'message': "Create index 'another-index' errored: Non-OK status code returned (400) containing u'IndexAlreadyExistsException[[another-index] Already exists]'."})
         self.assertRaises(ElasticSearchError, self.conn.delete_index, "another-index", quiet=False)
 
     def testPutMapping(self):

@@ -371,7 +371,7 @@ class ElasticSearch(object):
         except ElasticSearchError, e:
             if not quiet:
                 raise
-            response = {"message": "Index '%s' already exists." % index}
+            response = {"message": "Create index '%s' errored: %s" % (index, e)}
         return response
 
     def delete_index(self, index, quiet=True):
@@ -383,7 +383,7 @@ class ElasticSearch(object):
         except ElasticSearchError, e:
             if not quiet:
                 raise
-            response = {"message": "Index '%s' doesn't exist." % index}
+            response = {"message": "Delete index '%s' errored: %s" % (index, e)}
         return response
 
     def flush(self, indexes=['_all'], refresh=None):
