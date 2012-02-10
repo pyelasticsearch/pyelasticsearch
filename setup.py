@@ -5,7 +5,7 @@ setup(
     name = "pyelasticsearch",
     version = "0.0.5",
     description = "Lightweight python wrapper for elasticsearch.",
-    long_description=open('README.rst', 'r').read(),
+    long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst'), 'r').read(),
     author = 'Robert Eanes',
     author_email = 'python@robsinbox.com',
     py_modules = ['pyelasticsearch'],
