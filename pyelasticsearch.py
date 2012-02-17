@@ -197,7 +197,7 @@ class ElasticSearch(object):
         if not hasattr(requests, method.lower()):
             raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
 
-        logging.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
+        self.log.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
         req_method = getattr(requests, method.lower())
 
         try:
@@ -205,13 +205,13 @@ class ElasticSearch(object):
         except requests.ConnectionError, e:
             raise ElasticSearchError("Connecting to %s failed: %s." % (url, e))
 
-        logging.debug("response status: %s" % resp.status_code)
+        self.log.debug("response status: %s" % resp.status_code)
         prepped_response = self._prep_response(resp.content)
 
         if resp.status_code >= 400:
             raise ElasticSearchError("Non-OK status code returned (%d) containing %r." % (resp.status_code, prepped_response.get('error', prepped_response)))
 
-        logging.debug("got response %s" % prepped_response)
+        self.log.debug("got response %s" % prepped_response)
         return prepped_response
 
     def _prep_request(self, body):
