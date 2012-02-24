@@ -287,11 +287,17 @@ class ElasticSearch(object):
         response = self._send_request('POST', path, body, {'op_type':'create'}, prepare_body=False)
         return response
 
-    def delete(self, index, doc_type, id):
+    def delete(self, index, doc_type, id=None):
         """
         Delete a typed JSON document from a specific index based on its id.
+
+        If id is omitted, all documents of a given doctype will be deleted.
         """
-        path = self._make_path([index, doc_type, id])
+        path_parts = [index, doc_type]
+        if id:
+            path_parts.append(id)
+
+        path = self._make_path(path_parts)
         response = self._send_request('DELETE', path)
         return response
 

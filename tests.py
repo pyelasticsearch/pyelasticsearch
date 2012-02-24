@@ -62,6 +62,12 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.delete("test-index", "test-type", 1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'})
 
+    def testDeleteByDocType(self):
+        self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
+        self.conn.refresh(["test-index"])
+        result = self.conn.delete("test-index", "test-type")
+        self.assertResultContains(result, {'ok': True})
+
     def testDeleteByQuery(self):
         self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
         self.conn.index({"name":"Bill Baloney"}, "test-index", "test-type", 2)
@@ -88,7 +94,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.create_index("another-index")
         result = self.conn.create_index("another-index")
         self.conn.delete_index("another-index")
-        self.assertEqual(result, {'message': "Create index 'another-index' errored: Non-OK status code returned (400) containing u'IndexAlreadyExistsException[[another-index] Already exists]'."})
+        self.assertEqual(result, {'message': "Create index 'another-index' errored: Non-OK status code returned (400) containing 'IndexAlreadyExistsException[[another-index] Already exists]'."})
         self.assertRaises(ElasticSearchError, self.conn.delete_index, "another-index", quiet=False)
 
     def testPutMapping(self):
