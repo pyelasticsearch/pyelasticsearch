@@ -339,12 +339,12 @@ class ElasticSearch(object):
         response = self._send_request('GET', path)
         return response
 
-    def put_mapping(self, doc_type, mapping, indexes=['_all']):
+    def put_mapping(self, doc_type, mapping, indexes=['_all'], **query_params):
         """
         Register specific mapping definition for a specific type against one or more indices.
         """
         path = self._make_path([','.join(indexes), doc_type,"_mapping"])
-        response = self._send_request('PUT', path, mapping)
+        response = self._send_request('PUT', path, mapping, **query_params)
         return response
 
     def morelikethis(self, index, doc_type, id, fields, **query_params):
