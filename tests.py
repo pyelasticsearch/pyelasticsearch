@@ -204,6 +204,30 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.search("name:joe")
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
+    def testSearchByDSL(self):
+        import simplejson as json
+        self.conn.index({"name":"AgeJoe Tester", "age":25}, "test-index", "test-type", 1)
+        self.conn.index({"name":"AgeBill Baloney", "age":35}, "test-index", "test-type", 2)
+        self.conn.refresh(["test-index"])
+
+        query = {   "query": { 
+                        "query_string": { "query": "name:age" }, 
+                        "filtered": {
+                            "filter": {
+                                "range": {
+                                    "age": {
+                                        "from": 27,
+                                        "to": 37,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }
+
+        result = self.conn.search("", body=json.dumps(query), indexes=['test-index'], doc_types=['test-type'])
+        self.assertTrue(result.get('hits').get('hits').__len__() > 0, str(result))
+
     def testMLT(self):
         self.conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
         self.conn.refresh(["test-index"])
