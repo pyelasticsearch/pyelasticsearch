@@ -142,9 +142,10 @@ class ElasticSearch(object):
     ElasticSearch connection object.
     """
 
-    def __init__(self, url, timeout=60):
+    def __init__(self, url, timeout=60, headers={}):
         self.url = url
         self.timeout = timeout
+        self.headers = headers
 
         if self.url.endswith('/'):
             self.url = self.url[:-1]
@@ -181,6 +182,7 @@ class ElasticSearch(object):
 
         kwargs = {
             'timeout': self.timeout,
+            'headers': self.headers,
         }
         url = self._build_url(path)
 
