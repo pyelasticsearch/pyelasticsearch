@@ -1,5 +1,7 @@
-from distutils.core import setup
-import setuptools
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 setup(
     name = "pyelasticsearch",
@@ -23,5 +25,6 @@ setup(
     install_requires=[
         'requests>=0.9.0',
     ],
+    test_suite='tests',
     url = 'http://github.com/rhec/pyelasticsearch'
 )
