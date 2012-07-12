@@ -280,7 +280,7 @@ class ElasticSearch(object):
             body_bits.append(self._prep_request(action))
             body_bits.append(self._prep_request(doc))
 
-        path = self._make_path(['_bulk'])
+        path = self._make_path([index, '_bulk'])
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
         response = self._send_request('POST', path, body, {'op_type': 'create'}, prepare_body=False)
