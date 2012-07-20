@@ -106,6 +106,18 @@ Test adding with automatic id generation
 
 
 """
+import datetime
+import logging
+import re
+import requests
+from urllib import urlencode
+try:
+    # For Python < 2.6 or people using a newer version of simplejson
+    import simplejson as json
+except ImportError:
+    # For Python >= 2.6
+    import json
+
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
@@ -114,16 +126,8 @@ __version__ = (0, 0, 3)
 def get_version():
     return "%s.%s.%s" % __version__
 
-try:
-    # For Python < 2.6 or people using a newer version of simplejson
-    import simplejson as json
-except ImportError:
-    # For Python >= 2.6
-    import json
 
-from urllib import urlencode
-import logging
-import requests
+DATETIME_REGEX = re.compile('^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
 
 
 class ElasticSearchError(Exception):
@@ -136,18 +140,18 @@ class NullHandler(logging.Handler):
         pass
 
 
-
 class ElasticSearch(object):
     """
     ElasticSearch connection object.
     """
-
     def __init__(self, url, timeout=60):
         self.url = url
         self.timeout = timeout
 
         if self.url.endswith('/'):
             self.url = self.url[:-1]
+
+        self.log = self.setup_logging()
 
     def setup_logging(self):
         """
@@ -175,7 +179,7 @@ class ElasticSearch(object):
     def _build_url(self, path):
         return self.url + path
 
-    def _send_request(self, method, path, body="", querystring_args={}):
+    def _send_request(self, method, path, body="", querystring_args=None, prepare_body=True):
         if querystring_args:
             path = "?".join([path, urlencode(querystring_args)])
 
@@ -185,16 +189,28 @@ class ElasticSearch(object):
         url = self._build_url(path)
 
         if body:
-            kwargs['data'] = self._prep_request(body)
+            if prepare_body:
+                body = self._prep_request(body)
+
+            kwargs['data'] = body
 
         if not hasattr(requests, method.lower()):
             raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
 
         logging.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
         req_method = getattr(requests, method.lower())
-        resp = req_method(url, **kwargs)
+
+        try:
+            resp = req_method(url, **kwargs)
+        except requests.ConnectionError, e:
+            raise ElasticSearchError("Connecting to %s failed: %s." % (url, e))
+
         logging.debug("response status: %s" % resp.status_code)
         prepped_response = self._prep_response(resp.content)
+
+        if resp.status_code >= 400:
+            raise ElasticSearchError("Non-OK status code returned (%d) containing %r." % (resp.status_code, prepped_response.get('error', prepped_response)))
+
         logging.debug("got response %s" % prepped_response)
         return prepped_response
 
@@ -202,13 +218,19 @@ class ElasticSearch(object):
         """
         Encodes body as json.
         """
-        return json.dumps(body)
+        try:
+            return json.dumps(body)
+        except (TypeError, json.JSONDecodeError), e:
+            raise ElasticSearchError('Invalid JSON %r' % body, e)
 
     def _prep_response(self, response):
         """
         Parses json to a native python object.
         """
-        return json.loads(response)
+        try:
+            return json.loads(response)
+        except (TypeError, json.JSONDecodeError), e:
+            raise ElasticSearchError('Invalid JSON %r' % response, e)
 
     def _query_call(self, query_type, query, body=None, indexes=['_all'], doc_types=[], **query_params):
         """
@@ -226,7 +248,7 @@ class ElasticSearch(object):
 
     def index(self, doc, index, doc_type, id=None, force_insert=False):
         """
-    	Index a typed JSON document into a specific index and make it searchable.
+        Index a typed JSON document into a specific index and make it searchable.
         """
         if force_insert:
             querystring_args = {'op_type':'create'}
@@ -239,6 +261,30 @@ class ElasticSearch(object):
             request_method = 'PUT'
         path = self._make_path([index, doc_type, id])
         response = self._send_request(request_method, path, doc, querystring_args)
+        return response
+
+    def bulk_index(self, index, doc_type, docs, id_field="id"):
+        """
+        Indexes a list of documents as efficiently as possible.
+        """
+        body_bits = []
+
+        if not len(docs):
+            raise ElasticSearchError("No documents provided for bulk indexing!")
+
+        for doc in docs:
+            action = {"index": {"_index": index, "_type": doc_type}}
+
+            if doc.get(id_field):
+                action['index']['_id'] = doc[id_field]
+
+            body_bits.append(self._prep_request(action))
+            body_bits.append(self._prep_request(doc))
+
+        path = self._make_path(['_bulk'])
+        # Need the trailing newline.
+        body = '\n'.join(body_bits) + '\n'
+        response = self._send_request('POST', path, body, {'op_type':'create'}, prepare_body=False)
         return response
 
     def delete(self, index, doc_type, id):
@@ -279,6 +325,14 @@ class ElasticSearch(object):
         """
         return self._query_call("_count", query, body, indexes, doc_types, **query_params)
 
+    def get_mapping(self, indexes=['_all'], doc_types=[]):
+        """
+        Fetches the existing mapping definition for a specific index & type.
+        """
+        path = self._make_path([','.join(indexes), ','.join(doc_types), "_mapping"])
+        response = self._send_request('GET', path)
+        return response
+
     def put_mapping(self, doc_type, mapping, indexes=['_all']):
         """
         Register specific mapping definition for a specific type against one or more indices.
@@ -306,20 +360,30 @@ class ElasticSearch(object):
         response = self._send_request('GET', path)
         return response
 
-    def create_index(self, index, settings=None):
+    def create_index(self, index, settings=None, quiet=True):
         """
         Creates an index with optional settings.
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        response = self._send_request('PUT', self._make_path([index]), settings)
+        try:
+            response = self._send_request('PUT', self._make_path([index]), settings)
+        except ElasticSearchError, e:
+            if not quiet:
+                raise
+            response = {"message": "Create index '%s' errored: %s" % (index, e)}
         return response
 
-    def delete_index(self, index):
+    def delete_index(self, index, quiet=True):
         """
         Deletes an index.
         """
-        response = self._send_request('DELETE', self._make_path([index]))
+        try:
+            response = self._send_request('DELETE', self._make_path([index]))
+        except ElasticSearchError, e:
+            if not quiet:
+                raise
+            response = {"message": "Delete index '%s' errored: %s" % (index, e)}
         return response
 
     def flush(self, indexes=['_all'], refresh=None):
@@ -349,7 +413,6 @@ class ElasticSearch(object):
         response = self._send_request('POST', path)
         return response
 
-
     def optimize(self, indexes=['_all'], **args):
         """
         Optimize one ore more indices
@@ -357,6 +420,54 @@ class ElasticSearch(object):
         path = self._make_path([','.join(indexes), '_optimize'])
         response = self._send_request('POST', path, querystring_args=args)
         return response
+
+    def from_python(self, value):
+        """
+        Converts Python values to a form suitable for ElasticSearch's JSON.
+        """
+        if hasattr(value, 'strftime'):
+            if hasattr(value, 'hour'):
+                value = value.isoformat()
+            else:
+                value = "%sT00:00:00" % value.isoformat()
+        elif isinstance(value, str):
+            value = unicode(value, errors='replace')
+
+        return value
+
+    def to_python(self, value):
+        """
+        Converts values from ElasticSearch to native Python values.
+        """
+        if isinstance(value, (int, float, long, complex, list, tuple, bool)):
+            return value
+
+        if isinstance(value, basestring):
+            possible_datetime = DATETIME_REGEX.search(value)
+
+            if possible_datetime:
+                date_values = possible_datetime.groupdict()
+
+                for dk, dv in date_values.items():
+                    date_values[dk] = int(dv)
+
+                return datetime.datetime(date_values['year'], date_values['month'], date_values['day'], date_values['hour'], date_values['minute'], date_values['second'])
+
+        try:
+            # This is slightly gross but it's hard to tell otherwise what the
+            # string's original type might have been. Be careful who you trust.
+            converted_value = eval(value)
+
+            # Try to handle most built-in types.
+            if isinstance(converted_value, (list, tuple, set, dict, int, float, long, complex)):
+                return converted_value
+        except:
+            # If it fails (SyntaxError or its ilk) or we don't trust it,
+            # continue on.
+            pass
+
+        return value
+
 
 if __name__ == "__main__":
     import doctest
