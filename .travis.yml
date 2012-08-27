@@ -9,4 +9,8 @@ before_install:
   - sudo service elasticsearch start
   - sleep 3
 
+install:
+  - pip install -e .
+  - pip install simplejson
+
 script: python setup.py test
