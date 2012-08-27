@@ -1,10 +1,12 @@
 import os
-from distutils.core import setup
-import setuptools
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 setup(
     name = "pyelasticsearch",
-    version = "0.0.5",
+    version = "0.0.6",
     description = "Lightweight python wrapper for elasticsearch.",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst'), 'r').read(),
     author = 'Robert Eanes',
@@ -24,5 +26,6 @@ setup(
     install_requires=[
         'requests>=0.9.0',
     ],
+    test_suite='tests',
     url = 'http://github.com/rhec/pyelasticsearch'
 )
