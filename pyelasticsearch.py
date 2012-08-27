@@ -171,7 +171,7 @@ class ElasticSearch(object):
         path_components = [str(component) for component in path_components if component]
         path = '/'.join(path_components)
         if not path.startswith('/'):
-            path = '/'+path
+            path = '/' + path
         return path
 
     def _build_url(self, path):
@@ -238,7 +238,7 @@ class ElasticSearch(object):
         querystring_args = query_params
         if query:
             querystring_args['q'] = query
-        path = self._make_path([','.join(indexes), ','.join(doc_types),query_type])
+        path = self._make_path([','.join(indexes), ','.join(doc_types), query_type])
         response = self._send_request('GET', path, body, querystring_args)
         return response
 
@@ -249,7 +249,7 @@ class ElasticSearch(object):
         Index a typed JSON document into a specific index and make it searchable.
         """
         if force_insert:
-            querystring_args = {'op_type':'create'}
+            querystring_args = {'op_type': 'create'}
         else:
             querystring_args = {}
 
@@ -282,7 +282,7 @@ class ElasticSearch(object):
         path = self._make_path(['_bulk'])
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        response = self._send_request('POST', path, body, {'op_type':'create'}, prepare_body=False)
+        response = self._send_request('POST', path, body, {'op_type': 'create'}, prepare_body=False)
         return response
 
     def delete(self, index, doc_type, id=None):
@@ -341,7 +341,7 @@ class ElasticSearch(object):
         """
         Register specific mapping definition for a specific type against one or more indices.
         """
-        path = self._make_path([','.join(indexes), doc_type,"_mapping"])
+        path = self._make_path([','.join(indexes), doc_type, "_mapping"])
         response = self._send_request('PUT', path, mapping, **query_params)
         return response
 
