@@ -118,13 +118,12 @@ except ImportError:
     # For Python >= 2.6
     import json
 
-
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
-__version__ = (0, 0, 3)
+__version__ = '0.0.6'
+__version_info__ = tuple(__version__.split('.'))
 
-def get_version():
-    return "%s.%s.%s" % __version__
+get_version = lambda: __version_info__
 
 
 DATETIME_REGEX = re.compile('^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
@@ -132,7 +131,6 @@ DATETIME_REGEX = re.compile('^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T(?
 
 class ElasticSearchError(Exception):
     pass
-
 
 
 class NullHandler(logging.Handler):
