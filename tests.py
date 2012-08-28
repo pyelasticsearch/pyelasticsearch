@@ -9,10 +9,10 @@ from pyelasticsearch import ElasticSearch, ElasticSearchError
 
 
 class VerboseElasticSearch(ElasticSearch):
-     def setup_logging(self):
-         log = super(VerboseElasticSearch, self).setup_logging()
-         log.setLevel(logging.DEBUG)
-         return log
+    def setup_logging(self):
+        log = super(VerboseElasticSearch, self).setup_logging()
+        log.setLevel(logging.DEBUG)
+        return log
 
 
 class ElasticSearchTestCase(unittest.TestCase):
