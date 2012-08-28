@@ -109,14 +109,11 @@ Test adding with automatic id generation
 import datetime
 import logging
 import re
-import requests
 from urllib import urlencode
-try:
-    # For Python < 2.6 or people using a newer version of simplejson
-    import simplejson as json
-except ImportError:
-    # For Python >= 2.6
-    import json
+
+import requests
+# import either simplejson or the json module in Python >= 2.6
+from requests.compat import json
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
@@ -150,6 +147,7 @@ class ElasticSearch(object):
             self.url = self.url[:-1]
 
         self.log = self.setup_logging()
+        self.client = requests.session()
 
     def setup_logging(self):
         """
@@ -192,19 +190,19 @@ class ElasticSearch(object):
 
             kwargs['data'] = body
 
-        if not hasattr(requests, method.lower()):
+        req_method = getattr(self.client, method.lower(), None)
+        if req_method is None:
             raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
 
-        self.log.debug("making %s request to path: %s %s with body: %s" % (method, url, path, kwargs.get('data', {})))
-        req_method = getattr(requests, method.lower())
-
+        self.log.debug("making %s request to path: %s %s with body: %s" %
+                       (method, url, path, kwargs.get('data', {})))
         try:
             resp = req_method(url, **kwargs)
         except requests.ConnectionError, e:
             raise ElasticSearchError("Connecting to %s failed: %s." % (url, e))
 
         self.log.debug("response status: %s" % resp.status_code)
-        prepped_response = self._prep_response(resp.content)
+        prepped_response = self._prep_response(resp)
 
         if resp.status_code >= 400:
             raise ElasticSearchError("Non-OK status code returned (%d) containing %r." % (resp.status_code, prepped_response.get('error', prepped_response)))
@@ -226,9 +224,12 @@ class ElasticSearch(object):
         Parses json to a native python object.
         """
         try:
-            return json.loads(response)
+            json_response = response.json
         except (TypeError, json.JSONDecodeError), e:
             raise ElasticSearchError('Invalid JSON %r' % response, e)
+        if json_response is None:
+            raise ElasticSearchError('Invalid JSON %r' % response)
+        return json_response
 
     def _query_call(self, query_type, query, body=None, indexes=['_all'], doc_types=[], **query_params):
         """

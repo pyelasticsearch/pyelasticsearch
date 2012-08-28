@@ -5,6 +5,7 @@ Unit tests for pyelasticsearch.  These require an elasticsearch server running o
 import datetime
 import logging
 import unittest
+import requests
 from pyelasticsearch import ElasticSearch, ElasticSearchError
 
 
@@ -182,7 +183,9 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         # Test invalid JSON.
         self.assertRaises(ElasticSearchError, conn._prep_request, unittest.TestCase)
-        self.assertRaises(ElasticSearchError, conn._prep_response, '{"busted" "json" "that": ["is] " wrong')
+        resp = requests.Response()
+        resp._content = '{"busted" "json" "that": ["is] " wrong'
+        self.assertRaises(ElasticSearchError, conn._prep_response, resp)
 
 
 class SearchTestCase(ElasticSearchTestCase):
