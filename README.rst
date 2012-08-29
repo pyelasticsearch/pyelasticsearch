@@ -67,3 +67,4 @@ Credits
 Used `pysolr`_ as a jumping off point - thanks guys.
 
 .. _`pysolr`: http://github.com/jkocherhans/pysolr
+
