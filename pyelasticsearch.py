@@ -172,6 +172,11 @@ class ElasticSearch(object):
             path = '/' + path
         return path
 
+    def _concat(self, items):
+        if items is None:
+            return ''
+        return ','.join([item for item in items if item != '_all'])
+
     def _build_url(self, path):
         return self.url + path
 
@@ -205,7 +210,9 @@ class ElasticSearch(object):
         prepped_response = self._prep_response(resp)
 
         if resp.status_code >= 400:
-            raise ElasticSearchError("Non-OK status code returned (%d) containing %r." % (resp.status_code, prepped_response.get('error', prepped_response)))
+            raise ElasticSearchError(
+                "Non-OK status code returned (%d) containing %r." %
+                (resp.status_code, prepped_response.get('error', prepped_response)))
 
         self.log.debug("got response %s" % prepped_response)
         return prepped_response
@@ -231,7 +238,8 @@ class ElasticSearch(object):
             raise ElasticSearchError('Invalid JSON %r' % response)
         return json_response
 
-    def _query_call(self, query_type, query, body=None, indexes=['_all'], doc_types=[], **query_params):
+    def _query_call(self, query_type, query, body=None, indexes=None,
+                    doc_types=None, **query_params):
         """
         This can be used for search and count calls.
         These are identical api calls, except for the type of query.
@@ -239,7 +247,9 @@ class ElasticSearch(object):
         querystring_args = query_params
         if query:
             querystring_args['q'] = query
-        path = self._make_path([','.join(indexes), ','.join(doc_types), query_type])
+        path = self._make_path([self._concat(indexes),
+                                self._concat(doc_types),
+                                query_type])
         response = self._send_request('GET', path, body, querystring_args)
         return response
 
@@ -283,7 +293,8 @@ class ElasticSearch(object):
         path = self._make_path([index, '_bulk'])
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        response = self._send_request('POST', path, body, {'op_type': 'create'}, prepare_body=False)
+        response = self._send_request('POST', path, body,
+            {'op_type': 'create'}, prepare_body=False)
         return response
 
     def delete(self, index, doc_type, id=None):
@@ -316,7 +327,7 @@ class ElasticSearch(object):
         response = self._send_request('GET', path)
         return response
 
-    def search(self, query, body=None, indexes=['_all'], doc_types=[], **query_params):
+    def search(self, query, body=None, indexes=None, doc_types=None, **query_params):
         """
         Execute a search query against one or more indices and get back search hits.
         query must be a dictionary that will convert to Query DSL
@@ -324,25 +335,27 @@ class ElasticSearch(object):
         """
         return self._query_call("_search", query, body, indexes, doc_types, **query_params)
 
-    def count(self, query, body=None, indexes=['_all'], doc_types=[], **query_params):
+    def count(self, query, body=None, indexes=None, doc_types=None, **query_params):
         """
         Execute a query against one or more indices and get hits count.
         """
         return self._query_call("_count", query, body, indexes, doc_types, **query_params)
 
-    def get_mapping(self, indexes=['_all'], doc_types=[]):
+    def get_mapping(self, indexes=None, doc_types=None):
         """
         Fetches the existing mapping definition for a specific index & type.
         """
-        path = self._make_path([','.join(indexes), ','.join(doc_types), "_mapping"])
+        path = self._make_path([self._concat(indexes),
+                                self._concat(doc_types),
+                                "_mapping"])
         response = self._send_request('GET', path)
         return response
 
-    def put_mapping(self, doc_type, mapping, indexes=['_all'], **query_params):
+    def put_mapping(self, doc_type, mapping, indexes=None, **query_params):
         """
         Register specific mapping definition for a specific type against one or more indices.
         """
-        path = self._make_path([','.join(indexes), doc_type, "_mapping"])
+        path = self._make_path([self._concat(indexes), doc_type, "_mapping"])
         response = self._send_request('PUT', path, mapping, **query_params)
         return response
 
@@ -351,17 +364,17 @@ class ElasticSearch(object):
         Execute a "more like this" search query against one or more fields and get back search hits.
         """
         path = self._make_path([index, doc_type, id, '_mlt'])
-        query_params['fields'] = ','.join(fields)
+        query_params['fields'] = self._concat(fields)
         response = self._send_request('GET', path, querystring_args=query_params)
         return response
 
     ## Index Admin API
 
-    def status(self, indexes=['_all']):
+    def status(self, indexes=None):
         """
         Retrieve the status of one or more indices
         """
-        path = self._make_path([','.join(indexes), '_status'])
+        path = self._make_path([self._concat(indexes), '_status'])
         response = self._send_request('GET', path)
         return response
 
@@ -391,38 +404,38 @@ class ElasticSearch(object):
             response = {"message": "Delete index '%s' errored: %s" % (index, e)}
         return response
 
-    def flush(self, indexes=['_all'], refresh=None):
+    def flush(self, indexes=None, refresh=None):
         """
         Flushes one or more indices (clear memory)
         """
-        path = self._make_path([','.join(indexes), '_flush'])
+        path = self._make_path([self._concat(indexes), '_flush'])
         args = {}
         if refresh is not None:
             args['refresh'] = refresh
         response = self._send_request('POST', path, querystring_args=args)
         return response
 
-    def refresh(self, indexes=['_all']):
+    def refresh(self, indexes=None):
         """
         Refresh one or more indices
         """
-        path = self._make_path([','.join(indexes), '_refresh'])
+        path = self._make_path([self._concat(indexes), '_refresh'])
         response = self._send_request('POST', path)
         return response
 
-    def gateway_snapshot(self, indexes=['_all']):
+    def gateway_snapshot(self, indexes=None):
         """
         Gateway snapshot one or more indices
         """
-        path = self._make_path([','.join(indexes), '_gateway', 'snapshot'])
+        path = self._make_path([self._concat(indexes), '_gateway', 'snapshot'])
         response = self._send_request('POST', path)
         return response
 
-    def optimize(self, indexes=['_all'], **args):
+    def optimize(self, indexes=None, **args):
         """
         Optimize one ore more indices
         """
-        path = self._make_path([','.join(indexes), '_optimize'])
+        path = self._make_path([self._concat(indexes), '_optimize'])
         response = self._send_request('POST', path, querystring_args=args)
         return response
 
@@ -456,7 +469,10 @@ class ElasticSearch(object):
                 for dk, dv in date_values.items():
                     date_values[dk] = int(dv)
 
-                return datetime.datetime(date_values['year'], date_values['month'], date_values['day'], date_values['hour'], date_values['minute'], date_values['second'])
+                return datetime.datetime(
+                    date_values['year'], date_values['month'],
+                    date_values['day'], date_values['hour'],
+                    date_values['minute'], date_values['second'])
 
         try:
             # This is slightly gross but it's hard to tell otherwise what the
