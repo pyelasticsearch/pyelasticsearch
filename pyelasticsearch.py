@@ -378,31 +378,39 @@ class ElasticSearch(object):
         response = self._send_request('GET', path)
         return response
 
+    def _send_index_request(self, method, description, index, quiet=True, **kwargs):
+        """
+        Send a request to an index's path, and optionally trap errors.
+
+        :arg method: The HTTP method to use
+        :arg description: A human-readable label for the operation, like
+            "Close" or "Delete", to be substituted into error message if quiet
+            is truthy
+        :arg index: The name of the index to operate on
+        :arg quiet: Whether to trap any ElasticSearchErrors that result
+        :arg **kwargs: Kwargs to pass along to ``_send_request()``
+        """
+        try:
+            response = self._send_request(method, self._make_path([index]), **kwargs)
+        except ElasticSearchError, e:
+            if not quiet:
+                raise
+            response = {"message": "%s index '%s' errored: %s" % (description, index, e)}
+        return response
+
     def create_index(self, index, settings=None, quiet=True):
         """
         Creates an index with optional settings.
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        try:
-            response = self._send_request('PUT', self._make_path([index]), settings)
-        except ElasticSearchError, e:
-            if not quiet:
-                raise
-            response = {"message": "Create index '%s' errored: %s" % (index, e)}
-        return response
+        return self._send_index_request('PUT', 'Create', index, body=settings, quiet=quiet)
 
     def delete_index(self, index, quiet=True):
         """
         Deletes an index.
         """
-        try:
-            response = self._send_request('DELETE', self._make_path([index]))
-        except ElasticSearchError, e:
-            if not quiet:
-                raise
-            response = {"message": "Delete index '%s' errored: %s" % (index, e)}
-        return response
+        return self._send_index_request('DELETE', 'Delete', index, quiet=quiet)
 
     def flush(self, indexes=None, refresh=None):
         """
