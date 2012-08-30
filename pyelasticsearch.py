@@ -224,7 +224,7 @@ class ElasticSearch(object):
         try:
             return json.dumps(body)
         except (TypeError, json.JSONDecodeError), e:
-            raise ElasticSearchError('Invalid JSON %r' % body, e)
+            raise ElasticSearchError('Invalid JSON %r' % (body,), e)
 
     def _prep_response(self, response):
         """
@@ -233,9 +233,9 @@ class ElasticSearch(object):
         try:
             json_response = response.json
         except (TypeError, json.JSONDecodeError), e:
-            raise ElasticSearchError('Invalid JSON %r' % response, e)
+            raise ElasticSearchError('Invalid JSON %r' % (response,), e)
         if json_response is None:
-            raise ElasticSearchError('Invalid JSON %r' % response)
+            raise ElasticSearchError('Invalid JSON %r' % (response,))
         return json_response
 
     def _query_call(self, query_type, query, body=None, indexes=None,
