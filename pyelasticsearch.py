@@ -117,7 +117,7 @@ from requests.compat import json
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch']
-__version__ = '0.0.6'
+__version__ = '0.1'
 __version_info__ = tuple(__version__.split('.'))
 
 get_version = lambda: __version_info__
