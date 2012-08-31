@@ -378,7 +378,7 @@ class ElasticSearch(object):
         response = self._send_request('GET', path)
         return response
 
-    def _send_index_request(self, method, description, index, quiet=True, **kwargs):
+    def _send_index_request(self, method, description, index, more_path=None, quiet=True, **kwargs):
         """
         Send a request to an index's path, and optionally trap errors.
 
@@ -387,11 +387,15 @@ class ElasticSearch(object):
             "Close" or "Delete", to be substituted into error message if quiet
             is truthy
         :arg index: The name of the index to operate on
+        :arg more_path: Additional URL segments to append to the path
         :arg quiet: Whether to trap any ElasticSearchErrors that result
         :arg **kwargs: Kwargs to pass along to ``_send_request()``
         """
+        more_path = more_path or []
         try:
-            response = self._send_request(method, self._make_path([index]), **kwargs)
+            response = self._send_request(method,
+                                          self._make_path([index] + more_path),
+                                          **kwargs)
         except ElasticSearchError, e:
             if not quiet:
                 raise
@@ -411,6 +415,12 @@ class ElasticSearch(object):
         Deletes an index.
         """
         return self._send_index_request('DELETE', 'Delete', index, quiet=quiet)
+
+    def close_index(self, index, quiet=True):
+        """
+        Close an index.
+        """
+        return self._send_index_request('POST', 'Close', index, more_path=['_close'], quiet=quiet)
 
     def flush(self, indexes=None, refresh=None):
         """
