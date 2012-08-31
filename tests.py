@@ -63,6 +63,13 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.close_index("test-index", quiet=False)
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
+    def testOpenIndex(self):
+        """Make sure an open_index call on a closed index reports success."""
+        self.conn.create_index("test-index", quiet=False)
+        self.conn.close_index("test-index", quiet=False)
+        result = self.conn.open_index("test-index", quiet=False)
+        self.assertResultContains(result, {'acknowledged': True, 'ok': True})
+
     def testDeleteByID(self):
         self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
         self.conn.refresh(["test-index"])

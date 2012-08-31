@@ -422,6 +422,12 @@ class ElasticSearch(object):
         """
         return self._send_index_request('POST', 'Close', index, more_path=['_close'], quiet=quiet)
 
+    def open_index(self, index, quiet=True):
+        """
+        Open an index.
+        """
+        return self._send_index_request('POST', 'Open', index, more_path=['_open'], quiet=quiet)
+
     def flush(self, indexes=None, refresh=None):
         """
         Flushes one or more indices (clear memory)
