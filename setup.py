@@ -42,6 +42,7 @@ setup(
     install_requires=[
         'requests>=0.9.0',
     ],
+    tests_require=['mock'],
     test_suite='tests',
     url='http://github.com/rhec/pyelasticsearch'
 )

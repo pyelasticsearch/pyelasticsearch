@@ -173,6 +173,10 @@ class ElasticSearch(object):
         return path
 
     def _concat(self, items):
+        """
+        Return a comma-delimited concatenation of the elements of ``items``,
+        with any occurrences of "_all" omitted.
+        """
         if items is None:
             return ''
         return ','.join([item for item in items if item != '_all'])
@@ -378,31 +382,70 @@ class ElasticSearch(object):
         response = self._send_request('GET', path)
         return response
 
+    def _send_index_request(self, method, description, index, more_path=None, quiet=True, **kwargs):
+        """
+        Send a request to an index's path, and optionally trap errors.
+
+        :arg method: The HTTP method to use
+        :arg description: A human-readable label for the operation, like
+            "Close" or "Delete", to be substituted into error message if quiet
+            is truthy
+        :arg index: The name of the index to operate on
+        :arg more_path: Additional URL segments to append to the path
+        :arg quiet: Whether to trap any ElasticSearchErrors that result
+        :arg **kwargs: Kwargs to pass along to ``_send_request()``
+        """
+        more_path = more_path or []
+        try:
+            response = self._send_request(method,
+                                          self._make_path([index] + more_path),
+                                          **kwargs)
+        except ElasticSearchError, e:
+            if not quiet:
+                raise
+            response = {"message": "%s index '%s' errored: %s" % (description, index, e)}
+        return response
+
     def create_index(self, index, settings=None, quiet=True):
         """
         Creates an index with optional settings.
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        try:
-            response = self._send_request('PUT', self._make_path([index]), settings)
-        except ElasticSearchError, e:
-            if not quiet:
-                raise
-            response = {"message": "Create index '%s' errored: %s" % (index, e)}
-        return response
+        return self._send_index_request('PUT', 'Create', index, body=settings, quiet=quiet)
 
     def delete_index(self, index, quiet=True):
         """
         Deletes an index.
         """
-        try:
-            response = self._send_request('DELETE', self._make_path([index]))
-        except ElasticSearchError, e:
-            if not quiet:
-                raise
-            response = {"message": "Delete index '%s' errored: %s" % (index, e)}
-        return response
+        return self._send_index_request('DELETE', 'Delete', index, quiet=quiet)
+
+    def close_index(self, index, quiet=True):
+        """
+        Close an index.
+        """
+        return self._send_index_request('POST', 'Close', index, more_path=['_close'], quiet=quiet)
+
+    def open_index(self, index, quiet=True):
+        """
+        Open an index.
+        """
+        return self._send_index_request('POST', 'Open', index, more_path=['_open'], quiet=quiet)
+
+    def update_settings(self, indexes, settings, quiet=True):
+        """
+        :arg indexes: The indexes to update, or ['_all'] to do all of them
+        """
+        # TODO: Have a way of saying "all indexes" that doesn't involve a magic string.
+        # If we implement the "update cluster settings" API, call that
+        # update_cluster_settings().
+        return self._send_index_request(
+            'PUT',
+            'Settings update on',
+            self._concat(indexes),
+            more_path=['_settings'],
+            quiet=quiet,
+            body=settings)
 
     def flush(self, indexes=None, refresh=None):
         """
