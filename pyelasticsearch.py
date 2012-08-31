@@ -173,6 +173,10 @@ class ElasticSearch(object):
         return path
 
     def _concat(self, items):
+        """
+        Return a comma-delimited concatenation of the elements of ``items``,
+        with any occurrences of "_all" omitted.
+        """
         if items is None:
             return ''
         return ','.join([item for item in items if item != '_all'])
@@ -427,6 +431,21 @@ class ElasticSearch(object):
         Open an index.
         """
         return self._send_index_request('POST', 'Open', index, more_path=['_open'], quiet=quiet)
+
+    def update_settings(self, indexes, settings, quiet=True):
+        """
+        :arg indexes: The indexes to update, or ['_all'] to do all of them
+        """
+        # TODO: Have a way of saying "all indexes" that doesn't involve a magic string.
+        # If we implement the "update cluster settings" API, call that
+        # update_cluster_settings().
+        return self._send_index_request(
+            'PUT',
+            'Settings update on',
+            self._concat(indexes),
+            more_path=['_settings'],
+            quiet=quiet,
+            body=settings)
 
     def flush(self, indexes=None, refresh=None):
         """

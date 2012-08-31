@@ -5,6 +5,8 @@ Unit tests for pyelasticsearch.  These require an elasticsearch server running o
 import datetime
 import logging
 import unittest
+
+from mock import patch
 import requests
 from pyelasticsearch import ElasticSearch, ElasticSearchError
 
@@ -69,6 +71,16 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.close_index("test-index", quiet=False)
         result = self.conn.open_index("test-index", quiet=False)
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
+
+    def testUpdateSettings(self):
+        """Make sure ``update_settings()`` send the expected request."""
+        with patch.object(self.conn, '_send_request') as _send_request:
+            self.conn.update_settings(['test-index', 'toast-index'],
+                                      {'index': {'number_of_replicas': 2}})
+        _send_request.assert_called_once_with(
+            'PUT',
+            '/test-index,toast-index/_settings',
+            body={'index': {'number_of_replicas': 2}})
 
     def testDeleteByID(self):
         self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
