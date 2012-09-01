@@ -293,8 +293,7 @@ class ElasticSearch(object):
         else:
             request_method = 'PUT'
         path = self._make_path([index, doc_type, id])
-        response = self._send_request(request_method, path, doc, querystring_args)
-        return response
+        return self._send_request(request_method, path, doc, querystring_args)
 
     def bulk_index(self, index, doc_type, docs, id_field="id"):
         """
@@ -317,9 +316,8 @@ class ElasticSearch(object):
         path = self._make_path([index, '_bulk'])
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        response = self._send_request('POST', path, body,
-            {'op_type': 'create'}, prepare_body=False)
-        return response
+        return self._send_request(
+            'POST', path, body, {'op_type': 'create'}, prepare_body=False)
 
     def delete(self, index, doc_type, id=None):
         """
@@ -332,8 +330,7 @@ class ElasticSearch(object):
             path_parts.append(id)
 
         path = self._make_path(path_parts)
-        response = self._send_request('DELETE', path)
-        return response
+        return self._send_request('DELETE', path)
 
     def delete_by_query(self, index, doc_type, query):
         """
@@ -348,8 +345,7 @@ class ElasticSearch(object):
         Get a typed JSON document from an index based on its id.
         """
         path = self._make_path([index, doc_type, id])
-        response = self._send_request('GET', path)
-        return response
+        return self._send_request('GET', path)
 
     def search(self, query, body=None, indexes=None, doc_types=None, **query_params):
         """
@@ -372,16 +368,14 @@ class ElasticSearch(object):
         path = self._make_path([self._concat(indexes),
                                 self._concat(doc_types),
                                 "_mapping"])
-        response = self._send_request('GET', path)
-        return response
+        return self._send_request('GET', path)
 
     def put_mapping(self, doc_type, mapping, indexes=None, **query_params):
         """
         Register specific mapping definition for a specific type against one or more indices.
         """
         path = self._make_path([self._concat(indexes), doc_type, "_mapping"])
-        response = self._send_request('PUT', path, mapping, **query_params)
-        return response
+        return self._send_request('PUT', path, mapping, **query_params)
 
     def morelikethis(self, index, doc_type, id, fields, **query_params):
         """
@@ -389,8 +383,7 @@ class ElasticSearch(object):
         """
         path = self._make_path([index, doc_type, id, '_mlt'])
         query_params['fields'] = self._concat(fields)
-        response = self._send_request('GET', path, querystring_args=query_params)
-        return response
+        return self._send_request('GET', path, querystring_args=query_params)
 
     ## Index Admin API
 
@@ -399,8 +392,7 @@ class ElasticSearch(object):
         Retrieve the status of one or more indices
         """
         path = self._make_path([self._concat(indexes), '_status'])
-        response = self._send_request('GET', path)
-        return response
+        return self._send_request('GET', path)
 
     def _send_index_request(self, method, description, index, more_path=None, quiet=True, **kwargs):
         """
@@ -475,32 +467,28 @@ class ElasticSearch(object):
         args = {}
         if refresh is not None:
             args['refresh'] = refresh
-        response = self._send_request('POST', path, querystring_args=args)
-        return response
+        return self._send_request('POST', path, querystring_args=args)
 
     def refresh(self, indexes=None):
         """
         Refresh one or more indices
         """
         path = self._make_path([self._concat(indexes), '_refresh'])
-        response = self._send_request('POST', path)
-        return response
+        return self._send_request('POST', path)
 
     def gateway_snapshot(self, indexes=None):
         """
         Gateway snapshot one or more indices
         """
         path = self._make_path([self._concat(indexes), '_gateway', 'snapshot'])
-        response = self._send_request('POST', path)
-        return response
+        return self._send_request('POST', path)
 
     def optimize(self, indexes=None, **args):
         """
         Optimize one ore more indices
         """
         path = self._make_path([self._concat(indexes), '_optimize'])
-        response = self._send_request('POST', path, querystring_args=args)
-        return response
+        return self._send_request('POST', path, querystring_args=args)
 
     def health(self, indexes=None, **kwargs):
         """
@@ -510,8 +498,7 @@ class ElasticSearch(object):
         :arg kwargs: Passed through to the Cluster Health API verbatim
         """
         path = self._make_path(['_cluster', 'health', self._concat(indexes)])
-        response = self._send_request('GET', path, querystring_args=kwargs)
-        return response
+        return self._send_request('GET', path, querystring_args=kwargs)
 
     @staticmethod
     def from_python(value):
