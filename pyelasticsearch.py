@@ -106,17 +106,18 @@ Test adding with automatic id generation
 
 
 """
-import datetime
+from datetime import datetime
 import logging
 import re
 from urllib import urlencode
 
 import requests
+from requests import Timeout, ConnectionError
 # import either simplejson or the json module in Python >= 2.6
 from requests.compat import json
 
 __author__ = 'Robert Eanes'
-__all__ = ['ElasticSearch']
+__all__ = ['ElasticSearch', 'ElasticSearchError', 'ElasticHttpError', 'Timeout']
 __version__ = '0.1'
 __version_info__ = tuple(__version__.split('.'))
 
@@ -128,6 +129,22 @@ DATETIME_REGEX = re.compile(r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T(
 
 class ElasticSearchError(Exception):
     pass
+
+
+class ElasticHttpError(ElasticSearchError):
+    """Exception raised when ES returns a non-OK (>=400) HTTP status code"""
+
+    @property
+    def status_code(self):
+        return self.args[0]
+
+    @property
+    def error(self):
+        return self.args[1]
+
+    def __unicode__(self):
+        return 'Non-OK status code returned (%d) containing %r.' % (
+            self.status_code, self.error)
 
 
 class NullHandler(logging.Handler):
@@ -176,9 +193,13 @@ class ElasticSearch(object):
         """
         Return a comma-delimited concatenation of the elements of ``items``,
         with any occurrences of "_all" omitted.
+
+        If ``items`` is a string, promote it to a 1-item list.
         """
         if items is None:
             return ''
+        if isinstance(items, basestring):
+            items = [items]
         return ','.join([item for item in items if item != '_all'])
 
     def _build_url(self, path):
@@ -207,16 +228,15 @@ class ElasticSearch(object):
                        (method, url, path, kwargs.get('data', {})))
         try:
             resp = req_method(url, **kwargs)
-        except requests.ConnectionError, e:
+        except ConnectionError, e:
             raise ElasticSearchError("Connecting to %s failed: %s." % (url, e))
 
         self.log.debug("response status: %s" % resp.status_code)
         prepped_response = self._prep_response(resp)
 
         if resp.status_code >= 400:
-            raise ElasticSearchError(
-                "Non-OK status code returned (%d) containing %r." %
-                (resp.status_code, prepped_response.get('error', prepped_response)))
+            raise ElasticHttpError(
+                resp.status_code, prepped_response.get('error', prepped_response))
 
         self.log.debug("got response %s" % prepped_response)
         return prepped_response
@@ -226,8 +246,8 @@ class ElasticSearch(object):
         Encodes body as json.
         """
         try:
-            return json.dumps(body)
-        except (TypeError, json.JSONDecodeError), e:
+            return json.dumps(body, cls=DateSavvyJsonEncoder)
+        except (TypeError, json.JSONDecodeError, ValueError), e:
             raise ElasticSearchError('Invalid JSON %r' % body, e)
 
     def _prep_response(self, response):
@@ -482,9 +502,21 @@ class ElasticSearch(object):
         response = self._send_request('POST', path, querystring_args=args)
         return response
 
-    def from_python(self, value):
+    def health(self, indexes=None, **kwargs):
         """
-        Converts Python values to a form suitable for ElasticSearch's JSON.
+        Report on the health of the cluster or certain indices.
+
+        :arg indexes: The index or iterable of indexes to examine
+        :arg kwargs: Passed through to the Cluster Health API verbatim
+        """
+        path = self._make_path(['_cluster', 'health', self._concat(indexes)])
+        response = self._send_request('GET', path, querystring_args=kwargs)
+        return response
+
+    @staticmethod
+    def from_python(value):
+        """
+        Convert Python values to a form suitable for ElasticSearch's JSON.
         """
         if hasattr(value, 'strftime'):
             if hasattr(value, 'hour'):
@@ -492,11 +524,12 @@ class ElasticSearch(object):
             else:
                 value = "%sT00:00:00" % value.isoformat()
         elif isinstance(value, str):
-            value = unicode(value, errors='replace')
+            value = unicode(value, errors='replace')  # TODO: Be stricter.
 
         return value
 
-    def to_python(self, value):
+    @staticmethod
+    def to_python(value):
         """
         Converts values from ElasticSearch to native Python values.
         """
@@ -512,7 +545,7 @@ class ElasticSearch(object):
                 for dk, dv in date_values.items():
                     date_values[dk] = int(dv)
 
-                return datetime.datetime(
+                return datetime(
                     date_values['year'], date_values['month'],
                     date_values['day'], date_values['hour'],
                     date_values['minute'], date_values['second'])
@@ -531,6 +564,12 @@ class ElasticSearch(object):
             pass
 
         return value
+
+
+class DateSavvyJsonEncoder(json.JSONEncoder):
+    def default(self, value):
+        """Convert more Python data types to ES-understandable JSON."""
+        return ElasticSearch.from_python(value)
 
 
 if __name__ == "__main__":
