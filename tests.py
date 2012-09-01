@@ -24,7 +24,7 @@ class ElasticSearchTestCase(unittest.TestCase):
 
     def tearDown(self):
         try:
-            self.conn.delete_index("test-index")
+            self.conn.delete_index('test-index')
         except:
             pass
 
@@ -46,30 +46,30 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(log.level, logging.DEBUG)
 
     def testIndexingWithID(self):
-        result = self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
+        result = self.conn.index({'name': 'Joe Tester'}, 'test-index', 'test-type', 1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'} )
 
     def testIndexingWithoutID(self):
-        result = self.conn.index({"name":"Joe Tester"}, "test-index", "test-type")
+        result = self.conn.index({'name': 'Joe Tester'}, 'test-index', 'test-type')
         self.assertResultContains(result, {'_type': 'test-type', 'ok': True, '_index': 'test-index'} )
         # should have an id of some value assigned.
         self.assertTrue(result.has_key('_id') and result['_id'])
 
     def testExplicitIndexCreate(self):
-        result = self.conn.create_index("test-index")
+        result = self.conn.create_index('test-index')
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testCloseIndex(self):
         """Make sure a close_index call on an open index reports success."""
-        self.conn.create_index("test-index", quiet=False)
-        result = self.conn.close_index("test-index", quiet=False)
+        self.conn.create_index('test-index', quiet=False)
+        result = self.conn.close_index('test-index', quiet=False)
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testOpenIndex(self):
         """Make sure an open_index call on a closed index reports success."""
-        self.conn.create_index("test-index", quiet=False)
-        self.conn.close_index("test-index", quiet=False)
-        result = self.conn.open_index("test-index", quiet=False)
+        self.conn.create_index('test-index', quiet=False)
+        self.conn.close_index('test-index', quiet=False)
+        result = self.conn.open_index('test-index', quiet=False)
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testUpdateSettings(self):
@@ -99,82 +99,82 @@ class IndexingTestCase(ElasticSearchTestCase):
             'GET', '/_cluster/health', querystring_args={})
 
     def testDeleteByID(self):
-        self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
-        self.conn.refresh(["test-index"])
-        result = self.conn.delete("test-index", "test-type", 1)
+        self.conn.index({'name': 'Joe Tester'}, 'test-index', 'test-type', 1)
+        self.conn.refresh(['test-index'])
+        result = self.conn.delete('test-index', 'test-type', 1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'})
 
     def testDeleteByDocType(self):
-        self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
+        self.conn.index({'name': 'Joe Tester'}, 'test-index', 'test-type', 1)
         self.conn.refresh(["test-index"])
         result = self.conn.delete("test-index", "test-type")
         self.assertResultContains(result, {'ok': True})
 
     def testDeleteByQuery(self):
-        self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
-        self.conn.index({"name":"Bill Baloney"}, "test-index", "test-type", 2)
-        self.conn.index({"name":"Horace Humdinger"}, "test-index", "test-type", 3)
-        self.conn.refresh(["test-index"])
+        self.conn.index({'name': 'Joe Tester'}, 'test-index', 'test-type', 1)
+        self.conn.index({'name': 'Bill Baloney'}, 'test-index', 'test-type', 2)
+        self.conn.index({'name': 'Horace Humdinger'}, 'test-index', 'test-type', 3)
+        self.conn.refresh(['test-index'])
 
-        self.conn.refresh(["test-index"])
-        result = self.conn.count("*:*", indexes=['test-index'])
+        self.conn.refresh(['test-index'])
+        result = self.conn.count('*:*', indexes=['test-index'])
         self.assertResultContains(result, {'count': 3})
 
-        result = self.conn.delete_by_query("test-index", "test-type", {"query_string": {"query": "name:joe OR name:bill"}})
+        result = self.conn.delete_by_query('test-index', 'test-type', {'query_string': {'query': 'name:joe OR name:bill'}})
         self.assertResultContains(result, {'ok': True})
 
-        self.conn.refresh(["test-index"])
-        result = self.conn.count("*:*", indexes=['test-index'])
+        self.conn.refresh(['test-index'])
+        result = self.conn.count('*:*', indexes=['test-index'])
         self.assertResultContains(result, {'count': 1})
 
     def testDeleteIndex(self):
-        self.conn.create_index("another-index")
-        result = self.conn.delete_index("another-index")
+        self.conn.create_index('another-index')
+        result = self.conn.delete_index('another-index')
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testCannotCreateExistingIndex(self):
-        self.conn.create_index("another-index")
-        result = self.conn.create_index("another-index")
-        self.conn.delete_index("another-index")
+        self.conn.create_index('another-index')
+        result = self.conn.create_index('another-index')
+        self.conn.delete_index('another-index')
         self.assertTrue('IndexAlreadyExistsException[[another-index] Already exists]' in result['message'])
-        self.assertRaises(ElasticSearchError, self.conn.delete_index, "another-index", quiet=False)
+        self.assertRaises(ElasticSearchError, self.conn.delete_index, 'another-index', quiet=False)
 
     def testPutMapping(self):
-        result = self.conn.create_index("test-index")
-        result = self.conn.put_mapping("test-type", {"test-type" : {"properties" : {"name" : {"type" : "string", "store" : "yes"}}}}, indexes=["test-index"])
+        result = self.conn.create_index('test-index')
+        result = self.conn.put_mapping('test-type', {'test-type' : {'properties' : {'name' : {'type' : 'string', 'store' : 'yes'}}}}, indexes=['test-index'])
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testGettMapping(self):
-        result = self.conn.create_index("test-index")
-        mapping = {"test-type" : {"properties" : {"name" : {"type" : "string", "store" : "yes"}}}}
-        self.conn.put_mapping("test-type", mapping, indexes=["test-index"])
+        result = self.conn.create_index('test-index')
+        mapping = {'test-type' : {'properties' : {'name' : {'type' : 'string', 'store' : 'yes'}}}}
+        self.conn.put_mapping('test-type', mapping, indexes=['test-index'])
 
-        result = self.conn.get_mapping(indexes=["test-index"], doc_types=["test-type"])
+        result = self.conn.get_mapping(indexes=['test-index'], doc_types=['test-type'])
         self.assertEqual(result, mapping)
 
     def testIndexStatus(self):
-        self.conn.create_index("another-index")
-        result = self.conn.status(["another-index"])
-        self.conn.delete_index("another-index")
+        self.conn.create_index('another-index')
+        result = self.conn.status(['another-index'])
+        self.conn.delete_index('another-index')
         self.assertTrue(result.has_key('indices'))
         self.assertResultContains(result, {'ok': True})
 
     def testIndexFlush(self):
-        self.conn.create_index("another-index")
-        result = self.conn.flush(["another-index"])
-        self.conn.delete_index("another-index")
+        self.conn.create_index('another-index')
+        result = self.conn.flush(['another-index'])
+        self.conn.delete_index('another-index')
         self.assertResultContains(result, {'ok': True})
 
     def testIndexRefresh(self):
-        self.conn.create_index("another-index")
-        result = self.conn.refresh(["another-index"])
-        self.conn.delete_index("another-index")
+        self.conn.create_index('another-index')
+        result = self.conn.refresh(['another-index'])
+        self.conn.delete_index('another-index')
         self.assertResultContains(result, {'ok': True})
 
     def testIndexOptimize(self):
-        self.conn.create_index("another-index")
-        result = self.conn.optimize(["another-index"])
-        self.conn.delete_index("another-index")
+        self.conn.create_index('another-index')
+        result = self.conn.optimize(['another-index'])
+        self.conn.delete_index('another-index')
         self.assertResultContains(result, {'ok': True})
 
     def testFromPython(self):
@@ -204,23 +204,23 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
 
     def testBulkIndex(self):
-        self.assertRaises(ElasticSearchError, self.conn.count, "*:*", indexes=['test-index'])
+        self.assertRaises(ElasticSearchError, self.conn.count, '*:*', indexes=['test-index'])
         docs = [
-            {"name":"Joe Tester"},
-            {"name":"Bill Baloney", "id": 303},
+            {'name': 'Joe Tester'},
+            {'name': 'Bill Baloney', 'id': 303},
         ]
-        result = self.conn.bulk_index("test-index", "test-type", docs)
+        result = self.conn.bulk_index('test-index', 'test-type', docs)
         self.assertEqual(len(result['items']), 2)
         self.assertEqual(result['items'][0]['create']['ok'], True)
         self.assertEqual(result['items'][1]['index']['ok'], True)
         self.assertEqual(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
-        self.assertEqual(self.conn.count("*:*", indexes=['test-index'])['count'], 2)
+        self.assertEqual(self.conn.count('*:*', indexes=['test-index'])['count'], 2)
 
     def testErrorHandling(self):
         # Wrong port.
         conn = ElasticSearch('http://example.com:1009200/')
-        self.assertRaises(ElasticSearchError, conn.count, "*:*")
+        self.assertRaises(ElasticSearchError, conn.count, '*:*')
 
         # Test invalid JSON.
         self.assertRaises(ElasticSearchError, conn._prep_request, unittest.TestCase)
@@ -232,36 +232,36 @@ class IndexingTestCase(ElasticSearchTestCase):
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):
         super(SearchTestCase, self).setUp()
-        self.conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
-        self.conn.index({"name":"Bill Baloney"}, "test-index", "test-type", 2)
-        self.conn.refresh(["test-index"])
+        self.conn.index({'name': 'Joe Tester'}, 'test-index', 'test-type', 1)
+        self.conn.index({'name': 'Bill Baloney'}, 'test-index', 'test-type', 2)
+        self.conn.refresh(['test-index'])
 
     def testGetByID(self):
-        result = self.conn.get("test-index", "test-type", 1)
+        result = self.conn.get('test-index', 'test-type', 1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'})
 
     def testGetCountBySearch(self):
-        result = self.conn.count("name:joe")
+        result = self.conn.count('name:joe')
         self.assertResultContains(result, {'count': 1})
 
     def testSearchByField(self):
-        result = self.conn.search("name:joe")
+        result = self.conn.search('name:joe')
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
     def testSearchByDSL(self):
         import simplejson as json
-        self.conn.index({"name":"AgeJoe Tester", "age":25}, "test-index", "test-type", 1)
-        self.conn.index({"name":"AgeBill Baloney", "age":35}, "test-index", "test-type", 2)
-        self.conn.refresh(["test-index"])
+        self.conn.index({'name': 'AgeJoe Tester', 'age': 25}, 'test-index', 'test-type', 1)
+        self.conn.index({'name': 'AgeBill Baloney', 'age': 35}, 'test-index', 'test-type', 2)
+        self.conn.refresh(['test-index'])
 
-        query = {   "query": { 
-                        "query_string": { "query": "name:age" }, 
-                        "filtered": {
-                            "filter": {
-                                "range": {
-                                    "age": {
-                                        "from": 27,
-                                        "to": 37,
+        query = {   'query': { 
+                        'query_string': { 'query': 'name:age' }, 
+                        'filtered': {
+                            'filter': {
+                                'range': {
+                                    'age': {
+                                        'from': 27,
+                                        'to': 37,
                                     },
                                 },
                             },
@@ -269,15 +269,15 @@ class SearchTestCase(ElasticSearchTestCase):
                     },
                 }
 
-        result = self.conn.search("", body=json.dumps(query), indexes=['test-index'], doc_types=['test-type'])
+        result = self.conn.search('', body=json.dumps(query), indexes=['test-index'], doc_types=['test-type'])
         self.assertTrue(result.get('hits').get('hits').__len__() > 0, str(result))
 
     def testMLT(self):
-        self.conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
-        self.conn.refresh(["test-index"])
-        result = self.conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
+        self.conn.index({'name': 'Joe Test'}, 'test-index', 'test-type', 3)
+        self.conn.refresh(['test-index'])
+        result = self.conn.morelikethis('test-index', 'test-type', 1, ['name'], min_term_freq=1, min_doc_freq=1)
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301,'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

@@ -205,9 +205,9 @@ class ElasticSearch(object):
     def _build_url(self, path):
         return self.url + path
 
-    def _send_request(self, method, path, body="", querystring_args=None, prepare_body=True):
+    def _send_request(self, method, path, body='', querystring_args=None, prepare_body=True):
         if querystring_args:
-            path = "?".join([path, urlencode(querystring_args)])
+            path = '?'.join([path, urlencode(querystring_args)])
 
         kwargs = {
             'timeout': self.timeout,
@@ -224,21 +224,21 @@ class ElasticSearch(object):
         if req_method is None:
             raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
 
-        self.log.debug("making %s request to path: %s %s with body: %s" %
+        self.log.debug('making %s request to path: %s %s with body: %s' %
                        (method, url, path, kwargs.get('data', {})))
         try:
             resp = req_method(url, **kwargs)
         except ConnectionError, e:
-            raise ElasticSearchError("Connecting to %s failed: %s." % (url, e))
+            raise ElasticSearchError('Connecting to %s failed: %s.' % (url, e))
 
-        self.log.debug("response status: %s" % resp.status_code)
+        self.log.debug('response status: %s' % resp.status_code)
         prepped_response = self._prep_response(resp)
 
         if resp.status_code >= 400:
             raise ElasticHttpError(
                 resp.status_code, prepped_response.get('error', prepped_response))
 
-        self.log.debug("got response %s" % prepped_response)
+        self.log.debug('got response %s' % prepped_response)
         return prepped_response
 
     def _prep_request(self, body):
@@ -295,17 +295,17 @@ class ElasticSearch(object):
         path = self._make_path([index, doc_type, id])
         return self._send_request(request_method, path, doc, querystring_args)
 
-    def bulk_index(self, index, doc_type, docs, id_field="id"):
+    def bulk_index(self, index, doc_type, docs, id_field='id'):
         """
         Indexes a list of documents as efficiently as possible.
         """
         body_bits = []
 
         if not len(docs):
-            raise ElasticSearchError("No documents provided for bulk indexing!")
+            raise ElasticSearchError('No documents provided for bulk indexing!')
 
         for doc in docs:
-            action = {"index": {"_index": index, "_type": doc_type}}
+            action = {'index': {'_index': index, '_type': doc_type}}
 
             if doc.get(id_field):
                 action['index']['_id'] = doc[id_field]
@@ -353,13 +353,13 @@ class ElasticSearch(object):
         query must be a dictionary that will convert to Query DSL
         TODO: better api to reflect that the query can be either 'query' or 'body' argument.
         """
-        return self._query_call("_search", query, body, indexes, doc_types, **query_params)
+        return self._query_call('_search', query, body, indexes, doc_types, **query_params)
 
     def count(self, query, body=None, indexes=None, doc_types=None, **query_params):
         """
         Execute a query against one or more indices and get hits count.
         """
-        return self._query_call("_count", query, body, indexes, doc_types, **query_params)
+        return self._query_call('_count', query, body, indexes, doc_types, **query_params)
 
     def get_mapping(self, indexes=None, doc_types=None):
         """
@@ -367,14 +367,14 @@ class ElasticSearch(object):
         """
         path = self._make_path([self._concat(indexes),
                                 self._concat(doc_types),
-                                "_mapping"])
+                                '_mapping'])
         return self._send_request('GET', path)
 
     def put_mapping(self, doc_type, mapping, indexes=None, **query_params):
         """
         Register specific mapping definition for a specific type against one or more indices.
         """
-        path = self._make_path([self._concat(indexes), doc_type, "_mapping"])
+        path = self._make_path([self._concat(indexes), doc_type, '_mapping'])
         return self._send_request('PUT', path, mapping, **query_params)
 
     def morelikethis(self, index, doc_type, id, fields, **query_params):
@@ -415,7 +415,7 @@ class ElasticSearch(object):
         except ElasticSearchError, e:
             if not quiet:
                 raise
-            response = {"message": "%s index '%s' errored: %s" % (description, index, e)}
+            response = {'message': "%s index '%s' errored: %s" % (description, index, e)}
         return response
 
     def create_index(self, index, settings=None, quiet=True):
@@ -509,7 +509,7 @@ class ElasticSearch(object):
             if hasattr(value, 'hour'):
                 value = value.isoformat()
             else:
-                value = "%sT00:00:00" % value.isoformat()
+                value = '%sT00:00:00' % value.isoformat()
         elif isinstance(value, str):
             value = unicode(value, errors='replace')  # TODO: Be stricter.
 
@@ -559,6 +559,6 @@ class DateSavvyJsonEncoder(json.JSONEncoder):
         return ElasticSearch.from_python(value)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import doctest
     doctest.testmod()
