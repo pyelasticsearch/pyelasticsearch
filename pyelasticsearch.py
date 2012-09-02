@@ -223,8 +223,8 @@ class ElasticSearch(object):
             kwargs['data'] = body
 
         req_method = getattr(self.session, method.lower())
-        self.log.debug('making %s request to path: %s %s with body: %s' %
-                       (method, url, path, kwargs.get('data', {})))
+        self.log.debug('making %s request to path: %s %s with body: %s',
+                       method, url, path, kwargs.get('data', {}))
 
         for attempt in xrange(self.max_retries + 1):
             try:
@@ -242,13 +242,13 @@ class ElasticSearch(object):
         if was_dead:
             self.servers.mark_live(server_url)
 
-        self.log.debug('response status: %s' % resp.status_code)
+        self.log.debug('response status: %s', resp.status_code)
         prepped_response = self._prep_response(resp)
 
         if resp.status_code >= 400:
             raise ElasticHttpError(resp.status_code, prepped_response.get('error', prepped_response))
 
-        self.log.debug('got response %s' % prepped_response)
+        self.log.debug('got response %s', prepped_response)
         return prepped_response
 
     def _prep_request(self, body):
