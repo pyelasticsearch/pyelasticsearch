@@ -227,7 +227,9 @@ class ElasticSearch(object):
         self.log.debug('making %s request to path: %s %s with body: %s' %
                        (method, url, path, kwargs.get('data', {})))
         try:
-            resp = req_method(url, **kwargs)
+            # prefetch=True so the connection can be quickly returned to the
+            # pool. This is the default in requests >=0.3.16.
+            resp = req_method(url, prefetch=True, **kwargs)
         except ConnectionError, e:
             raise ElasticSearchError('Connecting to %s failed: %s.' % (url, e))
 
