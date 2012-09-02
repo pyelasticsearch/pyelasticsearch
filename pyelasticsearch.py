@@ -25,7 +25,7 @@ Add a few documents
 
 Get one
 
->>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
+>>> conn.refresh("test-index") # doctest: +ELLIPSIS
 {'ok': True, '_shards': {...}}
 >>> conn.get("test-index", "test-type", 1)
 {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}
@@ -39,16 +39,8 @@ Search
 >>> conn.search("name:joe")
 {'hits': {'hits': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 
-Terms
-
->>> conn.terms(['name'])
-{'docs': {'max_doc': 2, 'num_docs': 2, 'deleted_docs': 0}, 'fields': {'name': {'terms': [{'term': 'baloney', 'doc_freq': 1}, {'term': 'bill', 'doc_freq': 1}, {'term': 'joe', 'doc_freq': 1}, {'term': 'tester', 'doc_freq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
->>> conn.terms(['name'], indexes=['test-index'])
-{'docs': {'max_doc': 2, 'num_docs': 2, 'deleted_docs': 0}, 'fields': {'name': {'terms': [{'term': 'baloney', 'doc_freq': 1}, {'term': 'bill', 'doc_freq': 1}, {'term': 'joe', 'doc_freq': 1}, {'term': 'tester', 'doc_freq': 1}]}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
->>> conn.terms(['name'], min_freq=2)
-{'docs': {'max_doc': 2, 'num_docs': 2, 'deleted_docs': 0}, 'fields': {'name': {'terms': []}}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
-
 More Like This
+
 >>> conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
 >>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
