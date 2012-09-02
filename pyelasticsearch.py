@@ -154,10 +154,12 @@ class ElasticSearch(object):
     """
     ElasticSearch connection object.
     """
-    def __init__(self, urls, timeout=60, revival_delay=300):
+    def __init__(self, urls, timeout=60, max_retries=0, revival_delay=300):
         """
         :arg timeout: Number of seconds to wait for each request before raising
             Timeout
+        :arg max_retries: How many other servers to try, in series, after a
+            request times out or a connection fails
         :arg revival_delay: Number of seconds for which to avoid a server after
             it times out or is uncontactable
         """
@@ -167,6 +169,7 @@ class ElasticSearch(object):
         self.servers = DowntimePronePool(urls, revival_delay)
 
         self.timeout = timeout
+        self.max_retries = max_retries
         self.log = self.setup_logging()
         self.session = requests.session()
 
@@ -222,13 +225,19 @@ class ElasticSearch(object):
         req_method = getattr(self.session, method.lower())
         self.log.debug('making %s request to path: %s %s with body: %s' %
                        (method, url, path, kwargs.get('data', {})))
-        try:
-            # prefetch=True so the connection can be quickly returned to the
-            # pool. This is the default in requests >=0.3.16.
-            resp = req_method(url, prefetch=True, timeout=self.timeout, **kwargs)
-        except (ConnectionError, Timeout):
-            self.servers.mark_dead(server_url)
-            raise
+
+        for attempt in xrange(self.max_retries + 1):
+            try:
+                # prefetch=True so the connection can be quickly returned to the
+                # pool. This is the default in requests >=0.3.16.
+                resp = req_method(url, prefetch=True, timeout=self.timeout, **kwargs)
+            except (ConnectionError, Timeout):
+                self.servers.mark_dead(server_url)
+                self.log.info('%s marked as dead for awhile.', server_url)
+                if attempt >= self.max_retries:
+                    raise
+            else:
+                break
 
         if was_dead:
             self.servers.mark_live(server_url)
@@ -602,15 +611,16 @@ class DowntimePronePool(object):
         Guarantee that this element won't be returned again until a period of
         time has passed, unless all elements are dead.
 
-        If the given element is already on the dead list, do nothing. We wouldn't
-        want to push its revival time farther away.
+        If the given element is already on the dead list, do nothing. We
+        wouldn't want to push its revival time farther away.
         """
         with self._locking():
             try:
                 self.live.remove(element)
             except ValueError:
-                # Another thread has marked this element dead since this one got
-                # ahold of it, or we handed them a dead element to begin with.
+                # Another thread has marked this element dead since this one
+                # got ahold of it, or we handed them a dead element to begin
+                # with.
                 pass
             else:
                 self.dead.append((time() + self.revival_delay, element))

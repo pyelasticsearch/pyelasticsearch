@@ -70,7 +70,8 @@ An ElasticSearch object can take a list of node URLs on construction. This lets
 us balance load and maintain availability when nodes go down: pyelasticsearch
 will randomly choose a server URL for each request. If a node fails to respond
 before a timeout period elapses, it is assumed down and not tried again for
-awhile.
+awhile. Meanwhile, pyelasticsearch will retry the request on a different node
+if ``max_retries`` was set to something greater than zero at construction
 
 Why Not pyes?
 =============
