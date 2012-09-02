@@ -23,7 +23,7 @@ Example::
     conn.index({"name":"Freddy Tester", "age": 29, "title": "Office Assistant"}, "contacts", "person", 3)
 
     # Refresh the index to pick up the latest documents.
-    conn.refresh(["contacts"])
+    conn.refresh("contacts")
 
     # Get just Jessica's document.
     jessica = conn.get("contacts", "person", 2)
@@ -55,6 +55,32 @@ Example::
 For more examples, please check out the doctests & ``tests.py``.
 
 
+Connection Pooling
+==================
+
+The ElasticSearch object is thread-safe. To take best advantage of connection
+pooling, create one, and share it among all threads. At most, the object will
+hold a number of connections to each node equal to the number of threads.
+
+
+Load-balancing and Failover
+===========================
+
+An ElasticSearch object can take a list of node URLs on construction. This lets
+us balance load and maintain availability when nodes go down: pyelasticsearch
+will randomly choose a server URL for each request. If a node fails to respond
+before a timeout period elapses, it is assumed down and not tried again for
+awhile.
+
+Why Not pyes?
+=============
+* pyes puts pointless abstractions in front of mappings. Dicts are fine, and
+  its API just gives you one more thing you have to learn.
+* pyes's dead-server handling just throws up its hands if all of the servers
+  are marked dead. pyelasticsearch will make an effort to try a dead one if no
+  live ones remain, and, if it responds, it will mark it live.
+
+
 License
 =======
 
@@ -67,4 +93,3 @@ Credits
 Used `pysolr`_ as a jumping off point - thanks guys.
 
 .. _`pysolr`: http://github.com/jkocherhans/pysolr
-

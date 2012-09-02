@@ -8,7 +8,7 @@ import unittest
 
 from mock import patch
 import requests
-from pyelasticsearch import ElasticSearch, ElasticSearchError
+from pyelasticsearch import ElasticSearch, ElasticSearchError, ConnectionError
 
 
 class VerboseElasticSearch(ElasticSearch):
@@ -220,7 +220,7 @@ class IndexingTestCase(ElasticSearchTestCase):
     def testErrorHandling(self):
         # Wrong port.
         conn = ElasticSearch('http://example.com:1009200/')
-        self.assertRaises(ElasticSearchError, conn.count, '*:*')
+        self.assertRaises(ConnectionError, conn.count, '*:*')
 
         # Test invalid JSON.
         self.assertRaises(ElasticSearchError, conn._prep_request, unittest.TestCase)

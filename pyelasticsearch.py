@@ -98,9 +98,14 @@ Test adding with automatic id generation
 
 
 """
+from collections import deque
 from datetime import datetime
+from contextlib import contextmanager
 import logging
+import random
 import re
+from threading import Lock
+from time import time
 from urllib import urlencode
 
 import requests
@@ -109,7 +114,8 @@ from requests import Timeout, ConnectionError
 from requests.compat import json
 
 __author__ = 'Robert Eanes'
-__all__ = ['ElasticSearch', 'ElasticSearchError', 'ElasticHttpError', 'Timeout']
+__all__ = ['ElasticSearch', 'ElasticSearchError', 'ElasticHttpError',
+           'Timeout', 'ConnectionError']
 __version__ = '0.1'
 __version_info__ = tuple(__version__.split('.'))
 
@@ -148,15 +154,21 @@ class ElasticSearch(object):
     """
     ElasticSearch connection object.
     """
-    def __init__(self, url, timeout=60):
-        self.url = url
+    def __init__(self, urls, timeout=60, revival_delay=300):
+        """
+        :arg timeout: Number of seconds to wait for each request before raising
+            Timeout
+        :arg revival_delay: Number of seconds for which to avoid a server after
+            it times out or is uncontactable
+        """
+        if isinstance(urls, basestring):
+            urls = [urls]
+        urls = [u[:-1] if u.endswith('/') else u for u in urls]
+        self.servers = DowntimePronePool(urls, revival_delay)
+
         self.timeout = timeout
-
-        if self.url.endswith('/'):
-            self.url = self.url[:-1]
-
         self.log = self.setup_logging()
-        self.client = requests.session()
+        self.session = requests.session()
 
     def setup_logging(self):
         """
@@ -194,43 +206,38 @@ class ElasticSearch(object):
             items = [items]
         return ','.join([item for item in items if item != '_all'])
 
-    def _build_url(self, path):
-        return self.url + path
-
     def _send_request(self, method, path, body='', querystring_args=None, prepare_body=True):
         if querystring_args:
             path = '?'.join([path, urlencode(querystring_args)])
 
-        kwargs = {
-            'timeout': self.timeout,
-        }
-        url = self._build_url(path)
+        kwargs = {}
+        server_url, was_dead = self.servers.get()
+        url =  server_url + path
 
         if body:
             if prepare_body:
                 body = self._prep_request(body)
-
             kwargs['data'] = body
 
-        req_method = getattr(self.client, method.lower(), None)
-        if req_method is None:
-            raise ElasticSearchError("No such HTTP Method '%s'!" % method.lower())
-
+        req_method = getattr(self.session, method.lower())
         self.log.debug('making %s request to path: %s %s with body: %s' %
                        (method, url, path, kwargs.get('data', {})))
         try:
             # prefetch=True so the connection can be quickly returned to the
             # pool. This is the default in requests >=0.3.16.
-            resp = req_method(url, prefetch=True, **kwargs)
-        except ConnectionError, e:
-            raise ElasticSearchError('Connecting to %s failed: %s.' % (url, e))
+            resp = req_method(url, prefetch=True, timeout=self.timeout, **kwargs)
+        except (ConnectionError, Timeout):
+            self.servers.mark_dead(server_url)
+            raise
+
+        if was_dead:
+            self.servers.mark_live(server_url)
 
         self.log.debug('response status: %s' % resp.status_code)
         prepped_response = self._prep_response(resp)
 
         if resp.status_code >= 400:
-            raise ElasticHttpError(
-                resp.status_code, prepped_response.get('error', prepped_response))
+            raise ElasticHttpError(resp.status_code, prepped_response.get('error', prepped_response))
 
         self.log.debug('got response %s' % prepped_response)
         return prepped_response
@@ -551,6 +558,78 @@ class DateSavvyJsonEncoder(json.JSONEncoder):
     def default(self, value):
         """Convert more Python data types to ES-understandable JSON."""
         return ElasticSearch.from_python(value)
+
+
+class DowntimePronePool(object):
+    """
+    A thread-safe bucket of things that may have downtime.
+
+    Tries to return a "live" element from the bucket on request, retiring
+    "dead" elements for a time to give them a chance to recover before offering
+    them again.
+    """
+    def __init__(self, elements, revival_delay):
+        self.live = elements
+        self.dead = deque()  # [(time to reinstate, url), ...], oldest first
+        self.revival_delay = revival_delay
+        self.lock = Lock()  # a lock around live and dead
+
+    def get(self):
+        """
+        Return a random element and a bool indicating whether it was from the
+        dead list.
+
+        We prefer to return live servers. However, if all elements are marked
+        dead, return one of those in case it's come back to life earlier than
+        expected. This fallback is O(n) rather than O(1), but it's all dwarfed
+        by IO anyway.
+
+        First, move any elements that have aged out off the dead list.
+        """
+        with self._locking():
+            # Revive any elements whose times have come:
+            now = time()
+            while self.dead and self.dead[0][0] >= now:
+                self.live.append(self.dead.popleft()[1])
+
+            try:
+                return random.choice(self.live), False
+            except IndexError:  # live is empty.
+                return random.choice(self.dead)[1], True  # O(n) but rare
+
+    def mark_dead(self, element):
+        """
+        Guarantee that this element won't be returned again until a period of
+        time has passed, unless all elements are dead.
+
+        If the given element is already on the dead list, do nothing. We wouldn't
+        want to push its revival time farther away.
+        """
+        with self._locking():
+            try:
+                self.live.remove(element)
+            except ValueError:
+                # Another thread has marked this element dead since this one got
+                # ahold of it, or we handed them a dead element to begin with.
+                pass
+            else:
+                self.dead.append((time() + self.revival_delay, element))
+
+    def mark_live(self, element):
+        """Move an element from the dead list to the live one if it is dead."""
+        with self._locking():
+            for i, (revival_time, cur_element) in enumerate(self.dead):
+                if cur_element == element:
+                    self.live.append(element)
+                    del self.dead[i]
+                    break
+            # If it isn't found, it's already been revived, and that's okay.
+
+    @contextmanager
+    def _locking(self):
+        self.lock.acquire()
+        yield
+        self.lock.release()
 
 
 if __name__ == '__main__':
