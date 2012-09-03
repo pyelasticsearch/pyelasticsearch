@@ -45,7 +45,7 @@ More Like This
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
 >>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
 {'ok': True, '_shards': {...}}
->>> conn.morelikethis("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
+>>> conn.more_like_this("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
 {'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
 >>> conn.delete("test-index", "test-type", 3)
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
@@ -95,7 +95,6 @@ Get status
 Test adding with automatic id generation
 >>> conn.index({"name":"Joe Tester"}, "test-index", "test-type") # doctest: +ELLIPSIS
 {'_type': 'test-type', '_id': '...', 'ok': True, '_index': 'test-index'}
-
 """
 from collections import deque
 from datetime import datetime
@@ -152,9 +151,8 @@ class NullHandler(logging.Handler):
 
 
 class ElasticSearch(object):
-    """
-    ElasticSearch connection object.
-    """
+    """ElasticSearch connection object."""
+
     def __init__(self, urls, timeout=60, max_retries=0, revival_delay=300):
         """
         :arg timeout: Number of seconds to wait for each request before raising
@@ -180,7 +178,6 @@ class ElasticSearch(object):
 
         Done as a method so others can override as needed without complex
         setup.
-
         """
         log = logging.getLogger('pyelasticsearch')
         null = NullHandler()
@@ -292,17 +289,12 @@ class ElasticSearch(object):
         Index a typed JSON document into a specific index, and make it
         searchable.
         """
-        if force_insert:
-            querystring_args = {'op_type': 'create'}
-        else:
-            querystring_args = {}
-
-        if id is None:
-            request_method = 'POST'
-        else:
-            request_method = 'PUT'
-        path = self._make_path(index, doc_type, id)
-        return self._send_request(request_method, path, doc, querystring_args)
+        # TODO: Support the zillions of other querystring args.
+        return self._send_request(
+            'PUT' if id else 'POST',
+            self._make_path(index, doc_type, id),
+            doc,
+            {'op_type': 'create'} if force_insert else {})
 
     def bulk_index(self, index, doc_type, docs, id_field='id'):
         """Index a list of documents as efficiently as possible."""
@@ -337,16 +329,14 @@ class ElasticSearch(object):
         if id:
             path_parts.append(id)
 
-        path = self._make_path(*path_parts)
-        return self._send_request('DELETE', path)
+        return self._send_request('DELETE', self._make_path(*path_parts))
 
     def delete_by_query(self, index, doc_type, query):
         """
         Delete typed JSON documents from a specific index based on query.
         """
         path = self._make_path(index, doc_type, '_query')
-        response = self._send_request('DELETE', path, query)
-        return response
+        return self._send_request('DELETE', path, query)
 
     def get(self, index, doc_type, id):
         """Get a typed JSON document from an index by ID."""
@@ -440,31 +430,26 @@ class ElasticSearch(object):
 
     def create_index(self, index, settings=None, quiet=True):
         """
-        Creates an index with optional settings.
-        Settings must be a dictionary which will be converted to JSON.
-        Elasticsearch also accepts yaml, but we are only passing JSON.
+        Create an index with optional settings.
+
+        :arg settings: A dictionary which will be converted to JSON.
+            Elasticsearch also accepts yaml, but we are only passing JSON.
         """
         return self._send_index_request(
             'PUT', 'Create', index, body=settings, quiet=quiet)
 
     def delete_index(self, index, quiet=True):
-        """
-        Deletes an index.
-        """
+        """Delete an index."""
         return self._send_index_request(
             'DELETE', 'Delete', index, quiet=quiet)
 
     def close_index(self, index, quiet=True):
-        """
-        Close an index.
-        """
+        """Close an index."""
         return self._send_index_request(
             'POST', 'Close', index, more_path=['_close'], quiet=quiet)
 
     def open_index(self, index, quiet=True):
-        """
-        Open an index.
-        """
+        """Open an index."""
         return self._send_index_request(
             'POST', 'Open', index, more_path=['_open'], quiet=quiet)
 
@@ -485,9 +470,7 @@ class ElasticSearch(object):
             body=settings)
 
     def flush(self, indexes=None, refresh=None):
-        """
-        Flushes one or more indices (clear memory)
-        """
+        """Flush one or more indices (clear memory)."""
         path = self._make_path(self._concat(indexes), '_flush')
         args = {}
         if refresh is not None:
@@ -495,23 +478,17 @@ class ElasticSearch(object):
         return self._send_request('POST', path, querystring_args=args)
 
     def refresh(self, indexes=None):
-        """
-        Refresh one or more indices
-        """
+        """Refresh one or more indices."""
         path = self._make_path(self._concat(indexes), '_refresh')
         return self._send_request('POST', path)
 
     def gateway_snapshot(self, indexes=None):
-        """
-        Gateway snapshot one or more indices
-        """
+        """Gateway snapshot one or more indices."""
         path = self._make_path(self._concat(indexes), '_gateway', 'snapshot')
         return self._send_request('POST', path)
 
     def optimize(self, indexes=None, **args):
-        """
-        Optimize one ore more indices
-        """
+        """Optimize one ore more indices."""
         path = self._make_path(self._concat(indexes), '_optimize')
         return self._send_request('POST', path, querystring_args=args)
 
@@ -542,9 +519,7 @@ class ElasticSearch(object):
 
     @staticmethod
     def to_python(value):
-        """
-        Converts values from ElasticSearch to native Python values.
-        """
+        """Convert values from ElasticSearch to native Python values."""
         if isinstance(value, (int, float, long, complex, list, tuple, bool)):
             return value
 
@@ -568,7 +543,9 @@ class ElasticSearch(object):
             converted_value = eval(value)
 
             # Try to handle most built-in types.
-            if isinstance(converted_value, (list, tuple, set, dict, int, float, long, complex)):
+            if isinstance(
+                    converted_value,
+                    (list, tuple, set, dict, int, float, long, complex)):
                 return converted_value
         except:
             # If it fails (SyntaxError or its ilk) or we don't trust it,
