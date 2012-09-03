@@ -471,11 +471,10 @@ class ElasticSearch(object):
 
     def flush(self, indexes=None, refresh=None):
         """Flush one or more indices (clear memory)."""
-        path = self._make_path(self._concat(indexes), '_flush')
-        args = {}
-        if refresh is not None:
-            args['refresh'] = refresh
-        return self._send_request('POST', path, querystring_args=args)
+        return self._send_request(
+            'POST',
+            self._make_path(self._concat(indexes), '_flush'),
+            querystring_args={'refresh': refresh} if refresh else {})
 
     def refresh(self, indexes=None):
         """Refresh one or more indices."""
