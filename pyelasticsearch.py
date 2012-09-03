@@ -587,7 +587,7 @@ class DowntimePronePool(object):
         with self._locking():
             # Revive any elements whose times have come:
             now = time()
-            while self.dead and self.dead[0][0] >= now:
+            while self.dead and now >= self.dead[0][0]:
                 self.live.append(self.dead.popleft()[1])
 
             try:
