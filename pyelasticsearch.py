@@ -277,14 +277,13 @@ class ElasticSearch(object):
         This can be used for search and count calls.
         These are identical api calls, except for the type of query.
         """
-        querystring_args = query_params
+        query_params = query_params
         if query:
-            querystring_args['q'] = query
+            query_params['q'] = query
         path = self._make_path(self._concat(indexes),
                                self._concat(doc_types),
                                query_type)
-        response = self._send_request('GET', path, body, querystring_args)
-        return response
+        return self._send_request('GET', path, body, query_params)
 
     ## REST API
 
