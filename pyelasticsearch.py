@@ -96,7 +96,6 @@ Test adding with automatic id generation
 >>> conn.index({"name":"Joe Tester"}, "test-index", "test-type") # doctest: +ELLIPSIS
 {'_type': 'test-type', '_id': '...', 'ok': True, '_index': 'test-index'}
 
-
 """
 from collections import deque
 from datetime import datetime
@@ -122,7 +121,9 @@ __version_info__ = tuple(__version__.split('.'))
 get_version = lambda: __version_info__
 
 
-DATETIME_REGEX = re.compile(r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
+DATETIME_REGEX = re.compile(
+    r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T'
+    r'(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
 
 
 class ElasticSearchError(Exception):
@@ -175,10 +176,11 @@ class ElasticSearch(object):
 
     def setup_logging(self):
         """
-        Sets up the logging.
+        Set up the logging.
 
         Done as a method so others can override as needed without complex
         setup.
+
         """
         log = logging.getLogger('pyelasticsearch')
         null = NullHandler()
@@ -187,11 +189,8 @@ class ElasticSearch(object):
         return log
 
     def _make_path(self, path_components):
-        """
-        Smush together the path components. Empty components will be ignored.
-        """
-        path_components = [str(component) for component in path_components if component]
-        path = '/'.join(path_components)
+        """Smush together the path components, ignoring empty ones."""
+        path = '/'.join(str(p) for p in path_components if p)
         if not path.startswith('/'):
             path = '/' + path
         return path
@@ -207,20 +206,23 @@ class ElasticSearch(object):
             return ''
         if isinstance(items, basestring):
             items = [items]
-        return ','.join([item for item in items if item != '_all'])
+        return ','.join(i for i in items if i != '_all')
 
-    def _send_request(self, method, path, body='', querystring_args=None, prepare_body=True):
+    def _send_request(self,
+                      method,
+                      path,
+                      body='',
+                      querystring_args=None,
+                      prepare_body=True):
         if querystring_args:
             path = '?'.join([path, urlencode(querystring_args)])
 
         kwargs = {}
         server_url, was_dead = self.servers.get()
-        url =  server_url + path
+        url = server_url + path
 
         if body:
-            if prepare_body:
-                body = self._prep_request(body)
-            kwargs['data'] = body
+            kwargs['data'] = self._prep_request(body) if prepare_body else body
 
         req_method = getattr(self.session, method.lower())
         self.log.debug('making %s request to path: %s %s with body: %s',
@@ -228,9 +230,10 @@ class ElasticSearch(object):
 
         for attempt in xrange(self.max_retries + 1):
             try:
-                # prefetch=True so the connection can be quickly returned to the
-                # pool. This is the default in requests >=0.3.16.
-                resp = req_method(url, prefetch=True, timeout=self.timeout, **kwargs)
+                # prefetch=True so the connection can be quickly returned to
+                # the pool. This is the default in requests >=0.3.16.
+                resp = req_method(
+                    url, prefetch=True, timeout=self.timeout, **kwargs)
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
                 self.log.info('%s marked as dead for awhile.', server_url)
@@ -244,26 +247,22 @@ class ElasticSearch(object):
 
         self.log.debug('response status: %s', resp.status_code)
         prepped_response = self._prep_response(resp)
-
         if resp.status_code >= 400:
-            raise ElasticHttpError(resp.status_code, prepped_response.get('error', prepped_response))
-
+            raise ElasticHttpError(
+                resp.status_code,
+                prepped_response.get('error', prepped_response))
         self.log.debug('got response %s', prepped_response)
         return prepped_response
 
     def _prep_request(self, body):
-        """
-        Encodes body as json.
-        """
+        """Return body encoded as JSON."""
         try:
             return json.dumps(body, cls=DateSavvyJsonEncoder)
         except (TypeError, json.JSONDecodeError, ValueError), e:
             raise ElasticSearchError('Invalid JSON %r' % (body,), e)
 
     def _prep_response(self, response):
-        """
-        Parses json to a native python object.
-        """
+        """Return a native-Python representation of a JSON blob."""
         try:
             json_response = response.json
         except (TypeError, json.JSONDecodeError), e:
@@ -291,7 +290,8 @@ class ElasticSearch(object):
 
     def index(self, doc, index, doc_type, id=None, force_insert=False):
         """
-        Index a typed JSON document into a specific index and make it searchable.
+        Index a typed JSON document into a specific index, and make it
+        searchable.
         """
         if force_insert:
             querystring_args = {'op_type': 'create'}
@@ -306,13 +306,12 @@ class ElasticSearch(object):
         return self._send_request(request_method, path, doc, querystring_args)
 
     def bulk_index(self, index, doc_type, docs, id_field='id'):
-        """
-        Indexes a list of documents as efficiently as possible.
-        """
+        """Index a list of documents as efficiently as possible."""
         body_bits = []
 
-        if not len(docs):
-            raise ElasticSearchError('No documents provided for bulk indexing!')
+        if not docs:
+            raise ElasticSearchError(
+                'No documents provided for bulk indexing!')
 
         for doc in docs:
             action = {'index': {'_index': index, '_type': doc_type}}
@@ -331,9 +330,9 @@ class ElasticSearch(object):
 
     def delete(self, index, doc_type, id=None):
         """
-        Delete a typed JSON document from a specific index based on its id.
+        Delete a typed JSON document from a specific index based on its ID.
 
-        If id is omitted, all documents of a given doctype will be deleted.
+        If ``id`` is omitted, delete all documents of the given doctype.
         """
         path_parts = [index, doc_type]
         if id:
@@ -344,37 +343,39 @@ class ElasticSearch(object):
 
     def delete_by_query(self, index, doc_type, query):
         """
-        Delete a typed JSON documents from a specific index based on query
+        Delete typed JSON documents from a specific index based on query.
         """
         path = self._make_path([index, doc_type, '_query'])
         response = self._send_request('DELETE', path, query)
         return response
 
     def get(self, index, doc_type, id):
-        """
-        Get a typed JSON document from an index based on its id.
-        """
+        """Get a typed JSON document from an index by ID."""
         path = self._make_path([index, doc_type, id])
         return self._send_request('GET', path)
 
-    def search(self, query, body=None, indexes=None, doc_types=None, **query_params):
+    def search(
+        self, query, body=None, indexes=None, doc_types=None, **query_params):
         """
-        Execute a search query against one or more indices and get back search hits.
-        query must be a dictionary that will convert to Query DSL
-        TODO: better api to reflect that the query can be either 'query' or 'body' argument.
-        """
-        return self._query_call('_search', query, body, indexes, doc_types, **query_params)
+        Execute a search query against one or more indices and get back search
+        hits.
 
-    def count(self, query, body=None, indexes=None, doc_types=None, **query_params):
+        ``query`` must be a dictionary that will convert to ES's Query DSL.
+
+        TODO: better api to reflect that the query can be either 'query' or
+        'body' argument.
         """
-        Execute a query against one or more indices and get hits count.
-        """
-        return self._query_call('_count', query, body, indexes, doc_types, **query_params)
+        return self._query_call(
+            '_search', query, body, indexes, doc_types, **query_params)
+
+    def count(
+        self, query, body=None, indexes=None, doc_types=None, **query_params):
+        """Execute a query against one or more indices and get hit count."""
+        return self._query_call(
+            '_count', query, body, indexes, doc_types, **query_params)
 
     def get_mapping(self, indexes=None, doc_types=None):
-        """
-        Fetches the existing mapping definition for a specific index & type.
-        """
+        """Fetch the mapping definition for a specific index and type."""
         path = self._make_path([self._concat(indexes),
                                 self._concat(doc_types),
                                 '_mapping'])
@@ -382,14 +383,16 @@ class ElasticSearch(object):
 
     def put_mapping(self, doc_type, mapping, indexes=None, **query_params):
         """
-        Register specific mapping definition for a specific type against one or more indices.
+        Register specific mapping definition for a specific type against one or
+        more indices.
         """
         path = self._make_path([self._concat(indexes), doc_type, '_mapping'])
         return self._send_request('PUT', path, mapping, **query_params)
 
-    def morelikethis(self, index, doc_type, id, fields, **query_params):
+    def more_like_this(self, index, doc_type, id, fields, **query_params):
         """
-        Execute a "more like this" search query against one or more fields and get back search hits.
+        Execute a "more like this" search query against one or more fields and
+        get back search hits.
         """
         path = self._make_path([index, doc_type, id, '_mlt'])
         query_params['fields'] = self._concat(fields)
@@ -404,7 +407,13 @@ class ElasticSearch(object):
         path = self._make_path([self._concat(indexes), '_status'])
         return self._send_request('GET', path)
 
-    def _send_index_request(self, method, description, index, more_path=None, quiet=True, **kwargs):
+    def _send_index_request(self,
+                            method,
+                            description,
+                            index,
+                            more_path=None,
+                            quiet=True,
+                            **kwargs):
         """
         Send a request to an index's path, and optionally trap errors.
 
@@ -425,7 +434,8 @@ class ElasticSearch(object):
         except ElasticSearchError, e:
             if not quiet:
                 raise
-            response = {'message': "%s index '%s' errored: %s" % (description, index, e)}
+            response = {'message': "%s index '%s' errored: %s" %
+                        (description, index, e)}
         return response
 
     def create_index(self, index, settings=None, quiet=True):
@@ -434,31 +444,36 @@ class ElasticSearch(object):
         Settings must be a dictionary which will be converted to JSON.
         Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        return self._send_index_request('PUT', 'Create', index, body=settings, quiet=quiet)
+        return self._send_index_request(
+            'PUT', 'Create', index, body=settings, quiet=quiet)
 
     def delete_index(self, index, quiet=True):
         """
         Deletes an index.
         """
-        return self._send_index_request('DELETE', 'Delete', index, quiet=quiet)
+        return self._send_index_request(
+            'DELETE', 'Delete', index, quiet=quiet)
 
     def close_index(self, index, quiet=True):
         """
         Close an index.
         """
-        return self._send_index_request('POST', 'Close', index, more_path=['_close'], quiet=quiet)
+        return self._send_index_request(
+            'POST', 'Close', index, more_path=['_close'], quiet=quiet)
 
     def open_index(self, index, quiet=True):
         """
         Open an index.
         """
-        return self._send_index_request('POST', 'Open', index, more_path=['_open'], quiet=quiet)
+        return self._send_index_request(
+            'POST', 'Open', index, more_path=['_open'], quiet=quiet)
 
     def update_settings(self, indexes, settings, quiet=True):
         """
         :arg indexes: The indexes to update, or ['_all'] to do all of them
         """
-        # TODO: Have a way of saying "all indexes" that doesn't involve a magic string.
+        # TODO: Have a way of saying "all indexes" that doesn't involve a magic
+        # string.
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
         return self._send_index_request(
@@ -592,8 +607,6 @@ class DowntimePronePool(object):
         dead, return one of those in case it's come back to life earlier than
         expected. This fallback is O(n) rather than O(1), but it's all dwarfed
         by IO anyway.
-
-        First, move any elements that have aged out off the dead list.
         """
         with self._locking():
             # Revive any elements whose times have come:
