@@ -226,7 +226,7 @@ class ElasticSearch(object):
         url = server_url + path
 
         if body:
-            kwargs['data'] = self._prep_request(body) if prepare_body else body
+            kwargs['data'] = self._encode_json(body) if prepare_body else body
 
         req_method = getattr(self.session, method.lower())
         self.log.debug('making %s request to path: %s %s with body: %s',
@@ -263,12 +263,9 @@ class ElasticSearch(object):
         self.log.debug('got response %s', prepped_response)
         return prepped_response
 
-    def _prep_request(self, body):
+    def _encode_json(self, body):
         """Return body encoded as JSON."""
-        try:
-            return json.dumps(body, cls=DateSavvyJsonEncoder)
-        except (TypeError, ValueError), e:
-            raise ElasticSearchError('Invalid JSON %r' % (body,), e)
+        return json.dumps(body, cls=DateSavvyJsonEncoder)
 
     def _prep_response(self, response):
         """Return a native-Python representation of a JSON blob."""
@@ -320,8 +317,8 @@ class ElasticSearch(object):
             if doc.get(id_field):
                 action['index']['_id'] = doc[id_field]
 
-            body_bits.append(self._prep_request(action))
-            body_bits.append(self._prep_request(doc))
+            body_bits.append(self._encode_json(action))
+            body_bits.append(self._encode_json(doc))
 
         path = self._make_path(index, '_bulk')
         # Need the trailing newline.

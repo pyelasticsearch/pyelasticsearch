@@ -223,7 +223,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertRaises(ConnectionError, conn.count, '*:*')
 
         # Test invalid JSON.
-        self.assertRaises(ElasticSearchError, conn._prep_request, unittest.TestCase)
+        self.assertRaises(ValueError, conn._encode_json, object())
         resp = requests.Response()
         resp._content = '{"busted" "json" "that": ["is] " wrong'
         self.assertRaises(ElasticSearchError, conn._prep_response, resp)
