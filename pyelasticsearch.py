@@ -141,7 +141,7 @@ class ElasticHttpError(ElasticSearchError):
         return self.args[1]
 
     def __unicode__(self):
-        return 'Non-OK status code returned (%d) containing %r.' % (
+        return u'Non-OK status code returned (%d) containing %r.' % (
             self.status_code, self.error)
 
 
