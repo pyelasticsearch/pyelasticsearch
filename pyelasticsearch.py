@@ -272,12 +272,11 @@ class ElasticSearch(object):
 
     def _prep_response(self, response):
         """Return a native-Python representation of a JSON blob."""
-        try:
-            json_response = response.json
-        except (TypeError,), e:
-            raise ElasticSearchError('Invalid JSON %r' % (response,), e)
+        json_response = response.json
         if json_response is None:
-            raise ElasticSearchError('Invalid JSON %r' % (response,))
+            # TODO: Perhaps raise a more specific exception here.
+            raise ElasticSearchError('Invalid JSON returned from ES: %r' %
+                                     (response,))
         return json_response
 
     def _query_call(self, query_type, query, body=None, indexes=None,
