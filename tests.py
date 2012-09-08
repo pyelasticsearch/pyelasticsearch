@@ -74,7 +74,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testUpdateSettings(self):
-        """Make sure ``update_settings()`` send the expected request."""
+        """Make sure ``update_settings()`` sends the expected request."""
         with patch.object(self.conn, '_send_request') as _send_request:
             self.conn.update_settings(['test-index', 'toast-index'],
                                       {'index': {'number_of_replicas': 2}})

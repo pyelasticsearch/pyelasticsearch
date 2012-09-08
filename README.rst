@@ -96,3 +96,32 @@ Credits
 Used `pysolr`_ as a jumping off point - thanks guys.
 
 .. _`pysolr`: http://github.com/jkocherhans/pysolr
+
+
+Version History
+===============
+
+0.2 -- a slightly backward-incompatible release
+  * Add load-balancing across multiple nodes.
+  * Add failover in the case where a node doesn't respond.
+  * Add `close_index`, `open_index`, `update_settings`, `health`.
+  * Automatically convert `datetime` objects when encoding JSON.
+  * Rethink error handling:
+    * Raise a more specific exception for HTTP error codes so callers can catch
+      it without examining a string.
+    * Catch non-JSON responses properly, and raise the more specific
+      `NonJsonResponseError` instead of the generic `ElasticSearchError`.
+    * Remove mentions of nonexistent exception types that would cause crashes
+      in their `except` clauses.
+    * Crash harder if JSON encoding happens: that always indicates a bug in
+      pyelasticsearch.
+    * Remove the ill-defined `ElasticSearchError`.
+    * Raise `ConnectionError` rather than `ElasticSearchError` if we can't
+      connect to a node (and we're out of auto-retries).
+    * Raise `ValueError` rather than `ElasticSearchError` if no documents are
+      passed to `bulk_index`.
+  * In routines that can take either one or many indexes, don't require the
+    caller to wrap a single index name in a list.
+  * Rename `morelikethis` to `more_like_this` for consistency with other
+    methods.
+  * Many other internal improvements
