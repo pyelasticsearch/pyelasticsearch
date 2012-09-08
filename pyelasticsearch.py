@@ -112,7 +112,7 @@ from requests import Timeout, ConnectionError
 from requests.compat import json
 
 __author__ = 'Robert Eanes'
-__all__ = ['ElasticSearch', 'ElasticSearchError', 'ElasticHttpError',
+__all__ = ['ElasticSearch', 'ElasticHttpError', 'NonJsonResponseError',
            'Timeout', 'ConnectionError']
 __version__ = '0.2'
 __version_info__ = tuple(__version__.split('.'))
@@ -125,11 +125,7 @@ DATETIME_REGEX = re.compile(
     r'(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
 
 
-class ElasticSearchError(Exception):
-    pass
-
-
-class ElasticHttpError(ElasticSearchError):
+class ElasticHttpError(Exception):
     """Exception raised when ES returns a non-OK (>=400) HTTP status code"""
     # TODO: If helpful in practice, split this into separate subclasses for 4xx
     # and 5xx errors. On second thought, ES, as of 0.19.9, returns 500s on
@@ -138,6 +134,8 @@ class ElasticHttpError(ElasticSearchError):
     # a server error. We'd have to test the string for what kind of error it is
     # and choose an exception class accordingly.
 
+    # This @property technique allows the exception to be pickled (like by
+    # Sentry or celery) without having to write our own serialization stuff.
     @property
     def status_code(self):
         return self.args[0]
@@ -149,6 +147,18 @@ class ElasticHttpError(ElasticSearchError):
     def __unicode__(self):
         return u'Non-OK status code returned (%d) containing %r.' % (
             self.status_code, self.error)
+
+
+class NonJsonResponseError(Exception):
+    """
+    Exception raised in the unlikely case that ES returns a non-JSON response
+    """
+    @property
+    def response(self):
+        return self.args[0]
+
+    def __unicode__(self):
+        return u'Invalid JSON returned from ES: %r' % (self.response,)
 
 
 class NullHandler(logging.Handler):
@@ -271,9 +281,7 @@ class ElasticSearch(object):
         """Return a native-Python representation of a JSON blob."""
         json_response = response.json
         if json_response is None:
-            # TODO: Perhaps raise a more specific exception here.
-            raise ElasticSearchError('Invalid JSON returned from ES: %r' %
-                                     (response,))
+            raise NonJsonResponseError(response)
         return json_response
 
     def _query_call(self, query_type, query, body=None, indexes=None,
@@ -428,7 +436,7 @@ class ElasticSearch(object):
                 method,
                 self._make_path(*([index] + more_path)),
                 **kwargs)
-        except ElasticSearchError, e:
+        except (NonJsonResponseError, ElasticHttpError), e:
             if not quiet:
                 raise
             response = {'message': "%s index '%s' errored: %s" %

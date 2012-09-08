@@ -8,7 +8,8 @@ import unittest
 
 from mock import patch
 import requests
-from pyelasticsearch import ElasticSearch, ElasticSearchError, ConnectionError
+from pyelasticsearch import (ElasticSearch, ElasticHttpError,
+                             NonJsonResponseError, ConnectionError)
 
 
 class VerboseElasticSearch(ElasticSearch):
@@ -137,7 +138,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.create_index('another-index')
         self.conn.delete_index('another-index')
         self.assertTrue('IndexAlreadyExistsException[[another-index] Already exists]' in result['message'])
-        self.assertRaises(ElasticSearchError, self.conn.delete_index, 'another-index', quiet=False)
+        self.assertRaises(ElasticHttpError, self.conn.delete_index, 'another-index', quiet=False)
 
     def testPutMapping(self):
         result = self.conn.create_index('test-index')
@@ -204,7 +205,9 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
 
     def testBulkIndex(self):
-        self.assertRaises(ElasticSearchError, self.conn.count, '*:*', indexes=['test-index'])
+        # Try counting the docs in a nonexistent index:
+        self.assertRaises(ElasticHttpError, self.conn.count, '*:*', indexes=['test-index'])
+
         docs = [
             {'name': 'Joe Tester'},
             {'name': 'Bill Baloney', 'id': 303},
@@ -226,7 +229,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertRaises(ValueError, conn._encode_json, object())
         resp = requests.Response()
         resp._content = '{"busted" "json" "that": ["is] " wrong'
-        self.assertRaises(ElasticSearchError, conn._prep_response, resp)
+        self.assertRaises(NonJsonResponseError, conn._prep_response, resp)
 
 
 class SearchTestCase(ElasticSearchTestCase):
