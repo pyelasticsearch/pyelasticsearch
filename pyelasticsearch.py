@@ -114,7 +114,7 @@ from requests.compat import json
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticSearchError', 'ElasticHttpError',
            'Timeout', 'ConnectionError']
-__version__ = '0.1'
+__version__ = '0.2'
 __version_info__ = tuple(__version__.split('.'))
 
 get_version = lambda: __version_info__
@@ -131,6 +131,12 @@ class ElasticSearchError(Exception):
 
 class ElasticHttpError(ElasticSearchError):
     """Exception raised when ES returns a non-OK (>=400) HTTP status code"""
+    # TODO: If helpful in practice, split this into separate subclasses for 4xx
+    # and 5xx errors. On second thought, ES, as of 0.19.9, returns 500s on
+    # trivial things like JSON parse errors (which it does recognize), so it
+    # wouldn't be good to rely on its idea of what's a client error and what's
+    # a server error. We'd have to test the string for what kind of error it is
+    # and choose an exception class accordingly.
 
     @property
     def status_code(self):
@@ -225,6 +231,9 @@ class ElasticSearch(object):
         self.log.debug('making %s request to path: %s %s with body: %s',
                        method, url, path, kwargs.get('data', {}))
 
+        # We do our own retrying rather than using urllib3's; we want to retry
+        # a different node in the cluster if possible, not the same one again
+        # (which may be down).
         for attempt in xrange(self.max_retries + 1):
             try:
                 # prefetch=True so the connection can be quickly returned to
@@ -615,7 +624,11 @@ class DowntimePronePool(object):
                 self.dead.append((time() + self.revival_delay, element))
 
     def mark_live(self, element):
-        """Move an element from the dead list to the live one if it is dead."""
+        """
+        Move an element from the dead list to the live one.
+
+        If the element wasn't dead, do nothing.
+        """
         with self._locking():
             for i, (revival_time, cur_element) in enumerate(self.dead):
                 if cur_element == element:

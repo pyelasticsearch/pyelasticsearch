@@ -59,8 +59,9 @@ Connection Pooling
 ==================
 
 The ElasticSearch object is thread-safe. To take best advantage of connection
-pooling, create one, and share it among all threads. At most, the object will
-hold a number of connections to each node equal to the number of threads.
+pooling, create one instance, and share it among all threads. At most, the
+object will hold a number of connections to each node equal to the number of
+threads.
 
 
 Load-balancing and Failover
@@ -71,7 +72,8 @@ us balance load and maintain availability when nodes go down: pyelasticsearch
 will randomly choose a server URL for each request. If a node fails to respond
 before a timeout period elapses, it is assumed down and not tried again for
 awhile. Meanwhile, pyelasticsearch will retry the request on a different node
-if ``max_retries`` was set to something greater than zero at construction
+if ``max_retries`` was set to something greater than zero at construction.
+
 
 Why Not pyes?
 =============
