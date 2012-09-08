@@ -172,6 +172,7 @@ class ElasticSearch(object):
             urls = [urls]
         urls = [u[:-1] if u.endswith('/') else u for u in urls]
         self.servers = DowntimePronePool(urls, revival_delay)
+        self.revival_delay = revival_delay
 
         self.timeout = timeout
         self.max_retries = max_retries
@@ -242,7 +243,9 @@ class ElasticSearch(object):
                     url, prefetch=True, timeout=self.timeout, **kwargs)
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
-                self.log.info('%s marked as dead for awhile.', server_url)
+                self.log.info('%s marked as dead for %s seconds.',
+                              server_url,
+                              self.revival_delay)
                 if attempt >= self.max_retries:
                     raise
             else:
