@@ -301,7 +301,7 @@ class ElasticSearch(object):
         body_bits = []
 
         if not docs:
-            raise ElasticSearchError(
+            raise ValueError(
                 'No documents provided for bulk indexing!')
 
         for doc in docs:
