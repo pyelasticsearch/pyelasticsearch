@@ -267,14 +267,14 @@ class ElasticSearch(object):
         """Return body encoded as JSON."""
         try:
             return json.dumps(body, cls=DateSavvyJsonEncoder)
-        except (TypeError, json.JSONDecodeError, ValueError), e:
+        except (TypeError, ValueError), e:
             raise ElasticSearchError('Invalid JSON %r' % (body,), e)
 
     def _prep_response(self, response):
         """Return a native-Python representation of a JSON blob."""
         try:
             json_response = response.json
-        except (TypeError, json.JSONDecodeError), e:
+        except (TypeError,), e:
             raise ElasticSearchError('Invalid JSON %r' % (response,), e)
         if json_response is None:
             raise ElasticSearchError('Invalid JSON %r' % (response,))
@@ -313,8 +313,7 @@ class ElasticSearch(object):
         body_bits = []
 
         if not docs:
-            raise ValueError(
-                'No documents provided for bulk indexing!')
+            raise ValueError('No documents provided for bulk indexing!')
 
         for doc in docs:
             action = {'index': {'_index': index, '_type': doc_type}}
