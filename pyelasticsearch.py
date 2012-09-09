@@ -226,17 +226,17 @@ class ElasticSearch(object):
                       method,
                       path,
                       body='',
-                      querystring_args=None,
-                      prepare_body=True):
-        if querystring_args:
-            path = '?'.join([path, urlencode(querystring_args)])
+                      query_params=None,
+                      encode_body=True):
+        if query_params:
+            path = '?'.join([path, urlencode(query_params)])
 
         kwargs = {}
         server_url, was_dead = self.servers.get()
         url = server_url + path
 
         if body:
-            kwargs['data'] = self._encode_json(body) if prepare_body else body
+            kwargs['data'] = self._encode_json(body) if encode_body else body
 
         req_method = getattr(self.session, method.lower())
         self.log.debug('making %s request to path: %s %s with body: %s',
@@ -332,7 +332,7 @@ class ElasticSearch(object):
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
         return self._send_request(
-            'POST', path, body, {'op_type': 'create'}, prepare_body=False)
+            'POST', path, body, {'op_type': 'create'}, encode_body=False)
 
     def delete(self, index, doc_type, id=None):
         """
@@ -400,7 +400,7 @@ class ElasticSearch(object):
         """
         path = self._make_path(index, doc_type, id, '_mlt')
         query_params['fields'] = self._concat(fields)
-        return self._send_request('GET', path, querystring_args=query_params)
+        return self._send_request('GET', path, query_params=query_params)
 
     ## Index Admin API
 
@@ -450,7 +450,7 @@ class ElasticSearch(object):
         return self._send_request(
             'POST',
             self._make_path(self._concat(indexes), '_flush'),
-            querystring_args={'refresh': refresh} if refresh else {})
+            query_params={'refresh': refresh} if refresh else {})
 
     def refresh(self, indexes=None):
         """Refresh one or more indices."""
@@ -465,7 +465,7 @@ class ElasticSearch(object):
     def optimize(self, indexes=None, **args):
         """Optimize one ore more indices."""
         path = self._make_path(self._concat(indexes), '_optimize')
-        return self._send_request('POST', path, querystring_args=args)
+        return self._send_request('POST', path, query_params=args)
 
     def health(self, indexes=None, **kwargs):
         """
@@ -475,7 +475,7 @@ class ElasticSearch(object):
         :arg kwargs: Passed through to the Cluster Health API verbatim
         """
         path = self._make_path('_cluster', 'health', self._concat(indexes))
-        return self._send_request('GET', path, querystring_args=kwargs)
+        return self._send_request('GET', path, query_params=kwargs)
 
     @staticmethod
     def from_python(value):
