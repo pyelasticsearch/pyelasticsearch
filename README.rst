@@ -82,6 +82,8 @@ Why Not pyes?
 * pyes's dead-server handling just throws up its hands if all of the servers
   are marked dead. pyelasticsearch will make an effort to try a dead one if no
   live ones remain, and, if it responds, it will mark it live.
+* There are a lot of weirdnesses in the code, like monkeypatching and uses of
+  setattr with constant args.
 
 
 License

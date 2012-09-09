@@ -543,6 +543,15 @@ class DowntimePronePool(object):
     Tries to return a "live" element from the bucket on request, retiring
     "dead" elements for a time to give them a chance to recover before offering
     them again.
+
+    Actually testing whether an element is dead is expressly outside the scope
+    of this class (for decoupling) and outside the period of its lock (since it
+    could take a long time). Thus, we explicitly embrace the race condition
+    where 2 threads are testing an element simultaneously, get different
+    results, and call ``mark_dead`` and then ``mark_live`` fairly close
+    together. It's not at all clear which is the correct state in that case, so
+    we just let the winner win. If flapping is a common case, we could add flap
+    detection later and class flappers as failures, immune to ``mark_live``.
     """
     def __init__(self, elements, revival_delay):
         self.live = elements
@@ -595,6 +604,10 @@ class DowntimePronePool(object):
         Move an element from the dead list to the live one.
 
         If the element wasn't dead, do nothing.
+
+        This is intended to be used only in the case where ``get()`` falls back
+        to returning a dead element and we find out it isn't acting dead after
+        all.
         """
         with self._locking():
             for i, (revival_time, cur_element) in enumerate(self.dead):
