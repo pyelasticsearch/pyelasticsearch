@@ -145,8 +145,8 @@ class ElasticHttpError(Exception):
         return self.args[1]
 
     def __unicode__(self):
-        return u'Non-OK status code returned (%d) containing %r.' % (
-            self.status_code, self.error)
+        return u'Non-OK response returned (%d): %r' % (self.status_code,
+                                                       self.error)
 
 
 class NonJsonResponseError(Exception):
@@ -265,7 +265,7 @@ class ElasticSearch(object):
             self.servers.mark_live(server_url)
 
         self.log.debug('response status: %s', resp.status_code)
-        prepped_response = self._prep_response(resp)
+        prepped_response = self._decode_response(resp)
         if resp.status_code >= 400:
             raise ElasticHttpError(
                 resp.status_code,
@@ -277,7 +277,7 @@ class ElasticSearch(object):
         """Return body encoded as JSON."""
         return json.dumps(body, cls=DateSavvyJsonEncoder)
 
-    def _prep_response(self, response):
+    def _decode_response(self, response):
         """Return a native-Python representation of a JSON blob."""
         json_response = response.json
         if json_response is None:
