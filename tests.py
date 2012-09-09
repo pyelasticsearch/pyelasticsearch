@@ -8,8 +8,8 @@ import unittest
 
 from mock import patch
 import requests
-from pyelasticsearch import (ElasticSearch, ElasticHttpError,
-                             NonJsonResponseError, ConnectionError)
+
+from pyelasticsearch import *  # Test that __all__ is correct.
 
 
 class VerboseElasticSearch(ElasticSearch):
