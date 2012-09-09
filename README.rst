@@ -127,6 +127,8 @@ Version History
     * Removed `quiet` kwarg, meaning we always expose errors.
   * Rename `morelikethis` to `more_like_this` for consistency with other
     methods.
+  * ``index()`` now takes ``(index, doc_type, doc)`` rather than ``(doc, index,
+    doc_type)``, for consistency with other methods.
 
   Compatible changes:
 

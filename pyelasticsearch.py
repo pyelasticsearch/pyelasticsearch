@@ -300,7 +300,7 @@ class ElasticSearch(object):
 
     ## REST API
 
-    def index(self, doc, index, doc_type, id=None, force_insert=False):
+    def index(self, index, doc_type, doc, id=None, force_insert=False):
         """
         Index a typed JSON document into a specific index, and make it
         searchable.
