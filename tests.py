@@ -62,15 +62,15 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testCloseIndex(self):
         """Make sure a close_index call on an open index reports success."""
-        self.conn.create_index('test-index', quiet=False)
-        result = self.conn.close_index('test-index', quiet=False)
+        self.conn.create_index('test-index')
+        result = self.conn.close_index('test-index')
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testOpenIndex(self):
         """Make sure an open_index call on a closed index reports success."""
-        self.conn.create_index('test-index', quiet=False)
-        self.conn.close_index('test-index', quiet=False)
-        result = self.conn.open_index('test-index', quiet=False)
+        self.conn.create_index('test-index')
+        self.conn.close_index('test-index')
+        result = self.conn.open_index('test-index')
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
     def testUpdateSettings(self):
@@ -135,10 +135,9 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testCannotCreateExistingIndex(self):
         self.conn.create_index('another-index')
-        result = self.conn.create_index('another-index')
+        self.assertRaises(ElasticHttpError, self.conn.create_index, 'another-index')
         self.conn.delete_index('another-index')
-        self.assertTrue('IndexAlreadyExistsException[[another-index] Already exists]' in result['message'])
-        self.assertRaises(ElasticHttpError, self.conn.delete_index, 'another-index', quiet=False)
+        self.assertRaises(ElasticHttpError, self.conn.delete_index, 'another-index')
 
     def testPutMapping(self):
         result = self.conn.create_index('test-index')

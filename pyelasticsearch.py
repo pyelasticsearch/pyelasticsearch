@@ -413,37 +413,24 @@ class ElasticSearch(object):
 
     def _send_index_request(self,
                             method,
-                            description,
                             index,
                             more_path=None,
-                            quiet=True,
                             **kwargs):
         """
         Send a request to an index's path, and optionally trap errors.
 
         :arg method: The HTTP method to use
-        :arg description: A human-readable label for the operation, like
-            "Close" or "Delete", to be substituted into error message if quiet
-            is truthy
         :arg index: The name of the index to operate on
         :arg more_path: Additional URL segments to append to the path
-        :arg quiet: Whether to trap any ElasticSearchErrors that result
         :arg **kwargs: Kwargs to pass along to ``_send_request()``
         """
         more_path = more_path or []
-        try:
-            response = self._send_request(
-                method,
-                self._make_path(*([index] + more_path)),
-                **kwargs)
-        except (NonJsonResponseError, ElasticHttpError), e:
-            if not quiet:
-                raise
-            response = {'message': "%s index '%s' errored: %s" %
-                        (description, index, e)}
-        return response
+        return self._send_request(
+            method,
+            self._make_path(*([index] + more_path)),
+            **kwargs)
 
-    def create_index(self, index, settings=None, quiet=True):
+    def create_index(self, index, settings=None):
         """
         Create an index with optional settings.
 
@@ -451,24 +438,24 @@ class ElasticSearch(object):
             Elasticsearch also accepts yaml, but we are only passing JSON.
         """
         return self._send_index_request(
-            'PUT', 'Create', index, body=settings, quiet=quiet)
+            'PUT', index, body=settings)
 
-    def delete_index(self, index, quiet=True):
+    def delete_index(self, index):
         """Delete an index."""
         return self._send_index_request(
-            'DELETE', 'Delete', index, quiet=quiet)
+            'DELETE', index)
 
-    def close_index(self, index, quiet=True):
+    def close_index(self, index):
         """Close an index."""
         return self._send_index_request(
-            'POST', 'Close', index, more_path=['_close'], quiet=quiet)
+            'POST', index, more_path=['_close'])
 
-    def open_index(self, index, quiet=True):
+    def open_index(self, index):
         """Open an index."""
         return self._send_index_request(
-            'POST', 'Open', index, more_path=['_open'], quiet=quiet)
+            'POST', index, more_path=['_open'])
 
-    def update_settings(self, indexes, settings, quiet=True):
+    def update_settings(self, indexes, settings):
         """
         :arg indexes: The indexes to update, or ['_all'] to do all of them
         """
@@ -478,10 +465,8 @@ class ElasticSearch(object):
         # update_cluster_settings().
         return self._send_index_request(
             'PUT',
-            'Settings update on',
             self._concat(indexes),
             more_path=['_settings'],
-            quiet=quiet,
             body=settings)
 
     def flush(self, indexes=None, refresh=None):

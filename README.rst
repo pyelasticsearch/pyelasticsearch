@@ -101,12 +101,11 @@ Used `pysolr`_ as a jumping off point - thanks guys.
 Version History
 ===============
 
-0.2 -- a slightly backward-incompatible release
-  * Add load-balancing across multiple nodes.
-  * Add failover in the case where a node doesn't respond.
-  * Add `close_index`, `open_index`, `update_settings`, `health`.
-  * Automatically convert `datetime` objects when encoding JSON.
+0.2
+  Backward-incompatible changes:
+
   * Rethink error handling:
+
     * Raise a more specific exception for HTTP error codes so callers can catch
       it without examining a string.
     * Catch non-JSON responses properly, and raise the more specific
@@ -120,8 +119,19 @@ Version History
       connect to a node (and we're out of auto-retries).
     * Raise `ValueError` rather than `ElasticSearchError` if no documents are
       passed to `bulk_index`.
-  * In routines that can take either one or many indexes, don't require the
-    caller to wrap a single index name in a list.
+    * All exceptions are now more introspectable, because they don't
+      immediately mash all the context down into a string. For example, you can
+      recover the unmolested response object from `ElasticHttpError`.
+    * Removed `quiet` kwarg, meaning we always expose errors.
   * Rename `morelikethis` to `more_like_this` for consistency with other
     methods.
+
+  Compatible changes:
+
+  * Add load-balancing across multiple nodes.
+  * Add failover in the case where a node doesn't respond.
+  * Add `close_index`, `open_index`, `update_settings`, `health`.
+  * Automatically convert `datetime` objects when encoding JSON.
+  * In routines that can take either one or many indexes, don't require the
+    caller to wrap a single index name in a list.
   * Many other internal improvements
