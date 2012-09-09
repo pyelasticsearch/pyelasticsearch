@@ -411,25 +411,6 @@ class ElasticSearch(object):
         path = self._make_path(self._concat(indexes), '_status')
         return self._send_request('GET', path)
 
-    def _send_index_request(self,
-                            method,
-                            index,
-                            more_path=None,
-                            **kwargs):
-        """
-        Send a request to an index's path, and optionally trap errors.
-
-        :arg method: The HTTP method to use
-        :arg index: The name of the index to operate on
-        :arg more_path: Additional URL segments to append to the path
-        :arg **kwargs: Kwargs to pass along to ``_send_request()``
-        """
-        more_path = more_path or []
-        return self._send_request(
-            method,
-            self._make_path(*([index] + more_path)),
-            **kwargs)
-
     def create_index(self, index, settings=None):
         """
         Create an index with optional settings.
@@ -437,23 +418,19 @@ class ElasticSearch(object):
         :arg settings: A dictionary which will be converted to JSON.
             Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        return self._send_index_request(
-            'PUT', index, body=settings)
+        return self._send_request('PUT', self._make_path(index), body=settings)
 
     def delete_index(self, index):
         """Delete an index."""
-        return self._send_index_request(
-            'DELETE', index)
+        return self._send_request('DELETE', self._make_path(index))
 
     def close_index(self, index):
         """Close an index."""
-        return self._send_index_request(
-            'POST', index, more_path=['_close'])
+        return self._send_request('POST', self._make_path(index, '_close'))
 
     def open_index(self, index):
         """Open an index."""
-        return self._send_index_request(
-            'POST', index, more_path=['_open'])
+        return self._send_request('POST', self._make_path(index, '_open'))
 
     def update_settings(self, indexes, settings):
         """
@@ -463,10 +440,9 @@ class ElasticSearch(object):
         # string.
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
-        return self._send_index_request(
+        return self._send_request(
             'PUT',
-            self._concat(indexes),
-            more_path=['_settings'],
+            self._make_path(self._concat(indexes), '_settings'),
             body=settings)
 
     def flush(self, indexes=None, refresh=None):
