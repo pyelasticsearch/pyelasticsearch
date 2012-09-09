@@ -154,26 +154,26 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testIndexStatus(self):
         self.conn.create_index('another-index')
-        result = self.conn.status(['another-index'])
+        result = self.conn.status('another-index')
         self.conn.delete_index('another-index')
         self.assertTrue(result.has_key('indices'))
         self.assertResultContains(result, {'ok': True})
 
     def testIndexFlush(self):
         self.conn.create_index('another-index')
-        result = self.conn.flush(['another-index'])
+        result = self.conn.flush('another-index')
         self.conn.delete_index('another-index')
         self.assertResultContains(result, {'ok': True})
 
     def testIndexRefresh(self):
         self.conn.create_index('another-index')
-        result = self.conn.refresh(['another-index'])
+        result = self.conn.refresh('another-index')
         self.conn.delete_index('another-index')
         self.assertResultContains(result, {'ok': True})
 
     def testIndexOptimize(self):
         self.conn.create_index('another-index')
-        result = self.conn.optimize(['another-index'])
+        result = self.conn.optimize('another-index')
         self.conn.delete_index('another-index')
         self.assertResultContains(result, {'ok': True})
 
