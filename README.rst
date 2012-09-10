@@ -128,9 +128,9 @@ Version History
   * Rename `morelikethis` to `more_like_this` for consistency with other
     methods.
   * ``index()`` now takes ``(index, doc_type, doc)`` rather than ``(doc, index,
-    doc_type)``, for consistency with other methods.
+    doc_type)``, for consistency with ``bulk_index()`` and other methods.
 
-  Compatible changes:
+  Other changes:
 
   * Add load-balancing across multiple nodes.
   * Add failover in the case where a node doesn't respond.

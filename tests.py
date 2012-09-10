@@ -133,6 +133,14 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.delete_index('another-index')
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
+    def testDeleteNonexistentIndex(self):
+        """
+        Deleting a nonexistent index should raise ElasticHttpNotFoundError.
+        """
+        self.assertRaises(ElasticHttpNotFoundError,
+                          self.conn.delete_index,
+                          'nonexistent-index')
+
     def testCannotCreateExistingIndex(self):
         self.conn.create_index('another-index')
         self.assertRaises(ElasticHttpError, self.conn.create_index, 'another-index')

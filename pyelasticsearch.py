@@ -113,7 +113,7 @@ from requests.compat import json
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'NonJsonResponseError',
-           'Timeout', 'ConnectionError']
+           'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError']
 __version__ = '0.2'
 __version_info__ = tuple(__version__.split('.'))
 
@@ -138,15 +138,24 @@ class ElasticHttpError(Exception):
     # Sentry or celery) without having to write our own serialization stuff.
     @property
     def status_code(self):
+        """
+        Return the HTTP status code of the response that precipitated the
+        error.
+        """
         return self.args[0]
 
     @property
     def error(self):
+        """Return a string error message."""
         return self.args[1]
 
     def __unicode__(self):
         return u'Non-OK response returned (%d): %r' % (self.status_code,
                                                        self.error)
+
+
+class ElasticHttpNotFoundError(ElasticHttpError):
+    """Exception raised when a request to ES returns a 404"""
 
 
 class NonJsonResponseError(Exception):
@@ -267,7 +276,9 @@ class ElasticSearch(object):
         self.log.debug('response status: %s', resp.status_code)
         prepped_response = self._decode_response(resp)
         if resp.status_code >= 400:
-            raise ElasticHttpError(
+            error_class = (ElasticHttpNotFoundError if resp.status_code == 404
+                           else ElasticHttpError)
+            raise error_class(
                 resp.status_code,
                 prepped_response.get('error', prepped_response))
         self.log.debug('got response %s', prepped_response)
