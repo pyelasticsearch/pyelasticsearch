@@ -80,7 +80,7 @@ class IndexingTestCase(ElasticSearchTestCase):
                                       {'index': {'number_of_replicas': 2}})
         _send_request.assert_called_once_with(
             'PUT',
-            '/test-index,toast-index/_settings',
+            ['test-index,toast-index', '_settings'],
             body={'index': {'number_of_replicas': 2}})
 
     def testHealth(self):
@@ -90,14 +90,14 @@ class IndexingTestCase(ElasticSearchTestCase):
                              wait_for_nodes='>=1')
         _send_request.assert_called_once_with(
             'GET',
-            '/_cluster/health/test-index,toast-index',
+            ['_cluster', 'health', 'test-index,toast-index'],
             query_params={'wait_for_status': 'yellow',
                           'wait_for_nodes': '>=1'})
 
         with patch.object(self.conn, '_send_request') as _send_request:
             self.conn.health()
         _send_request.assert_called_once_with(
-            'GET', '/_cluster/health', query_params={})
+            'GET', ['_cluster', 'health', ''], query_params={})
 
     def testDeleteByID(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)

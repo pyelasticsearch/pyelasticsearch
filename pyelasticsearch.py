@@ -211,13 +211,6 @@ class ElasticSearch(object):
         log.setLevel(logging.ERROR)
         return log
 
-    def _make_path(self, *path_components):
-        """Smush together the path components, ignoring empty ones."""
-        path = '/'.join(str(p) for p in path_components if p)
-        if not path.startswith('/'):
-            path = '/' + path
-        return path
-
     def _concat(self, items):
         """
         Return a comma-delimited concatenation of the elements of ``items``,
@@ -233,10 +226,24 @@ class ElasticSearch(object):
 
     def _send_request(self,
                       method,
-                      path,
+                      path_components,
                       body='',
                       query_params=None,
                       encode_body=True):
+        """
+        Send an HTTP request to ES, and return the JSON-decoded response.
+
+        :arg path: An iterable of path components, to be joined by "/"
+        """
+        def join_path(path_components):
+            """Smush together the path components, ignoring empty ones."""
+            path = '/'.join(str(p) for p in path_components if p)
+            if not path.startswith('/'):
+                path = '/' + path
+            return path
+
+        path = join_path(path_components)
+
         if query_params:
             path = '?'.join([path, urlencode(query_params)])
 
@@ -304,10 +311,11 @@ class ElasticSearch(object):
         query_params = query_params
         if query:
             query_params['q'] = query
-        path = self._make_path(self._concat(indexes),
-                               self._concat(doc_types),
-                               query_type)
-        return self._send_request('GET', path, body, query_params)
+        return self._send_request(
+            'GET',
+            [self._concat(indexes), self._concat(doc_types), query_type],
+            body,
+            query_params)
 
     ## REST API
 
@@ -319,7 +327,7 @@ class ElasticSearch(object):
         # TODO: Support the zillions of other querystring args.
         return self._send_request(
             'PUT' if id else 'POST',
-            self._make_path(index, doc_type, id),
+            [index, doc_type, id],
             doc,
             {'op_type': 'create'} if force_insert else {})
 
@@ -339,11 +347,13 @@ class ElasticSearch(object):
             body_bits.append(self._encode_json(action))
             body_bits.append(self._encode_json(doc))
 
-        path = self._make_path(index, '_bulk')
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        return self._send_request(
-            'POST', path, body, {'op_type': 'create'}, encode_body=False)
+        return self._send_request('POST',
+                                  [index, '_bulk'],
+                                  body,
+                                  {'op_type': 'create'},  # TODO: Why?
+                                  encode_body=False)
 
     def delete(self, index, doc_type, id=None):
         """
@@ -351,23 +361,18 @@ class ElasticSearch(object):
 
         If ``id`` is omitted, delete all documents of the given doctype.
         """
-        path_parts = [index, doc_type]
-        if id:
-            path_parts.append(id)
-
-        return self._send_request('DELETE', self._make_path(*path_parts))
+        return self._send_request('DELETE',
+                                  [index, doc_type] + ([id] if id else []))
 
     def delete_by_query(self, index, doc_type, query):
         """
         Delete typed JSON documents from a specific index based on query.
         """
-        path = self._make_path(index, doc_type, '_query')
-        return self._send_request('DELETE', path, query)
+        return self._send_request('DELETE', [index, doc_type, '_query'], query)
 
     def get(self, index, doc_type, id):
         """Get a typed JSON document from an index by ID."""
-        path = self._make_path(index, doc_type, id)
-        return self._send_request('GET', path)
+        return self._send_request('GET', [index, doc_type, id])
 
     def search(
         self, query, body=None, indexes=None, doc_types=None, **query_params):
@@ -375,7 +380,7 @@ class ElasticSearch(object):
         Execute a search query against one or more indices and get back search
         hits.
 
-        ``query`` must be a dictionary that will convert to ES's Query DSL.
+        :arg query: a dictionary that will convert to ES's query DSL
 
         TODO: better api to reflect that the query can be either 'query' or
         'body' argument.
@@ -391,27 +396,31 @@ class ElasticSearch(object):
 
     def get_mapping(self, indexes=None, doc_types=None):
         """Fetch the mapping definition for a specific index and type."""
-        path = self._make_path(self._concat(indexes),
-                               self._concat(doc_types),
-                               '_mapping')
-        return self._send_request('GET', path)
+        return self._send_request('GET',
+                                  [self._concat(indexes),
+                                   self._concat(doc_types),
+                                   '_mapping'])
 
     def put_mapping(self, doc_type, mapping, indexes=None, **query_params):
         """
         Register specific mapping definition for a specific type against one or
         more indices.
         """
-        path = self._make_path(self._concat(indexes), doc_type, '_mapping')
-        return self._send_request('PUT', path, mapping, **query_params)
+        return self._send_request(
+            'PUT',
+            [self._concat(indexes), doc_type, '_mapping'],
+            mapping,
+            **query_params)
 
     def more_like_this(self, index, doc_type, id, fields, **query_params):
         """
         Execute a "more like this" search query against one or more fields and
         get back search hits.
         """
-        path = self._make_path(index, doc_type, id, '_mlt')
         query_params['fields'] = self._concat(fields)
-        return self._send_request('GET', path, query_params=query_params)
+        return self._send_request('GET',
+                                  [index, doc_type, id, '_mlt'],
+                                  query_params=query_params)
 
     ## Index Admin API
 
@@ -419,8 +428,7 @@ class ElasticSearch(object):
         """
         Retrieve the status of one or more indices
         """
-        path = self._make_path(self._concat(indexes), '_status')
-        return self._send_request('GET', path)
+        return self._send_request('GET', [self._concat(indexes), '_status'])
 
     def create_index(self, index, settings=None):
         """
@@ -429,19 +437,19 @@ class ElasticSearch(object):
         :arg settings: A dictionary which will be converted to JSON.
             Elasticsearch also accepts yaml, but we are only passing JSON.
         """
-        return self._send_request('PUT', self._make_path(index), body=settings)
+        return self._send_request('PUT', [index], body=settings)
 
     def delete_index(self, index):
         """Delete an index."""
-        return self._send_request('DELETE', self._make_path(index))
+        return self._send_request('DELETE', [index])
 
     def close_index(self, index):
         """Close an index."""
-        return self._send_request('POST', self._make_path(index, '_close'))
+        return self._send_request('POST', [index, '_close'])
 
     def open_index(self, index):
         """Open an index."""
-        return self._send_request('POST', self._make_path(index, '_open'))
+        return self._send_request('POST', [index, '_open'])
 
     def update_settings(self, indexes, settings):
         """
@@ -451,32 +459,32 @@ class ElasticSearch(object):
         # string.
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
-        return self._send_request(
-            'PUT',
-            self._make_path(self._concat(indexes), '_settings'),
-            body=settings)
+        return self._send_request('PUT',
+                                  [self._concat(indexes), '_settings'],
+                                  body=settings)
 
     def flush(self, indexes=None, refresh=None):
         """Flush one or more indices (clear memory)."""
         return self._send_request(
             'POST',
-            self._make_path(self._concat(indexes), '_flush'),
+            [self._concat(indexes), '_flush'],
             query_params={'refresh': refresh} if refresh else {})
 
     def refresh(self, indexes=None):
         """Refresh one or more indices."""
-        path = self._make_path(self._concat(indexes), '_refresh')
-        return self._send_request('POST', path)
+        return self._send_request('POST', [self._concat(indexes), '_refresh'])
 
     def gateway_snapshot(self, indexes=None):
         """Gateway snapshot one or more indices."""
-        path = self._make_path(self._concat(indexes), '_gateway', 'snapshot')
-        return self._send_request('POST', path)
+        return self._send_request(
+            'POST',
+            [self._concat(indexes), '_gateway', 'snapshot'])
 
     def optimize(self, indexes=None, **args):
         """Optimize one ore more indices."""
-        path = self._make_path(self._concat(indexes), '_optimize')
-        return self._send_request('POST', path, query_params=args)
+        return self._send_request('POST',
+                                  [self._concat(indexes), '_optimize'],
+                                  query_params=args)
 
     def health(self, indexes=None, **kwargs):
         """
@@ -485,8 +493,10 @@ class ElasticSearch(object):
         :arg indexes: The index or iterable of indexes to examine
         :arg kwargs: Passed through to the Cluster Health API verbatim
         """
-        path = self._make_path('_cluster', 'health', self._concat(indexes))
-        return self._send_request('GET', path, query_params=kwargs)
+        return self._send_request(
+            'GET',
+            ['_cluster', 'health', self._concat(indexes)],
+            query_params=kwargs)
 
     @staticmethod
     def from_python(value):
