@@ -189,7 +189,7 @@ class ElasticSearch(object):
         """
         if isinstance(urls, basestring):
             urls = [urls]
-        urls = [u[:-1] if u.endswith('/') else u for u in urls]
+        urls = [u.rstrip('/') for u in urls]
         self.servers = DowntimePronePool(urls, revival_delay)
         self.revival_delay = revival_delay
 
