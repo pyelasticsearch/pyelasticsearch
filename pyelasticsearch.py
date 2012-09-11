@@ -41,7 +41,7 @@ Search
 
 More Like This
 
->>> conn.index({"name":"Joe Test"}, "test-index", "test-type", 3)
+>>> conn.index("test-index", "test-type", {"name":"Joe Test"}, 3)
 {'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
 >>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
 {'ok': True, '_shards': {...}}
@@ -93,7 +93,7 @@ Get status
 {'ok': True, '_shards': {...}}
 
 Test adding with automatic id generation
->>> conn.index({"name":"Joe Tester"}, "test-index", "test-type") # doctest: +ELLIPSIS
+>>> conn.index("test-index", "test-type", {"name":"Joe Tester"}) # doctest: +ELLIPSIS
 {'_type': 'test-type', '_id': '...', 'ok': True, '_index': 'test-index'}
 """
 from collections import deque
