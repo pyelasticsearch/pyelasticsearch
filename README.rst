@@ -129,6 +129,16 @@ Version History
     methods.
   * ``index()`` now takes ``(index, doc_type, doc)`` rather than ``(doc, index,
     doc_type)``, for consistency with ``bulk_index()`` and other methods.
+  * Similarly, ``put_mapping()`` now takes ``(index, doc_type, mapping)``
+    rather than ``(doc_type, mapping, index)``.
+  * To prevent callers from accidentally destroying large amounts of data...
+
+    * ``delete()`` no longerdeletes all documents of a doctype when no ID is
+      specified; use ``delete_all()`` instead.
+    * ``delete_index()`` no longer deletes all indexes when none are given; use
+      ``delete_all_indexes()`` instead.
+    * ``update_settings()`` no longer updates the settings of all indexes when
+      none are specified; use ``update_all_settings()`` instead.
 
   Other changes:
 

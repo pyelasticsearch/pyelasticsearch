@@ -218,6 +218,7 @@ class ElasticSearch(object):
 
         If ``items`` is a string, promote it to a 1-item list.
         """
+        # TODO: Why strip out _all?
         if items is None:
             return ''
         if isinstance(items, basestring):
@@ -233,7 +234,8 @@ class ElasticSearch(object):
         """
         Send an HTTP request to ES, and return the JSON-decoded response.
 
-        :arg path: An iterable of path components, to be joined by "/"
+        :arg path_components: An iterable of path components, to be joined by
+            "/"
         """
         def join_path(path_components):
             """Smush together the path components, ignoring empty ones."""
@@ -355,14 +357,26 @@ class ElasticSearch(object):
                                   {'op_type': 'create'},  # TODO: Why?
                                   encode_body=False)
 
-    def delete(self, index, doc_type, id=None):
+    def delete(self, index, doc_type, id):
         """
         Delete a typed JSON document from a specific index based on its ID.
 
-        If ``id`` is omitted, delete all documents of the given doctype.
+        :arg index: The name of an index
+        :arg doc_type: The name of a document type
+        :arg id: The ID of the document to delete
         """
-        return self._send_request('DELETE',
-                                  [index, doc_type] + ([id] if id else []))
+        # TODO: Raise ValueError if id boils down to a 0-length string.
+        return self._send_request('DELETE', [index, doc_type, id])
+
+    def delete_all(self, index, doc_type):
+        """
+        Delete all documents of the given doctype from an index.
+
+        :arg index: The name of an index. ES does not support this being empty
+            or "_all" or a comma-delimited list of index names (in 0.19.9).
+        :arg doc_type: The name of a document type
+        """
+        return self._send_request('DELETE', [index, doc_type])
 
     def delete_by_query(self, index, doc_type, query):
         """
@@ -401,11 +415,15 @@ class ElasticSearch(object):
                                    self._concat(doc_types),
                                    '_mapping'])
 
-    def put_mapping(self, doc_type, mapping, indexes=None, **query_params):
+    def put_mapping(self, indexes, doc_type, mapping, **query_params):
         """
         Register specific mapping definition for a specific type against one or
         more indices.
         """
+        # TODO: Perhaps add a put_all_mappings() for consistency and so we
+        # don't need to expose the "_all" magic string. We haven't done it yet
+        # since this routine is not dangerous: ES makes you explicily pass
+        # "_all" to update all mappings.
         return self._send_request(
             'PUT',
             [self._concat(indexes), doc_type, '_mapping'],
@@ -434,14 +452,20 @@ class ElasticSearch(object):
         """
         Create an index with optional settings.
 
-        :arg settings: A dictionary which will be converted to JSON.
-            Elasticsearch also accepts yaml, but we are only passing JSON.
+        :arg settings: A dictionary which will be converted to JSON
         """
         return self._send_request('PUT', [index], body=settings)
 
-    def delete_index(self, index):
+    def delete_index(self, indexes):
         """Delete an index."""
-        return self._send_request('DELETE', [index])
+        if not indexes:
+            raise ValueError('No indexes specified. To delete all indexes, use'
+                             ' delete_all_indexes().')
+        return self._send_request('DELETE', [self._concat(indexes)])
+
+    def delete_all_indexes(self):
+        """Delete all indexes."""
+        return self.delete_index('_all')
 
     def close_index(self, index):
         """Close an index."""
@@ -453,15 +477,20 @@ class ElasticSearch(object):
 
     def update_settings(self, indexes, settings):
         """
-        :arg indexes: The indexes to update, or ['_all'] to do all of them
+        :arg indexes: An iterable of names of indexes to update
         """
-        # TODO: Have a way of saying "all indexes" that doesn't involve a magic
-        # string.
+        if not indexes:
+            raise ValueError('No indexes specified. To update all indexes, use'
+                             ' update_all_settings().')
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
         return self._send_request('PUT',
                                   [self._concat(indexes), '_settings'],
                                   body=settings)
+
+    def update_all_settings(self, settings):
+        """Update the settings of all indexes."""
+        return self._send_request('PUT', ['_settings'], body=settings)
 
     def flush(self, indexes=None, refresh=None):
         """Flush one or more indices (clear memory)."""

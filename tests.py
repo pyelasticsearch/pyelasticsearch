@@ -108,7 +108,7 @@ class IndexingTestCase(ElasticSearchTestCase):
     def testDeleteByDocType(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.conn.refresh(["test-index"])
-        result = self.conn.delete("test-index", "test-type")
+        result = self.conn.delete_all("test-index", "test-type")
         self.assertResultContains(result, {'ok': True})
 
     def testDeleteByQuery(self):
@@ -149,13 +149,13 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testPutMapping(self):
         result = self.conn.create_index('test-index')
-        result = self.conn.put_mapping('test-type', {'test-type' : {'properties' : {'name' : {'type' : 'string', 'store' : 'yes'}}}}, indexes=['test-index'])
+        result = self.conn.put_mapping('test-index', 'test-type', {'test-type' : {'properties' : {'name' : {'type' : 'string', 'store' : 'yes'}}}})
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
-    def testGettMapping(self):
+    def testGetMapping(self):
         result = self.conn.create_index('test-index')
         mapping = {'test-type' : {'properties' : {'name' : {'type' : 'string', 'store' : 'yes'}}}}
-        self.conn.put_mapping('test-type', mapping, indexes=['test-index'])
+        self.conn.put_mapping('test-index', 'test-type', mapping)
 
         result = self.conn.get_mapping(indexes=['test-index'], doc_types=['test-type'])
         self.assertEqual(result, mapping)
@@ -264,8 +264,8 @@ class SearchTestCase(ElasticSearchTestCase):
         self.conn.index('test-index', 'test-type', {'name': 'AgeBill Baloney', 'age': 35}, id=2)
         self.conn.refresh(['test-index'])
 
-        query = {   'query': { 
-                        'query_string': { 'query': 'name:age' }, 
+        query = {   'query': {
+                        'query_string': { 'query': 'name:age' },
                         'filtered': {
                             'filter': {
                                 'range': {
@@ -288,6 +288,46 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.more_like_this('test-index', 'test-type', 1, ['name'], min_term_freq=1, min_doc_freq=1)
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301,'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
+
+class DangerousOperationTests(ElasticSearchTestCase):
+    """
+    Tests that confirm callers can't do dangerous operations by accident and
+    that the substitute routines work
+    """
+
+    def test_delete_all(self):
+        """Make sure ``delete_all()`` sends the right request."""
+        with patch.object(self.conn, '_send_request') as _send_request:
+            self.conn.delete_all('test-index', 'tweet')
+        _send_request.assert_called_once_with(
+            'DELETE',
+            ['test-index', 'tweet'])
+
+    def delete_index_no_args(self):
+        """
+        ``delete_index()`` should raise ValueError if no indexes are given.
+        """
+        self.assertRaises(ValueError, self.conn.delete_index, [])
+
+    def test_delete_all_indexes(self):
+        """Make sure ``delete_all_indexes()`` sends the right request."""
+        with patch.object(self.conn, '_send_request') as _send_request:
+            self.conn.delete_all_indexes()
+        _send_request.assert_called_once_with('DELETE', [''])
+
+    def update_settings_no_args(self):
+        """
+        ``update_settings()`` should refuse to update *all* indexes when none
+        are given.
+        """
+        self.assertRaises(ValueError, self.conn.update_settings, [], {'b': 4})
+
+    def update_all_settings(self):
+        """Make sure ``update_all_settings()`` sends the right request."""
+        with patch.object(self.conn, '_send_request') as _send_request:
+            self.conn.update_all_settings({'joe': 'bob'})
+        _send_request.assert_called_once_with(
+            'PUT', ['_settings'], body={'joe': 'bob'})
 
 if __name__ == '__main__':
     unittest.main()
