@@ -330,7 +330,7 @@ class ElasticSearch(object):
         """
         # TODO: Support the zillions of other querystring args.
         return self._send_request(
-            'PUT' if id is None else 'POST',
+            'PUT' if id is not None else 'POST',
             [index, doc_type, id],
             doc,
             {'op_type': 'create'} if force_insert else {})
