@@ -313,7 +313,6 @@ class ElasticSearch(object):
         This can be used for search and count calls.
         These are identical api calls, except for the type of query.
         """
-        query_params = query_params
         if query:
             query_params['q'] = query
         return self._send_request(
