@@ -234,8 +234,15 @@ class ElasticSearch(object):
         """
         Send an HTTP request to ES, and return the JSON-decoded response.
 
+        Retry the request on different servers if the first one is down and
+        ``self.max_retries`` > 0.
+
+        :arg method: An HTTP method, like "GET"
         :arg path_components: An iterable of path components, to be joined by
             "/"
+        :arg body: The request body
+        :arg query_param: A map of querystring param names to values
+        :arg encode_body: Whether to encode the body of the request as JSON
         """
         def join_path(path_components):
             """Smush together the path components, ignoring empty ones."""
@@ -245,26 +252,23 @@ class ElasticSearch(object):
             return path
 
         path = join_path(path_components)
-
         if query_params:
             path = '?'.join([path, urlencode(query_params)])
 
-        kwargs = {}
-        server_url, was_dead = self.servers.get()
-        url = server_url + path
-
-        if body:
-            kwargs['data'] = self._encode_json(body) if encode_body else body
-
+        kwargs = ({'data': self._encode_json(body) if encode_body else body}
+                   if body else {})
         req_method = getattr(self.session, method.lower())
-        self.log.debug('making %s request to path: %s %s with body: %s',
-                       method, url, path, kwargs.get('data', {}))
 
         # We do our own retrying rather than using urllib3's; we want to retry
         # a different node in the cluster if possible, not the same one again
         # (which may be down).
         for attempt in xrange(self.max_retries + 1):
+            server_url, was_dead = self.servers.get()
+            url = server_url + path
             try:
+                self.log.debug(
+                    'making %s request to path: %s %s with body: %s',
+                    method, url, path, kwargs.get('data', {}))
                 # prefetch=True so the connection can be quickly returned to
                 # the pool. This is the default in requests >=0.3.16.
                 resp = req_method(
@@ -277,10 +281,9 @@ class ElasticSearch(object):
                 if attempt >= self.max_retries:
                     raise
             else:
+                if was_dead:
+                    self.servers.mark_live(server_url)
                 break
-
-        if was_dead:
-            self.servers.mark_live(server_url)
 
         self.log.debug('response status: %s', resp.status_code)
         prepped_response = self._decode_response(resp)

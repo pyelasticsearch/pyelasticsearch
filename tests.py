@@ -329,5 +329,51 @@ class DangerousOperationTests(ElasticSearchTestCase):
         _send_request.assert_called_once_with(
             'PUT', ['_settings'], body={'joe': 'bob'})
 
+
+class DowntimePoolingTests(unittest.TestCase):
+    """Tests for failover, pooling, and auto-retry"""
+
+    def test_retry(self):
+        """Make sure auto-retry works at least a little."""
+        first_url = []  # a mutable just so we can close over and write to it
+        def get_but_fail_the_first_time(url, **kwargs):
+            """
+            Raise ConnectionError for the first URL passed, but return a
+            plausible response for later ones.
+            """
+            # Monkeypatching random instead would have made too many
+            # assumptions about the code under test.
+            if first_url and url not in first_url:
+                response = requests.Response()
+                response._content = '{"some": "json"}'
+                return response
+            first_url.append(url)
+            raise ConnectionError
+
+        conn = ElasticSearch(['http://one.example.com:9200/',
+                              'http://two.example.com:9200/'],
+                             max_retries=1)
+
+        # Patch something so the request throws a timeout or connection error and collects what was attempted.
+        with patch.object(conn.session, 'get') as session_get:
+            session_get.side_effect = get_but_fail_the_first_time
+            # Try to request something with max_retries=1. This should make 2
+            # calls to session.get():
+            conn.get('test-index', 'test-type', 7)
+
+        # Assert that one server was tried and then the other.
+        self.assertEqual(session_get.call_count, 2)
+        calls = session_get.call_args_list
+        down_server = calls[0][0]
+        self.assertNotEqual(calls[1][0], down_server)
+
+        # Assert there's one item in the live pool and one in the dead.
+        # That oughta cover a fair amount.
+        self.assertEqual(len(conn.servers.live), 1)
+        self.assertEqual(len(conn.servers.dead), 1)
+
+    # TODO: Test that DowntimePronePool falls back to returning dead servers.
+
+
 if __name__ == '__main__':
     unittest.main()
