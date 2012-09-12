@@ -160,7 +160,7 @@ class ElasticHttpNotFoundError(ElasticHttpError):
 
 class NonJsonResponseError(Exception):
     """
-    Exception raised in the unlikely case that ES returns a non-JSON response
+    Exception raised in the unlikely event that ES returns a non-JSON response
     """
     @property
     def response(self):
@@ -265,10 +265,10 @@ class ElasticSearch(object):
         for attempt in xrange(self.max_retries + 1):
             server_url, was_dead = self.servers.get()
             url = server_url + path
+            self.log.debug(
+                'making %s request to path: %s %s with body: %s',
+                method, url, path, kwargs.get('data', {}))
             try:
-                self.log.debug(
-                    'making %s request to path: %s %s with body: %s',
-                    method, url, path, kwargs.get('data', {}))
                 # prefetch=True so the connection can be quickly returned to
                 # the pool. This is the default in requests >=0.3.16.
                 resp = req_method(
@@ -330,7 +330,7 @@ class ElasticSearch(object):
         """
         # TODO: Support the zillions of other querystring args.
         return self._send_request(
-            'PUT' if id is not None else 'POST',
+            'POST' if id is None else 'PUT',
             [index, doc_type, id],
             doc,
             {'op_type': 'create'} if force_insert else {})
