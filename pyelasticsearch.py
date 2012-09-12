@@ -575,7 +575,7 @@ class ElasticSearch(object):
                     converted_value,
                     (list, tuple, set, dict, int, float, long, complex)):
                 return converted_value
-        except:
+        except Exception:
             # If it fails (SyntaxError or its ilk) or we don't trust it,
             # continue on.
             pass
