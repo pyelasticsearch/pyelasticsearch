@@ -11,14 +11,7 @@ import requests
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
-from pyelasticsearch import to_query, es_kwargs
-
-
-class VerboseElasticSearch(ElasticSearch):
-    def setup_logging(self):
-        log = super(VerboseElasticSearch, self).setup_logging()
-        log.setLevel(logging.DEBUG)
-        return log
+from pyelasticsearch import es_kwargs
 
 
 class ElasticSearchTestCase(unittest.TestCase):
@@ -37,17 +30,6 @@ class ElasticSearchTestCase(unittest.TestCase):
 
 
 class IndexingTestCase(ElasticSearchTestCase):
-    def testSetupLogging(self):
-        log = self.conn.setup_logging()
-        self.assertTrue(isinstance(log, logging.Logger))
-        self.assertEqual(log.level, logging.ERROR)
-
-    def testOverriddenSetupLogging(self):
-        conn = VerboseElasticSearch('http://localhost:9200/')
-        log = conn.setup_logging()
-        self.assertTrue(isinstance(log, logging.Logger))
-        self.assertEqual(log.level, logging.DEBUG)
-
     def testIndexingWithID(self):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'} )
@@ -385,6 +367,7 @@ class KwargsForQueryTests(unittest.TestCase):
 
     def test_to_query(self):
         """Test the thing that translates objects to query string text."""
+        to_query = ElasticSearch._to_query
         self.assertEqual(to_query(4), '4')
         self.assertEqual(to_query(4L), '4')
         self.assertEqual(to_query(4.5), '4.5')

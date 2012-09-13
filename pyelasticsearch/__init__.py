@@ -100,7 +100,7 @@ from __future__ import absolute_import
 
 from datetime import datetime
 from functools import wraps
-import logging
+from logging import getLogger
 import re
 from urllib import urlencode
 
@@ -125,26 +125,6 @@ get_version = lambda: __version_info__
 DATETIME_REGEX = re.compile(
     r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T'
     r'(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
-
-
-class NullHandler(logging.Handler):
-    def emit(self, record):
-        pass
-
-
-def to_query(obj):
-    """Convert a native-Python object to a query string representation."""
-    # Quick and dirty thus far
-    if isinstance(obj, basestring):
-        return obj
-    if isinstance(obj, bool):
-        return 'true' if obj else 'false'
-    if isinstance(obj, (long, int, float)):
-        return str(obj)
-    if isinstance(obj, (list, tuple)):
-        return ','.join(to_query(o) for o in obj)
-    raise TypeError("to_query() doesn't know how to represent %r in an ES "
-                    "query string." % (obj,))
 
 
 def es_kwargs(*args_to_convert):
@@ -194,23 +174,11 @@ class ElasticSearch(object):
 
         self.timeout = timeout
         self.max_retries = max_retries
-        self.log = self.setup_logging()
+        self.logger = getLogger('pyelasticsearch')
         self.session = requests.session()
 
-    def setup_logging(self):
-        """
-        Set up the logging.
-
-        Done as a method so others can override as needed without complex
-        setup.
-        """
-        log = logging.getLogger('pyelasticsearch')
-        null = NullHandler()
-        log.addHandler(null)
-        log.setLevel(logging.ERROR)
-        return log
-
-    def _concat(self, items):
+    @staticmethod
+    def _concat(items):
         """
         Return a comma-delimited concatenation of the elements of ``items``,
         with any occurrences of "_all" omitted.
@@ -223,6 +191,21 @@ class ElasticSearch(object):
         if isinstance(items, basestring):
             items = [items]
         return ','.join(i for i in items if i != '_all')
+
+    @classmethod
+    def _to_query(cls, obj):
+        """Convert a native-Python object to a query string representation."""
+        # Quick and dirty thus far
+        if isinstance(obj, basestring):
+            return obj
+        if isinstance(obj, bool):
+            return 'true' if obj else 'false'
+        if isinstance(obj, (long, int, float)):
+            return str(obj)
+        if isinstance(obj, (list, tuple)):
+            return ','.join(cls._to_query(o) for o in obj)
+        raise TypeError("_to_query() doesn't know how to represent %r in an ES"
+                        " query string." % (obj,))
 
     def _send_request(self,
                       method,
@@ -252,8 +235,9 @@ class ElasticSearch(object):
 
         path = join_path(path_components)
         if query_params:
-            path = '?'.join([path, urlencode(dict((k, to_query(v)) for k, v in
-                                                  query_params.iteritems()))])
+            path = '?'.join(
+                [path, urlencode(dict((k, self._to_query(v)) for k, v in
+                                      query_params.iteritems()))])
 
         kwargs = ({'data': self._encode_json(body) if encode_body else body}
                    if body else {})
@@ -265,7 +249,7 @@ class ElasticSearch(object):
         for attempt in xrange(self.max_retries + 1):
             server_url, was_dead = self.servers.get()
             url = server_url + path
-            self.log.debug(
+            self.logger.debug(
                 'making %s request to path: %s %s with body: %s',
                 method, url, path, kwargs.get('data', {}))
             try:
@@ -275,9 +259,9 @@ class ElasticSearch(object):
                     url, prefetch=True, timeout=self.timeout, **kwargs)
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
-                self.log.info('%s marked as dead for %s seconds.',
-                              server_url,
-                              self.revival_delay)
+                self.logger.info('%s marked as dead for %s seconds.',
+                                 server_url,
+                                 self.revival_delay)
                 if attempt >= self.max_retries:
                     raise
             else:
@@ -285,7 +269,7 @@ class ElasticSearch(object):
                     self.servers.mark_live(server_url)
                 break
 
-        self.log.debug('response status: %s', resp.status_code)
+        self.logger.debug('response status: %s', resp.status_code)
         prepped_response = self._decode_response(resp)
         if resp.status_code >= 400:
             error_class = (ElasticHttpNotFoundError if resp.status_code == 404
@@ -293,7 +277,7 @@ class ElasticSearch(object):
             raise error_class(
                 resp.status_code,
                 prepped_response.get('error', prepped_response))
-        self.log.debug('got response %s', prepped_response)
+        self.logger.debug('got response %s', prepped_response)
         return prepped_response
 
     def _encode_json(self, body):

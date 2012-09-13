@@ -143,6 +143,9 @@ Version History
     (if any) as an arg; it now goes in the ``q`` kwarg, which mirrors how ES
     itself takes it. This means callers no longer have to pass an empty string
     as the first arg when they want to use a JSON query (a common case).
+  * ``setup_logging()`` is gone. If you want to configure logging, use the
+    logging module's usual ways. We still log to the "pyelasticsearch" named
+    logger.
 
   Other changes:
 
