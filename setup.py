@@ -1,10 +1,8 @@
 import codecs
 import os
 import re
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+
+from setuptools import setup, find_packages
 
 
 def read(*parts):
@@ -22,12 +20,13 @@ def find_version(*file_paths):
 
 setup(
     name="pyelasticsearch",
-    version=find_version("pyelasticsearch.py"),
+    version=find_version("pyelasticsearch/__init__.py"),
     description="Lightweight python wrapper for elasticsearch.",
     long_description=read('README.rst'),
     author='Robert Eanes',
     author_email='python@robsinbox.com',
-    py_modules=['pyelasticsearch'],
+    packages=find_packages(exclude=['ez_setup']),
+    include_package_data=True,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -43,6 +42,6 @@ setup(
         'requests>=0.9.0',
     ],
     tests_require=['mock'],
-    test_suite='tests',
+    test_suite='pyelasticsearch.tests',
     url='http://github.com/rhec/pyelasticsearch'
 )
