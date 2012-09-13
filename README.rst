@@ -18,9 +18,9 @@ Example::
     conn = ElasticSearch('http://localhost:9200/')
 
     # Index some documents.
-    conn.index({"name":"Joe Tester", "age": 25, "title": "QA Master"}, "contacts", "person", 1)
-    conn.index({"name":"Jessica Coder", "age": 32, "title": "Programmer"}, "contacts", "person", 2)
-    conn.index({"name":"Freddy Tester", "age": 29, "title": "Office Assistant"}, "contacts", "person", 3)
+    conn.index("contacts", "person", {"name":"Joe Tester", "age": 25, "title": "QA Master"}, id=1)
+    conn.index("contacts", "person", {"name":"Jessica Coder", "age": 32, "title": "Programmer"}, id=2)
+    conn.index("contacts", "person", {"name":"Freddy Tester", "age": 29, "title": "Office Assistant"}, id=3)
 
     # Refresh the index to pick up the latest documents.
     conn.refresh("contacts")
@@ -29,7 +29,7 @@ Example::
     jessica = conn.get("contacts", "person", 2)
 
     # Perform a simple search.
-    results = conn.search("name:joe OR name:freddy")
+    results = conn.search(q="name:joe OR name:freddy")
 
     # Perform a search using the elasticsearch Query DSL (http://www.elasticsearch.org/guide/reference/query-dsl)
     query = {
@@ -47,12 +47,12 @@ Example::
             },
         },
     }
-    results = conn.search(query)
+    results = conn.search(body=query)
 
     # Clean up.
     conn.delete_index("contacts")
 
-For more examples, please check out the doctests & ``tests.py``.
+For more examples, please check out the doctests and ``tests.py``.
 
 
 Connection Pooling
@@ -75,15 +75,34 @@ awhile. Meanwhile, pyelasticsearch will retry the request on a different node
 if ``max_retries`` was set to something greater than zero at construction.
 
 
-Why Not pyes?
-=============
-* pyes puts pointless abstractions in front of mappings. Dicts are fine, and
-  its API just gives you one more thing you have to learn.
-* pyes's dead-server handling just throws up its hands if all of the servers
-  are marked dead. pyelasticsearch will make an effort to try a dead one if no
-  live ones remain, and, if it responds, it will mark it live.
-* There are a lot of weirdnesses in the code, like monkeypatching and uses of
-  setattr with constant args.
+Forward-Compatibility Kwargs
+============================
+
+All methods that correspond to ES calls take an arbitrary set of kwargs that
+can be used to pass query string parameters directly to ES. Certain kwargs
+(called out by the ``es_kwargs`` decorator) are explicitly recognized as being
+claimed by ES and will never be trod upon by pyelasticsearch. To avoid
+conflicts, kwargs not yet so recognized should have "\es_" prepended by the
+caller. pyelasticsearch will strip off the "\es_" and pass the rest along to ES
+unscathed. Ideally, we'll then add support for those args in a future release.
+
+These "pass-through" kwargs are converted to text as follows:
+
+Bools
+    ``True``: "true"
+    ``False``: "false"
+
+Strings
+    Passed unmolested
+
+Ints, longs, and floats
+    Converted to strings via ``str()``
+
+Lists and tuples
+    Joined with commas, e.g. ``['one-index', two-index']`` becomes
+    ``one-index,two-index``
+
+Anything else raises a TypeError.
 
 
 License
@@ -104,6 +123,8 @@ Version History
 ===============
 
 0.2
+  Pretty much a rewrite by Erik Rose
+
   Backward-incompatible changes:
 
   * Rethink error handling:
@@ -153,7 +174,7 @@ Version History
   * Add failover in the case where a node doesn't respond.
   * Add `close_index`, `open_index`, `update_settings`, `health`.
   * Support passing arbitrary kwargs through to the ES query string. Known ones
-    are taken verbatim; unanticipated ones need an "es_" prefix to guarantee
+    are taken verbatim; unanticipated ones need an "\es_" prefix to guarantee
     forward compatibility.
   * Automatically convert `datetime` objects when encoding JSON.
   * In routines that can take either one or many indexes, don't require the
