@@ -83,7 +83,8 @@ class IndexingTestCase(ElasticSearchTestCase):
         _send_request.assert_called_once_with(
             'PUT',
             ['test-index,toast-index', '_settings'],
-            body={'index': {'number_of_replicas': 2}})
+            body={'index': {'number_of_replicas': 2}},
+            query_params={})
 
     def testHealth(self):
         with patch.object(self.conn, '_send_request') as _send_request:
@@ -317,7 +318,7 @@ class DangerousOperationTests(ElasticSearchTestCase):
         """Make sure ``delete_all_indexes()`` sends the right request."""
         with patch.object(self.conn, '_send_request') as _send_request:
             self.conn.delete_all_indexes()
-        _send_request.assert_called_once_with('DELETE', [''])
+        _send_request.assert_called_once_with('DELETE', [''], query_params={})
 
     def update_settings_no_args(self):
         """

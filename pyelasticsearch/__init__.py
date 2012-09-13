@@ -501,40 +501,51 @@ class ElasticSearch(object):
 
     ## Index Admin API
 
-    def status(self, indexes=None):
+    @es_kwargs('recovery', 'snapshot')
+    def status(self, indexes=None, query_params=None):
         """
         Retrieve the status of one or more indices
         """
-        return self._send_request('GET', [self._concat(indexes), '_status'])
+        return self._send_request('GET', [self._concat(indexes), '_status'],
+                                  query_params=query_params)
 
-    def create_index(self, index, settings=None):
+    @es_kwargs()
+    def create_index(self, index, settings=None, query_params=None):
         """
         Create an index with optional settings.
 
         :arg settings: A dictionary which will be converted to JSON
         """
-        return self._send_request('PUT', [index], body=settings)
+        return self._send_request('PUT', [index], body=settings,
+                                  query_params=query_params)
 
-    def delete_index(self, indexes):
+    @es_kwargs()
+    def delete_index(self, indexes, query_params=None):
         """Delete an index."""
         if not indexes:
             raise ValueError('No indexes specified. To delete all indexes, use'
                              ' delete_all_indexes().')
-        return self._send_request('DELETE', [self._concat(indexes)])
+        return self._send_request('DELETE', [self._concat(indexes)],
+                                  query_params=query_params)
 
-    def delete_all_indexes(self):
+    def delete_all_indexes(self, **kwargs):
         """Delete all indexes."""
-        return self.delete_index('_all')
+        return self.delete_index('_all', **kwargs)
 
-    def close_index(self, index):
+    @es_kwargs()
+    def close_index(self, index, query_params=None):
         """Close an index."""
-        return self._send_request('POST', [index, '_close'])
+        return self._send_request('POST', [index, '_close'],
+                                  query_params=query_params)
 
-    def open_index(self, index):
+    @es_kwargs()
+    def open_index(self, index, query_params=None):
         """Open an index."""
-        return self._send_request('POST', [index, '_open'])
+        return self._send_request('POST', [index, '_open'],
+                                  query_params=query_params)
 
-    def update_settings(self, indexes, settings):
+    @es_kwargs()
+    def update_settings(self, indexes, settings, query_params=None):
         """
         :arg indexes: An iterable of names of indexes to update
         """
@@ -545,36 +556,47 @@ class ElasticSearch(object):
         # update_cluster_settings().
         return self._send_request('PUT',
                                   [self._concat(indexes), '_settings'],
-                                  body=settings)
+                                  body=settings,
+                                  query_params=query_params)
 
-    def update_all_settings(self, settings):
+    @es_kwargs()
+    def update_all_settings(self, settings, query_params=None):
         """Update the settings of all indexes."""
-        return self._send_request('PUT', ['_settings'], body=settings)
+        return self._send_request('PUT', ['_settings'], body=settings,
+                                  query_params=query_params)
 
-    def flush(self, indexes=None, refresh=None):
+    @es_kwargs('refresh')
+    def flush(self, indexes=None, query_params=None):
         """Flush one or more indices (clear memory)."""
-        return self._send_request(
-            'POST',
-            [self._concat(indexes), '_flush'],
-            query_params={'refresh': refresh} if refresh else {})
+        return self._send_request('POST',
+                                  [self._concat(indexes), '_flush'],
+                                  query_params=query_params)
 
-    def refresh(self, indexes=None):
+    @es_kwargs()
+    def refresh(self, indexes=None, query_params=None):
         """Refresh one or more indices."""
-        return self._send_request('POST', [self._concat(indexes), '_refresh'])
+        return self._send_request('POST', [self._concat(indexes), '_refresh'],
+                                  query_params=query_params)
 
-    def gateway_snapshot(self, indexes=None):
+    @es_kwargs()
+    def gateway_snapshot(self, indexes=None, query_params=None):
         """Gateway snapshot one or more indices."""
         return self._send_request(
             'POST',
-            [self._concat(indexes), '_gateway', 'snapshot'])
+            [self._concat(indexes), '_gateway', 'snapshot'],
+            query_params=query_params)
 
-    def optimize(self, indexes=None, **args):
+    @es_kwargs('max_num_segments', 'only_expunge_deletes', 'refresh', 'flush',
+               'wait_for_merge')
+    def optimize(self, indexes=None, query_params=None):
         """Optimize one ore more indices."""
         return self._send_request('POST',
                                   [self._concat(indexes), '_optimize'],
-                                  query_params=args)
+                                  query_params=query_params)
 
-    def health(self, indexes=None, **kwargs):
+    @es_kwargs('level', 'wait_for_status', 'wait_for_relocating_shards',
+               'wait_for_nodes', 'timeout')
+    def health(self, indexes=None, query_params=None):
         """
         Report on the health of the cluster or certain indices.
 
@@ -584,7 +606,7 @@ class ElasticSearch(object):
         return self._send_request(
             'GET',
             ['_cluster', 'health', self._concat(indexes)],
-            query_params=kwargs)
+            query_params=query_params)
 
     @staticmethod
     def from_python(value):
