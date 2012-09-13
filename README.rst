@@ -145,6 +145,9 @@ Version History
   * Add load-balancing across multiple nodes.
   * Add failover in the case where a node doesn't respond.
   * Add `close_index`, `open_index`, `update_settings`, `health`.
+  * Support passing arbitrary kwargs through to the ES query string. Known ones
+    are taken verbatim; unanticipated ones need an "es_" prefix to guarantee
+    forward compatibility.
   * Automatically convert `datetime` objects when encoding JSON.
   * In routines that can take either one or many indexes, don't require the
     caller to wrap a single index name in a list.

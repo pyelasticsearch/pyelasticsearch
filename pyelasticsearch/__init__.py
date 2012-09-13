@@ -240,7 +240,7 @@ class ElasticSearch(object):
         :arg path_components: An iterable of path components, to be joined by
             "/"
         :arg body: The request body
-        :arg query_params: A map of querystring param names to values
+        :arg query_params: A map of querystring param names to values or None
         :arg encode_body: Whether to encode the body of the request as JSON
         """
         def join_path(path_components):
@@ -378,7 +378,9 @@ class ElasticSearch(object):
                                   doc,
                                   query_params)
 
-    def bulk_index(self, index, doc_type, docs, id_field='id'):
+    @kwargs_for_query('consistency', 'refresh')
+    def bulk_index(self, index, doc_type, docs, id_field='id',
+                   query_params=None):
         """Index a list of documents as efficiently as possible."""
         body_bits = []
 
@@ -396,13 +398,17 @@ class ElasticSearch(object):
 
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
+        query_params['op_type'] = 'create'  # TODO: Why?
         return self._send_request('POST',
                                   [index, '_bulk'],
                                   body,
-                                  {'op_type': 'create'},  # TODO: Why?
-                                  encode_body=False)
+                                  encode_body=False,
+                                  query_params=query_params)
 
-    def delete(self, index, doc_type, id):
+    _DELETE_KWARGS = ['routing', 'parent', 'replication', 'consistency',
+                      'refresh']
+    @kwargs_for_query(*_DELETE_KWARGS)
+    def delete(self, index, doc_type, id, query_params=None):
         """
         Delete a typed JSON document from a specific index based on its ID.
 
@@ -411,9 +417,11 @@ class ElasticSearch(object):
         :arg id: The ID of the document to delete
         """
         # TODO: Raise ValueError if id boils down to a 0-length string.
-        return self._send_request('DELETE', [index, doc_type, id])
+        return self._send_request('DELETE', [index, doc_type, id],
+                                  query_params=query_params)
 
-    def delete_all(self, index, doc_type):
+    @kwargs_for_query(*_DELETE_KWARGS)
+    def delete_all(self, index, doc_type, query_params=None):
         """
         Delete all documents of the given doctype from an index.
 
@@ -421,17 +429,22 @@ class ElasticSearch(object):
             or "_all" or a comma-delimited list of index names (in 0.19.9).
         :arg doc_type: The name of a document type
         """
-        return self._send_request('DELETE', [index, doc_type])
+        return self._send_request('DELETE', [index, doc_type],
+                                  query_params=query_params)
 
-    def delete_by_query(self, index, doc_type, query):
+    @kwargs_for_query('q', 'df', 'analyzer', 'default_operator', 'source'
+                      'routing', 'replication', 'consistency')
+    def delete_by_query(self, index, doc_type, query, query_params=None):
         """
         Delete typed JSON documents from a specific index based on query.
         """
         return self._send_request('DELETE', [index, doc_type, '_query'], query)
 
-    def get(self, index, doc_type, id):
+    @kwargs_for_query('realtime', 'fields', 'routing', 'preference', 'refresh')
+    def get(self, index, doc_type, id, query_params=None):
         """Get a typed JSON document from an index by ID."""
-        return self._send_request('GET', [index, doc_type, id])
+        return self._send_request('GET', [index, doc_type, id],
+                                  query_params=query_params)
 
     def search(
         self, query, body=None, indexes=None, doc_types=None, **query_params):

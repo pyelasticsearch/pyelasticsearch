@@ -303,7 +303,8 @@ class DangerousOperationTests(ElasticSearchTestCase):
             self.conn.delete_all('test-index', 'tweet')
         _send_request.assert_called_once_with(
             'DELETE',
-            ['test-index', 'tweet'])
+            ['test-index', 'tweet'],
+            query_params={})
 
     def delete_index_no_args(self):
         """
