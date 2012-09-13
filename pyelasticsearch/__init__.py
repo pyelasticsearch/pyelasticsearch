@@ -99,6 +99,7 @@ Test adding with automatic id generation
 from __future__ import absolute_import
 
 from datetime import datetime
+from functools import wraps
 import logging
 import re
 from urllib import urlencode
@@ -129,6 +130,48 @@ DATETIME_REGEX = re.compile(
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
+
+
+def to_query(obj):
+    """Convert a native-Python object to a query string representation."""
+    # Quick and dirty thus far
+    if isinstance(obj, basestring):
+        return obj
+    if isinstance(obj, bool):
+        return 'true' if obj else 'false'
+    if isinstance(obj, (long, int, float)):
+        return str(obj)
+    if isinstance(obj, (list, tuple)):
+        return ','.join(to_query(o) for o in obj)
+    raise TypeError("to_query() doesn't know how to represent %r in an ES "
+                    "query string." % (obj,))
+
+
+def kwargs_for_query(*args_to_convert):
+    """
+    Mark which kwargs will become query string params in the eventual ES call.
+
+    Return a decorator that grabs the kwargs of the given names, plus any
+    beginning with "es_", subtracts them from the ordinary kwargs, and passes
+    them to the decorated function through the ``query_params`` kwarg. The
+    remaining kwargs and the args are passed through unscathed.
+    """
+    convertible_args = set(args_to_convert)
+    def decorator(func):
+        @wraps(func)
+        def decorate(*args, **kwargs):
+            # Make kwargs the map of normal kwargs and query_params the map of
+            # kwargs destined for query string params:
+            query_params = {}
+            for k, v in kwargs.items():  # NOT iteritems; we mutate kwargs
+                if k.startswith('es_'):
+                    query_params[k[3:]] = kwargs.pop(k)
+                elif k in convertible_args:
+                    query_params[k] = kwargs.pop(k)
+
+            return func(*args, query_params=query_params, **kwargs)
+        return decorate
+    return decorator
 
 
 class ElasticSearch(object):
@@ -197,7 +240,7 @@ class ElasticSearch(object):
         :arg path_components: An iterable of path components, to be joined by
             "/"
         :arg body: The request body
-        :arg query_param: A map of querystring param names to values
+        :arg query_params: A map of querystring param names to values
         :arg encode_body: Whether to encode the body of the request as JSON
         """
         def join_path(path_components):
@@ -209,7 +252,8 @@ class ElasticSearch(object):
 
         path = join_path(path_components)
         if query_params:
-            path = '?'.join([path, urlencode(query_params)])
+            path = '?'.join([path, urlencode(dict((k, to_query(v)) for k, v in
+                                                  query_params.iteritems()))])
 
         kwargs = ({'data': self._encode_json(body) if encode_body else body}
                    if body else {})
@@ -279,17 +323,60 @@ class ElasticSearch(object):
 
     ## REST API
 
-    def index(self, index, doc_type, doc, id=None, force_insert=False):
+    @kwargs_for_query('routing', 'parent', 'timestamp', 'ttl', 'percolate',
+                      'consistency', 'replication', 'refresh', 'timeout')
+    def index(self, index, doc_type, doc, id=None, force_insert=False,
+              query_params=None):
         """
-        Index a typed JSON document into a specific index, and make it
-        searchable.
+        Put a typed JSON document into a specific index to make it searchable.
+
+        :arg index: The name of the index to which to add the document
+        :arg doc_type: The type of the document
+        :arg doc: A mapping, convertible to JSON, representing the document
+        :arg id: The ID to give the document. Leave blank to make one up.
+        :arg force_insert: If ``True`` and a document of the given ID already
+            exists, fail rather than updating it.
+        :arg routing: A value hashed to determine which shard this indexing
+            request is routed to
+        :arg parent: The ID of a parent document, which leads this document to
+            be routed to the same shard as the parent, unless ``routing``
+            overrides it.
+        :arg timestamp: An explicit value for the (typically automatic)
+            timestamp associated with a document, for use with ``ttl`` and such
+        :arg ttl: The time until this document is automatically removed from
+            the index. Can be an integral number of milliseconds or a duration
+            like '1d'.
+        :arg percolate: An indication of which percolator queries, registered
+            against this index, should be checked against the new document: '*'
+            or a query string like 'color:green'
+        :arg consistency: An indication of how many active shards the contact
+            node should demand to see in order to let the index operation
+            succeed: 'one', 'quorum', or 'all'
+        :arg replication: Set to 'async' to return from ES before finishing
+            replication.
+        :arg refresh: Pass True to refresh the index after adding the document.
+        :arg timeout: A duration to wait for the relevant primary shard to
+            become available, in the event that it isn't: for example, "5m"
+        :arg query_params: A map of other querystring params to pass along to
+            ES. This lets you use future ES features without waiting for an
+            update to pyelasticsearch. If we just used **kwargs for this, ES
+            could start using a querystring param that we already used as a
+            kwarg, and we'd shadow it. Name these params according to the names
+            they have in ES's REST API, but prepend "es_": for example,
+            ``es_version=2``.
+
+        See http://www.elasticsearch.org/guide/reference/api/index_.html for
+        more about the index API.
         """
-        # TODO: Support the zillions of other querystring args.
-        return self._send_request(
-            'POST' if id is None else 'PUT',
-            [index, doc_type, id],
-            doc,
-            {'op_type': 'create'} if force_insert else {})
+        # TODO: Support version along with associated "preference" and
+        # "version_type" params.
+        if force_insert:
+            query_params['op_type'] = 'create'
+
+        return self._send_request('POST' if id is None else 'PUT',
+                                  [index, doc_type, id],
+                                  doc,
+                                  query_params)
 
     def bulk_index(self, index, doc_type, docs, id_field='id'):
         """Index a list of documents as efficiently as possible."""

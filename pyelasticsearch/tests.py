@@ -9,7 +9,9 @@ import unittest
 from mock import patch
 import requests
 
-from pyelasticsearch import *  # Test that __all__ is correct.
+# Test that __all__ is sufficient:
+from pyelasticsearch import *
+from pyelasticsearch import to_query, kwargs_for_query
 
 
 class VerboseElasticSearch(ElasticSearch):
@@ -373,6 +375,62 @@ class DowntimePoolingTests(unittest.TestCase):
         self.assertEqual(len(conn.servers.dead), 1)
 
     # TODO: Test that DowntimePronePool falls back to returning dead servers.
+
+
+class KwargsForQueryTests(unittest.TestCase):
+    """Tests for the ``kwargs_for_query`` decorator and such"""
+
+    def test_to_query(self):
+        """Test the thing that translates objects to query string text."""
+        self.assertEqual(to_query(4), '4')
+        self.assertEqual(to_query(4L), '4')
+        self.assertEqual(to_query(4.5), '4.5')
+        self.assertEqual(to_query(True), 'true')
+        self.assertEqual(to_query(('4', 'hi', 'thomas')), '4,hi,thomas')
+        self.assertRaises(TypeError, to_query, object())
+
+    def test_kwargs_for_query(self):
+        """
+        Make sure ``kwargs_for_query`` bundles es_ and specifically called out
+        kwargs into the ``query_params`` map and leaves other args and kwargs
+        alone.
+        """
+        @kwargs_for_query('refresh', 'es_timeout')
+        def index(doc, query_params=None, other_kwarg=None):
+            return doc, query_params, other_kwarg
+
+        self.assertEqual(index(3, refresh=True, es_timeout=7, other_kwarg=1),
+                         (3, {'refresh': True, 'timeout': 7}, 1))
+        self.assertEqual(index.__name__, 'index')
+
+    def test_index(self):
+        """Integration-test ``index()`` with some decorator-handled arg."""
+        def valid_responder(*args, **kwargs):
+            """Return an arbitrary successful Response."""
+            response = requests.Response()
+            response._content = '{"some": "json"}'
+            response.status_code = 200
+            return response
+
+        conn = ElasticSearch('http://example.com:9200/')
+        with patch.object(conn.session, 'put') as put:
+            put.side_effect = valid_responder
+            conn.index('some_index',
+                       'some_type',
+                       {'some': 'doc'},
+                       id=3,
+                       routing='boogie',
+                       es_snorkfest=True,
+                       es_borkfest='gerbils:great')
+
+        # Make sure all the query string params got into the URL:
+        url = put.call_args[0][0]
+        self.assertTrue(
+            url.startswith('http://example.com:9200/some_index/some_type/3?'))
+        self.assertTrue('routing=boogie' in url)
+        self.assertTrue('snorkfest=true' in url)
+        self.assertTrue('borkfest=gerbils%3Agreat' in url)
+        self.assertTrue('es_' not in url)  # We stripped the "es_" prefixes.
 
 
 if __name__ == '__main__':
