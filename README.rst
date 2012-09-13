@@ -139,6 +139,10 @@ Version History
       ``delete_all_indexes()`` instead.
     * ``update_settings()`` no longer updates the settings of all indexes when
       none are specified; use ``update_all_settings()`` instead.
+  * ``search()`` and ``count()`` no longer take the query-string-dwelling query
+    (if any) as an arg; it now goes in the ``q`` kwarg, which mirrors how ES
+    itself takes it. This means callers no longer have to pass an empty string
+    as the first arg when they want to use a JSON query (a common case).
 
   Other changes:
 

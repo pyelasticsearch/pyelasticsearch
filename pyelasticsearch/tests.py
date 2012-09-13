@@ -11,7 +11,7 @@ import requests
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
-from pyelasticsearch import to_query, kwargs_for_query
+from pyelasticsearch import to_query, es_kwargs
 
 
 class VerboseElasticSearch(ElasticSearch):
@@ -120,14 +120,14 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.refresh(['test-index'])
 
         self.conn.refresh(['test-index'])
-        result = self.conn.count('*:*', indexes=['test-index'])
+        result = self.conn.count(q='*:*', indexes=['test-index'])
         self.assertResultContains(result, {'count': 3})
 
         result = self.conn.delete_by_query('test-index', 'test-type', {'query_string': {'query': 'name:joe OR name:bill'}})
         self.assertResultContains(result, {'ok': True})
 
         self.conn.refresh(['test-index'])
-        result = self.conn.count('*:*', indexes=['test-index'])
+        result = self.conn.count(q='*:*', indexes=['test-index'])
         self.assertResultContains(result, {'count': 1})
 
     def testDeleteIndex(self):
@@ -227,7 +227,8 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(result['items'][1]['index']['ok'], True)
         self.assertEqual(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
-        self.assertEqual(self.conn.count('*:*', indexes=['test-index'])['count'], 2)
+        self.assertEqual(self.conn.count(q='*:*',
+                                         indexes=['test-index'])['count'], 2)
 
     def testErrorHandling(self):
         # Wrong port.
@@ -253,11 +254,11 @@ class SearchTestCase(ElasticSearchTestCase):
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'})
 
     def testGetCountBySearch(self):
-        result = self.conn.count('name:joe')
+        result = self.conn.count(q='name:joe')
         self.assertResultContains(result, {'count': 1})
 
     def testSearchByField(self):
-        result = self.conn.search('name:joe')
+        result = self.conn.search(q='name:joe')
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
     def testSearchByDSL(self):
@@ -281,7 +282,7 @@ class SearchTestCase(ElasticSearchTestCase):
                     },
                 }
 
-        result = self.conn.search('', body=json.dumps(query), indexes=['test-index'], doc_types=['test-type'])
+        result = self.conn.search(body=json.dumps(query), indexes=['test-index'], doc_types=['test-type'])
         self.assertTrue(result.get('hits').get('hits').__len__() > 0, str(result))
 
     def testMLT(self):
@@ -379,7 +380,7 @@ class DowntimePoolingTests(unittest.TestCase):
 
 
 class KwargsForQueryTests(unittest.TestCase):
-    """Tests for the ``kwargs_for_query`` decorator and such"""
+    """Tests for the ``es_kwargs`` decorator and such"""
 
     def test_to_query(self):
         """Test the thing that translates objects to query string text."""
@@ -390,13 +391,12 @@ class KwargsForQueryTests(unittest.TestCase):
         self.assertEqual(to_query(('4', 'hi', 'thomas')), '4,hi,thomas')
         self.assertRaises(TypeError, to_query, object())
 
-    def test_kwargs_for_query(self):
+    def test_es_kwargs(self):
         """
-        Make sure ``kwargs_for_query`` bundles es_ and specifically called out
-        kwargs into the ``query_params`` map and leaves other args and kwargs
-        alone.
+        Make sure ``es_kwargs`` bundles es_ and specifically called out kwargs
+        into the ``query_params`` map and leaves other args and kwargs alone.
         """
-        @kwargs_for_query('refresh', 'es_timeout')
+        @es_kwargs('refresh', 'es_timeout')
         def index(doc, query_params=None, other_kwarg=None):
             return doc, query_params, other_kwarg
 

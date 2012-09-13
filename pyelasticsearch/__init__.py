@@ -147,7 +147,7 @@ def to_query(obj):
                     "query string." % (obj,))
 
 
-def kwargs_for_query(*args_to_convert):
+def es_kwargs(*args_to_convert):
     """
     Mark which kwargs will become query string params in the eventual ES call.
 
@@ -227,7 +227,7 @@ class ElasticSearch(object):
     def _send_request(self,
                       method,
                       path_components,
-                      body='',
+                      body=None,
                       query_params=None,
                       encode_body=True):
         """
@@ -239,7 +239,7 @@ class ElasticSearch(object):
         :arg method: An HTTP method, like "GET"
         :arg path_components: An iterable of path components, to be joined by
             "/"
-        :arg body: The request body
+        :arg body: The request body or None to omit
         :arg query_params: A map of querystring param names to values or None
         :arg encode_body: Whether to encode the body of the request as JSON
         """
@@ -307,24 +307,10 @@ class ElasticSearch(object):
             raise NonJsonResponseError(response)
         return json_response
 
-    def _query_call(self, query_type, query, body=None, indexes=None,
-                    doc_types=None, **query_params):
-        """
-        This can be used for search and count calls.
-        These are identical api calls, except for the type of query.
-        """
-        if query:
-            query_params['q'] = query
-        return self._send_request(
-            'GET',
-            [self._concat(indexes), self._concat(doc_types), query_type],
-            body,
-            query_params)
-
     ## REST API
 
-    @kwargs_for_query('routing', 'parent', 'timestamp', 'ttl', 'percolate',
-                      'consistency', 'replication', 'refresh', 'timeout')
+    @es_kwargs('routing', 'parent', 'timestamp', 'ttl', 'percolate',
+               'consistency', 'replication', 'refresh', 'timeout')
     def index(self, index, doc_type, doc, id=None, force_insert=False,
               query_params=None):
         """
@@ -378,7 +364,7 @@ class ElasticSearch(object):
                                   doc,
                                   query_params)
 
-    @kwargs_for_query('consistency', 'refresh')
+    @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
                    query_params=None):
         """Index a list of documents as efficiently as possible."""
@@ -407,7 +393,7 @@ class ElasticSearch(object):
 
     _DELETE_KWARGS = ['routing', 'parent', 'replication', 'consistency',
                       'refresh']
-    @kwargs_for_query(*_DELETE_KWARGS)
+    @es_kwargs(*_DELETE_KWARGS)
     def delete(self, index, doc_type, id, query_params=None):
         """
         Delete a typed JSON document from a specific index based on its ID.
@@ -420,7 +406,7 @@ class ElasticSearch(object):
         return self._send_request('DELETE', [index, doc_type, id],
                                   query_params=query_params)
 
-    @kwargs_for_query(*_DELETE_KWARGS)
+    @es_kwargs(*_DELETE_KWARGS)
     def delete_all(self, index, doc_type, query_params=None):
         """
         Delete all documents of the given doctype from an index.
@@ -432,48 +418,57 @@ class ElasticSearch(object):
         return self._send_request('DELETE', [index, doc_type],
                                   query_params=query_params)
 
-    @kwargs_for_query('q', 'df', 'analyzer', 'default_operator', 'source'
-                      'routing', 'replication', 'consistency')
+    @es_kwargs('q', 'df', 'analyzer', 'default_operator', 'source' 'routing',
+               'replication', 'consistency')
     def delete_by_query(self, index, doc_type, query, query_params=None):
         """
         Delete typed JSON documents from a specific index based on query.
         """
-        return self._send_request('DELETE', [index, doc_type, '_query'], query)
+        return self._send_request('DELETE', [index, doc_type, '_query'], query,
+                                  query_params=query_params)
 
-    @kwargs_for_query('realtime', 'fields', 'routing', 'preference', 'refresh')
+    @es_kwargs('realtime', 'fields', 'routing', 'preference', 'refresh')
     def get(self, index, doc_type, id, query_params=None):
         """Get a typed JSON document from an index by ID."""
         return self._send_request('GET', [index, doc_type, id],
                                   query_params=query_params)
 
-    def search(
-        self, query, body=None, indexes=None, doc_types=None, **query_params):
+    @es_kwargs('q', 'routing')
+    def search(self, body=None, indexes=None, doc_types=None,
+               query_params=None):
         """
         Execute a search query against one or more indices and get back search
         hits.
 
-        :arg query: a dictionary that will convert to ES's query DSL
-
-        TODO: better api to reflect that the query can be either 'query' or
-        'body' argument.
+        :arg body: A dictionary that will convert to ES's query DSL
+        :arg q: A query formatted for placement in the query string
         """
-        return self._query_call(
-            '_search', query, body, indexes, doc_types, **query_params)
+        return self._send_request(
+            'GET',
+            [self._concat(indexes), self._concat(doc_types), '_search'],
+            body,
+            query_params=query_params)
 
-    def count(
-        self, query, body=None, indexes=None, doc_types=None, **query_params):
+    @es_kwargs('q', 'df', 'analyzer', 'default_operator', 'source', 'routing')
+    def count(self, body=None, indexes=None, doc_types=None,
+              query_params=None):
         """Execute a query against one or more indices and get hit count."""
-        return self._query_call(
-            '_count', query, body, indexes, doc_types, **query_params)
+        return self._send_request(
+            'GET',
+            [self._concat(indexes), self._concat(doc_types), '_count'],
+            body,
+            query_params=query_params)
 
-    def get_mapping(self, indexes=None, doc_types=None):
+    @es_kwargs()
+    def get_mapping(self, indexes=None, doc_types=None, query_params=None):
         """Fetch the mapping definition for a specific index and type."""
-        return self._send_request('GET',
-                                  [self._concat(indexes),
-                                   self._concat(doc_types),
-                                   '_mapping'])
+        return self._send_request(
+            'GET',
+            [self._concat(indexes), self._concat(doc_types), '_mapping'],
+            query_params=query_params)
 
-    def put_mapping(self, indexes, doc_type, mapping, **query_params):
+    @es_kwargs('ignore_conflicts')
+    def put_mapping(self, indexes, doc_type, mapping, query_params=None):
         """
         Register specific mapping definition for a specific type against one or
         more indices.
@@ -486,9 +481,15 @@ class ElasticSearch(object):
             'PUT',
             [self._concat(indexes), doc_type, '_mapping'],
             mapping,
-            **query_params)
+            query_params=query_params)
 
-    def more_like_this(self, index, doc_type, id, fields, **query_params):
+    @es_kwargs('search_type', 'search_indices', 'search_types',
+               'search_scroll', 'search_size', 'search_from', 'fields',
+               'like_text', 'percent_terms_to_match', 'min_term_freq',
+               'max_query_terms', 'stop_words', 'min_doc_freq', 'max_doc_freq',
+               'min_word_len', 'max_word_len', 'boost_terms', 'boost',
+               'analyzer')
+    def more_like_this(self, index, doc_type, id, fields, query_params=None):
         """
         Execute a "more like this" search query against one or more fields and
         get back search hits.
