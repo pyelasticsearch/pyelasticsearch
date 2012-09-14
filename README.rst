@@ -126,6 +126,13 @@ Used `pysolr`_ as a jumping off point - thanks guys.
 Version History
 ===============
 
+0.3
+  Backward-incompatible changes:
+
+  * Tweak ``search()`` and ``count()`` APIs. Now each simply takes either a
+    textual or a dict query as its first argument. There's no more silliness
+    about needing to use either a ``q`` or a ``body`` kwarg.
+
 0.2.1
   * Recognize datetimes and dates in pass-through kwargs. This is useful for
     ``timeout``.

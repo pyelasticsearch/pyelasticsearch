@@ -109,14 +109,14 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.refresh(['test-index'])
 
         self.conn.refresh(['test-index'])
-        result = self.conn.count(q='*:*', indexes=['test-index'])
+        result = self.conn.count('*:*', indexes=['test-index'])
         self.assertResultContains(result, {'count': 3})
 
         result = self.conn.delete_by_query('test-index', 'test-type', {'query_string': {'query': 'name:joe OR name:bill'}})
         self.assertResultContains(result, {'ok': True})
 
         self.conn.refresh(['test-index'])
-        result = self.conn.count(q='*:*', indexes=['test-index'])
+        result = self.conn.count('*:*', indexes=['test-index'])
         self.assertResultContains(result, {'count': 1})
 
     def testDeleteIndex(self):
@@ -216,7 +216,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(result['items'][1]['index']['ok'], True)
         self.assertEqual(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
-        self.assertEqual(self.conn.count(q='*:*',
+        self.assertEqual(self.conn.count('*:*',
                                          indexes=['test-index'])['count'], 2)
 
     def testErrorHandling(self):
@@ -243,11 +243,11 @@ class SearchTestCase(ElasticSearchTestCase):
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'})
 
     def testGetCountBySearch(self):
-        result = self.conn.count(q='name:joe')
+        result = self.conn.count('name:joe', indexes='test-index')
         self.assertResultContains(result, {'count': 1})
 
     def testSearchByField(self):
-        result = self.conn.search(q='name:joe')
+        result = self.conn.search('name:joe', indexes='test-index')
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
     def testSearchByDSL(self):
@@ -256,22 +256,23 @@ class SearchTestCase(ElasticSearchTestCase):
         self.conn.index('test-index', 'test-type', {'name': 'AgeBill Baloney', 'age': 35}, id=2)
         self.conn.refresh(['test-index'])
 
-        query = {   'query': {
-                        'query_string': { 'query': 'name:age' },
-                        'filtered': {
-                            'filter': {
-                                'range': {
-                                    'age': {
-                                        'from': 27,
-                                        'to': 37,
-                                    },
+        query = {'query': {
+                    'filtered': {
+                        'query': {
+                            'query_string': {'query': 'name:baloney'}
+                        },
+                        'filter': {
+                            'range': {
+                                'age': {
+                                    'from': 27,
+                                    'to': 37,
                                 },
                             },
                         },
                     },
-                }
-
-        result = self.conn.search(body=json.dumps(query), indexes=['test-index'], doc_types=['test-type'])
+                },
+            }
+        result = self.conn.search(query, indexes=['test-index'], doc_types=['test-type'])
         self.assertTrue(result.get('hits').get('hits').__len__() > 0, str(result))
 
     def testMLT(self):

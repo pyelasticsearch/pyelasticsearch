@@ -213,7 +213,7 @@ class ElasticSearch(object):
     def _send_request(self,
                       method,
                       path_components,
-                      body=None,
+                      body='',
                       query_params=None,
                       encode_body=True):
         """
@@ -225,7 +225,7 @@ class ElasticSearch(object):
         :arg method: An HTTP method, like "GET"
         :arg path_components: An iterable of path components, to be joined by
             "/"
-        :arg body: The request body or None to omit
+        :arg body: The request body
         :arg query_params: A map of querystring param names to values or None
         :arg encode_body: Whether to encode the body of the request as JSON
         """
@@ -420,31 +420,42 @@ class ElasticSearch(object):
         return self._send_request('GET', [index, doc_type, id],
                                   query_params=query_params)
 
-    @es_kwargs('q', 'routing')
-    def search(self, body=None, indexes=None, doc_types=None,
-               query_params=None):
+    def _search_or_count(self, kind, query, indexes=None, doc_types=None,
+                         query_params=None):
+        if isinstance(query, basestring):
+            query_params['q'] = query
+            body = ''
+        else:
+            body = query
+
+        return self._send_request(
+            'GET',
+            [self._concat(indexes), self._concat(doc_types), kind],
+            body,
+            query_params=query_params)
+
+    @es_kwargs('routing')
+    def search(self, query, **kwargs):
         """
         Execute a search query against one or more indices and get back search
         hits.
 
-        :arg body: A dictionary that will convert to ES's query DSL
-        :arg q: A query formatted for placement in the query string
+        :arg query: A dictionary that will convert to ES's query DSL or a
+            string that will serve as a textual query to be passed as the ``q``
+            query string parameter
         """
-        return self._send_request(
-            'GET',
-            [self._concat(indexes), self._concat(doc_types), '_search'],
-            body,
-            query_params=query_params)
+        return self._search_or_count('_search', query, **kwargs)
 
-    @es_kwargs('q', 'df', 'analyzer', 'default_operator', 'source', 'routing')
-    def count(self, body=None, indexes=None, doc_types=None,
-              query_params=None):
-        """Execute a query against one or more indices and get hit count."""
-        return self._send_request(
-            'GET',
-            [self._concat(indexes), self._concat(doc_types), '_count'],
-            body,
-            query_params=query_params)
+    @es_kwargs('df', 'analyzer', 'default_operator', 'source', 'routing')
+    def count(self, query, **kwargs):
+        """
+        Execute a query against one or more indices and get hit count.
+
+        :arg query: A dictionary that will convert to ES's query DSL or a
+            string that will serve as a textual query to be passed as the ``q``
+            query string parameter
+        """
+        return self._search_or_count('_count', query, **kwargs)
 
     @es_kwargs()
     def get_mapping(self, indexes=None, doc_types=None, query_params=None):
