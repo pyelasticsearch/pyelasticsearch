@@ -116,7 +116,7 @@ from pyelasticsearch.exceptions import (ElasticHttpError, NonJsonResponseError,
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'NonJsonResponseError',
            'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError']
-__version__ = '0.2'
+__version__ = '0.2.1'
 __version_info__ = tuple(__version__.split('.'))
 
 get_version = lambda: __version_info__
@@ -204,6 +204,9 @@ class ElasticSearch(object):
             return str(obj)
         if isinstance(obj, (list, tuple)):
             return ','.join(cls._to_query(o) for o in obj)
+        iso = _iso_datetime(obj)
+        if iso:
+            return iso
         raise TypeError("_to_query() doesn't know how to represent %r in an ES"
                         " query string." % (obj,))
 
@@ -597,14 +600,11 @@ class ElasticSearch(object):
         """
         Convert Python values to a form suitable for ElasticSearch's JSON.
         """
-        if hasattr(value, 'strftime'):
-            if hasattr(value, 'hour'):
-                value = value.isoformat()
-            else:
-                value = '%sT00:00:00' % value.isoformat()
-        elif isinstance(value, str):
-            value = unicode(value, errors='replace')  # TODO: Be stricter.
-
+        iso = _iso_datetime(value)
+        if iso:
+            return iso
+        if isinstance(value, str):
+            return unicode(value, errors='replace')  # TODO: Be stricter.
         return value
 
     @staticmethod
@@ -649,6 +649,19 @@ class DateSavvyJsonEncoder(json.JSONEncoder):
     def default(self, value):
         """Convert more Python data types to ES-understandable JSON."""
         return ElasticSearch.from_python(value)
+
+
+def _iso_datetime(value):
+    """
+    If value appears to be something datetime-like, return it in ISO format.
+
+    Otherwise, return None.
+    """
+    if hasattr(value, 'strftime'):
+        if hasattr(value, 'hour'):
+            return value.isoformat()
+        else:
+            return '%sT00:00:00' % value.isoformat()
 
 
 if __name__ == '__main__':

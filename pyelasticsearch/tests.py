@@ -2,7 +2,7 @@
 """
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
-import datetime
+from datetime import datetime, date
 import logging
 import unittest
 
@@ -177,8 +177,8 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(self.conn.from_python(12.2), 12.2)
         self.assertEqual(self.conn.from_python(True), True)
         self.assertEqual(self.conn.from_python(False), False)
-        self.assertEqual(self.conn.from_python(datetime.date(2011, 12, 30)), '2011-12-30T00:00:00')
-        self.assertEqual(self.conn.from_python(datetime.datetime(2011, 12, 30, 11, 59, 32)), '2011-12-30T11:59:32')
+        self.assertEqual(self.conn.from_python(date(2011, 12, 30)), '2011-12-30T00:00:00')
+        self.assertEqual(self.conn.from_python(datetime(2011, 12, 30, 11, 59, 32)), '2011-12-30T11:59:32')
         self.assertEqual(self.conn.from_python([1, 2, 3]), [1, 2, 3])
         self.assertEqual(self.conn.from_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
         self.assertEqual(self.conn.from_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
@@ -190,8 +190,8 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(self.conn.to_python(12.2), 12.2)
         self.assertEqual(self.conn.to_python(True), True)
         self.assertEqual(self.conn.to_python(False), False)
-        self.assertEqual(self.conn.to_python('2011-12-30T00:00:00'), datetime.datetime(2011, 12, 30))
-        self.assertEqual(self.conn.to_python('2011-12-30T11:59:32'), datetime.datetime(2011, 12, 30, 11, 59, 32))
+        self.assertEqual(self.conn.to_python('2011-12-30T00:00:00'), datetime(2011, 12, 30))
+        self.assertEqual(self.conn.to_python('2011-12-30T11:59:32'), datetime(2011, 12, 30, 11, 59, 32))
         self.assertEqual(self.conn.to_python([1, 2, 3]), [1, 2, 3])
         self.assertEqual(self.conn.to_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
         self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
@@ -373,6 +373,10 @@ class KwargsForQueryTests(unittest.TestCase):
         self.assertEqual(to_query(4.5), '4.5')
         self.assertEqual(to_query(True), 'true')
         self.assertEqual(to_query(('4', 'hi', 'thomas')), '4,hi,thomas')
+        self.assertEqual(to_query(datetime(2000, 1, 2, 12, 34, 56)),
+                         '2000-01-02T12:34:56')
+        self.assertEqual(to_query(date(2000, 1, 2)),
+                         '2000-01-02T00:00:00')
         self.assertRaises(TypeError, to_query, object())
 
     def test_es_kwargs(self):

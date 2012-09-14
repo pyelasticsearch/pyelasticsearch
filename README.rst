@@ -102,6 +102,10 @@ Lists and tuples
     Joined with commas, e.g. ``['one-index', two-index']`` becomes
     ``one-index,two-index``
 
+Datetimes and dates
+    Datetimes are converted to ISO strings, like "2001-12-25T13:04:56". Dates
+    convert to midnight: "2001-12-25T00:00:00".
+
 Anything else raises a TypeError.
 
 
@@ -121,6 +125,10 @@ Used `pysolr`_ as a jumping off point - thanks guys.
 
 Version History
 ===============
+
+0.2.1
+  * Recognize datetimes and dates in pass-through kwargs. This is useful for
+    ``timeout``.
 
 0.2
   Pretty much a rewrite by Erik Rose
