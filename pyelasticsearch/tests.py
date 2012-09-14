@@ -14,6 +14,12 @@ from pyelasticsearch import *
 from pyelasticsearch import es_kwargs
 
 
+def arbitrary_response():
+    response = requests.Response()
+    response._content = '{"some": "json"}'
+    return response
+
+
 class ElasticSearchTestCase(unittest.TestCase):
     def setUp(self):
         self.conn = ElasticSearch('http://localhost:9200/')
@@ -331,9 +337,7 @@ class DowntimePoolingTests(unittest.TestCase):
             # Monkeypatching random instead would have made too many
             # assumptions about the code under test.
             if first_url and url not in first_url:
-                response = requests.Response()
-                response._content = '{"some": "json"}'
-                return response
+                return arbitrary_response()
             first_url.append(url)
             raise ConnectionError
 
@@ -341,7 +345,6 @@ class DowntimePoolingTests(unittest.TestCase):
                               'http://two.example.com:9200/'],
                              max_retries=1)
 
-        # Patch something so the request throws a timeout or connection error and collects what was attempted.
         with patch.object(conn.session, 'get') as session_get:
             session_get.side_effect = get_but_fail_the_first_time
             # Try to request something with max_retries=1. This should make 2
@@ -359,7 +362,51 @@ class DowntimePoolingTests(unittest.TestCase):
         self.assertEqual(len(conn.servers.live), 1)
         self.assertEqual(len(conn.servers.dead), 1)
 
-    # TODO: Test that DowntimePronePool falls back to returning dead servers.
+    def test_death_and_rebirth(self):
+        """
+        If a server fails, mark it dead. If there are no remaining live
+        servers, start trying dead ones. If a dead one starts working, bring it
+        back to life.
+
+        This is kind of an exploratory,
+        test-as-much-as-you-can-for-the-least-effort test.
+        """
+        conn = ElasticSearch(['http://one.example.com:9200/',
+                              'http://two.example.com:9200/'],
+                             max_retries=0)
+
+        with patch.object(conn.session, 'get') as session_get:
+            session_get.side_effect = Timeout
+
+            # This should kill off both servers:
+            for x in xrange(2):
+                try:
+                    conn.get('test-index', 'test-type', 7)
+                except Timeout:
+                    pass
+
+            # Make sure the pools are as we expect:
+            self.assertEquals(len(conn.servers.dead), 2)
+            self.assertEquals(len(conn.servers.live), 0)
+
+            # And this should use a dead server, though the request will still
+            # time out:
+            try:
+                conn.get('test-index', 'test-type', 7)
+            except Timeout:
+                pass
+            else:
+                raise AssertionError('That should have timed out.')
+
+        with patch.object(conn.session, 'get') as session_get:
+            session_get.return_value = arbitrary_response()
+
+            # Then we try another dead server, but this time it works:
+            conn.get('test-index', 'test-type', 7)
+
+            # Then that server should have come back to life:
+            self.assertEquals(len(conn.servers.dead), 1)
+            self.assertEquals(len(conn.servers.live), 1)
 
 
 class KwargsForQueryTests(unittest.TestCase):
