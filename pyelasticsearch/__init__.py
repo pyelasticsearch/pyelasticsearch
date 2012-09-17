@@ -1,101 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-NOTE: You should use the unit tests, not these doctests, which are harder to get running consistently.
-I've left them here as documentation only, they are accurate as usage examples.
-
-Create ElasticSearch connection
->>> conn = ElasticSearch('http://localhost:9200/')
-
-Or a more verbose log level.
->>> import logging
->>> class VerboseElasticSearch(ElasticSearch):
-...     def setup_logging(self):
-...         log = super(VerboseElasticSearch, self).setup_logging()
-...         log.addHandler(logging.StreamHandler())
-...         log.setLevel(logging.DEBUG)
-...         return log
->>> conn = VerboseElasticSearch('http://localhost:9200/')
-
-Add a few documents
-
->>> conn.index({"name":"Joe Tester"}, "test-index", "test-type", 1)
-{'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'}
->>> conn.index({"name":"Bill Baloney"}, "test-index", "test-type", 2)
-{'_type': 'test-type', '_id': '2', 'ok': True, '_index': 'test-index'}
-
-Get one
-
->>> conn.refresh("test-index") # doctest: +ELLIPSIS
-{'ok': True, '_shards': {...}}
->>> conn.get("test-index", "test-type", 1)
-{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}
-
-Get a count
->>> conn.count("name:joe")
-{'count': 1, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
-
-Search
-
->>> conn.search("name:joe")
-{'hits': {'hits': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
-
-More Like This
-
->>> conn.index("test-index", "test-type", {"name":"Joe Test"}, 3)
-{'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
->>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
-{'ok': True, '_shards': {...}}
->>> conn.more_like_this("test-index", "test-type", 1, ['name'], min_term_freq=1, min_doc_freq=1)
-{'hits': {'hits': [{'_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1}, '_shards': {'successful': 5, 'failed': 0, 'total': 5}}
->>> conn.delete("test-index", "test-type", 3)
-{'_type': 'test-type', '_id': '3', 'ok': True, '_index': 'test-index'}
-
-Delete Bill
-
->>> conn.delete("test-index", "test-type", 2)
-{'_type': 'test-type', '_id': '2', 'ok': True, '_index': 'test-index'}
-
->>> conn.delete_by_query("test-index, "test-type", {"query_string": {"query": "name:joe OR name:bill"}})
-{'ok': True, '_indices': {'test-index': {'_shards': {'successful': 5, 'failed': 0, 'total': 5}}}}
-
-Delete the index
-
->>> conn.delete_index("test-index")
-{'acknowledged': True, 'ok': True}
-
-Create the index anew
-
->>> conn.create_index("test-index")
-{'acknowledged': True, 'ok': True}
-
-Try (and fail) to create an existing index
-
->>> conn.create_index("test-index")
-{'error': '[test-index] Already exists'}
-
-Put mapping
-
->>> conn.put_mapping("test-type", {"test-type" : {"properties" : {"name" : {"type" : "string", "store" : "yes"}}}})
-{'acknowledged': True, 'ok': True}
-
-Get status
-
->>> conn.status(["test-index"]) # doctest: +ELLIPSIS
-{'indices': {'test-index': ...}}
-
->>> conn.flush(["test-index"]) # doctest: +ELLIPSIS
-{'ok': True, '_shards': {...}}
-
->>> conn.refresh(["test-index"]) # doctest: +ELLIPSIS
-{'ok': True, '_shards': {...}}
-
->>> conn.optimize(["test-index"]) # doctest: +ELLIPSIS
-{'ok': True, '_shards': {...}}
-
-Test adding with automatic id generation
->>> conn.index("test-index", "test-type", {"name":"Joe Tester"}) # doctest: +ELLIPSIS
-{'_type': 'test-type', '_id': '...', 'ok': True, '_index': 'test-index'}
-"""
 from __future__ import absolute_import
 
 from datetime import datetime
@@ -116,7 +19,7 @@ from pyelasticsearch.exceptions import (ElasticHttpError, NonJsonResponseError,
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'NonJsonResponseError',
            'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError']
-__version__ = '0.2.1'
+__version__ = '0.3'
 __version_info__ = tuple(__version__.split('.'))
 
 get_version = lambda: __version_info__
@@ -155,8 +58,10 @@ def es_kwargs(*args_to_convert):
 
 
 class ElasticSearch(object):
-    """ElasticSearch connection object."""
-
+    """
+    An object which manages connections to elasticsearch and acts as a
+    go-between for API calls to it
+    """
     def __init__(self, urls, timeout=60, max_retries=0, revival_delay=300):
         """
         :arg timeout: Number of seconds to wait for each request before raising
@@ -330,17 +235,20 @@ class ElasticSearch(object):
         :arg refresh: Pass True to refresh the index after adding the document.
         :arg timeout: A duration to wait for the relevant primary shard to
             become available, in the event that it isn't: for example, "5m"
-        :arg query_params: A map of other querystring params to pass along to
-            ES. This lets you use future ES features without waiting for an
-            update to pyelasticsearch. If we just used **kwargs for this, ES
-            could start using a querystring param that we already used as a
-            kwarg, and we'd shadow it. Name these params according to the names
-            they have in ES's REST API, but prepend "es_": for example,
-            ``es_version=2``.
 
-        See http://www.elasticsearch.org/guide/reference/api/index_.html for
-        more about the index API.
+        See the `ES's index API`_ for more detail.
+
+        .. _`ES's index API`:
+            http://www.elasticsearch.org/guide/reference/api/index_.html
         """
+        # :arg query_params: A map of other querystring params to pass along to
+        # ES. This lets you use future ES features without waiting for an
+        # update to pyelasticsearch. If we just used **kwargs for this, ES
+        # could start using a querystring param that we already used as a
+        # kwarg, and we'd shadow it. Name these params according to the names
+        # they have in ES's REST API, but prepend "\es_": for example,
+        # ``es_version=2``.
+
         # TODO: Support version along with associated "preference" and
         # "version_type" params.
         if force_insert:
@@ -354,7 +262,17 @@ class ElasticSearch(object):
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
                    query_params=None):
-        """Index a list of documents as efficiently as possible."""
+        """
+        Index a list of documents as efficiently as possible.
+
+        :arg consistency:
+        :arg refresh:
+
+        See the `ES's bulk API`_ for more detail.
+
+        .. _`ES's bulk API`:
+            http://www.elasticsearch.org/guide/reference/api/bulk.html
+        """
         body_bits = []
 
         if not docs:
@@ -673,8 +591,3 @@ def _iso_datetime(value):
             return value.isoformat()
         else:
             return '%sT00:00:00' % value.isoformat()
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

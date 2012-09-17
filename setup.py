@@ -22,7 +22,9 @@ setup(
     name="pyelasticsearch",
     version=find_version("pyelasticsearch/__init__.py"),
     description="Lightweight python wrapper for elasticsearch.",
-    long_description=read('README.rst'),
+    long_description=read('README.rst') + '\n\n' +
+                     '\n'.join(read('docs', 'source', 'versions.rst')
+                                   .splitlines()[1:]),
     author='Robert Eanes',
     author_email='python@robsinbox.com',
     packages=find_packages(exclude=['ez_setup']),

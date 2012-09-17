@@ -11,15 +11,12 @@ class ElasticHttpError(Exception):
     # Sentry or celery) without having to write our own serialization stuff.
     @property
     def status_code(self):
-        """
-        Return the HTTP status code of the response that precipitated the
-        error.
-        """
+        """The HTTP status code of the response that precipitated the error"""
         return self.args[0]
 
     @property
     def error(self):
-        """Return a string error message."""
+        """A string error message"""
         return self.args[1]
 
     def __unicode__(self):
