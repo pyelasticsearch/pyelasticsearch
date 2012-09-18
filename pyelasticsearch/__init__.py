@@ -265,6 +265,11 @@ class ElasticSearch(object):
         """
         Index a list of documents as efficiently as possible.
 
+        :arg index: The name of the index to which to add the document
+        :arg doc_type: The type of the document
+        :arg docs: An iterable of mappings, convertible to JSON, representing
+            documents to index
+        :arg id_field: The field of each document that holds its ID
         :arg consistency:
         :arg refresh:
 
@@ -303,8 +308,8 @@ class ElasticSearch(object):
         """
         Delete a typed JSON document from a specific index based on its ID.
 
-        :arg index: The name of an index
-        :arg doc_type: The name of a document type
+        :arg index: The name of the index from which to delete
+        :arg doc_type: The type of the document to delete
         :arg id: The ID of the document to delete
         """
         # TODO: Raise ValueError if id boils down to a 0-length string.
@@ -316,8 +321,9 @@ class ElasticSearch(object):
         """
         Delete all documents of the given doctype from an index.
 
-        :arg index: The name of an index. ES does not support this being empty
-            or "_all" or a comma-delimited list of index names (in 0.19.9).
+        :arg index: The name of the index from which to delete. ES does not
+            support this being empty or "_all" or a comma-delimited list of
+            index names (in 0.19.9).
         :arg doc_type: The name of a document type
         """
         return self._send_request('DELETE', [index, doc_type],
