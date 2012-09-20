@@ -8,6 +8,11 @@ Version History
   * Tweak ``search()`` and ``count()`` APIs. Now each simply takes either a
     textual or a dict query as its first argument. There's no more silliness
     about needing to use either a ``q`` or a ``body`` kwarg.
+  * Standardize on the singular for the names of kwargs. It's not always
+    obvious whether an ES API allows for multiple indexes. This was leading me
+    to have to look aside to the docs to determine whether the kwarg was called
+    ``index`` or ``indexes``. Using the singular everywhere will result in
+    fewer doc lookups, especially for the common case of a single index.
 
   Other changes:
   

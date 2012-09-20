@@ -109,14 +109,14 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.refresh(['test-index'])
 
         self.conn.refresh(['test-index'])
-        result = self.conn.count('*:*', indexes=['test-index'])
+        result = self.conn.count('*:*', index=['test-index'])
         self.assertResultContains(result, {'count': 3})
 
         result = self.conn.delete_by_query('test-index', 'test-type', {'query_string': {'query': 'name:joe OR name:bill'}})
         self.assertResultContains(result, {'ok': True})
 
         self.conn.refresh(['test-index'])
-        result = self.conn.count('*:*', indexes=['test-index'])
+        result = self.conn.count('*:*', index=['test-index'])
         self.assertResultContains(result, {'count': 1})
 
     def testDeleteIndex(self):
@@ -148,7 +148,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         mapping = {'test-type' : {'properties' : {'name' : {'type' : 'string', 'store' : 'yes'}}}}
         self.conn.put_mapping('test-index', 'test-type', mapping)
 
-        result = self.conn.get_mapping(indexes=['test-index'], doc_types=['test-type'])
+        result = self.conn.get_mapping(index=['test-index'], doc_type=['test-type'])
         self.assertEqual(result, mapping)
 
     def testIndexStatus(self):
@@ -204,7 +204,7 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testBulkIndex(self):
         # Try counting the docs in a nonexistent index:
-        self.assertRaises(ElasticHttpError, self.conn.count, '*:*', indexes=['test-index'])
+        self.assertRaises(ElasticHttpError, self.conn.count, '*:*', index=['test-index'])
 
         docs = [
             {'name': 'Joe Tester'},
@@ -217,7 +217,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertEqual(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
         self.assertEqual(self.conn.count('*:*',
-                                         indexes=['test-index'])['count'], 2)
+                                         index=['test-index'])['count'], 2)
 
     def testErrorHandling(self):
         # Wrong port.
@@ -243,11 +243,11 @@ class SearchTestCase(ElasticSearchTestCase):
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'})
 
     def testGetCountBySearch(self):
-        result = self.conn.count('name:joe', indexes='test-index')
+        result = self.conn.count('name:joe', index='test-index')
         self.assertResultContains(result, {'count': 1})
 
     def testSearchByField(self):
-        result = self.conn.search('name:joe', indexes='test-index')
+        result = self.conn.search('name:joe', index='test-index')
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
     def testSearchByDSL(self):
@@ -272,7 +272,7 @@ class SearchTestCase(ElasticSearchTestCase):
                     },
                 },
             }
-        result = self.conn.search(query, indexes=['test-index'], doc_types=['test-type'])
+        result = self.conn.search(query, index=['test-index'], doc_type=['test-type'])
         self.assertTrue(result.get('hits').get('hits').__len__() > 0, str(result))
 
     def testMLT(self):

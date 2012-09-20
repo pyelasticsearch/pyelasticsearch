@@ -344,7 +344,7 @@ class ElasticSearch(object):
         return self._send_request('GET', [index, doc_type, id],
                                   query_params=query_params)
 
-    def _search_or_count(self, kind, query, indexes=None, doc_types=None,
+    def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
         if isinstance(query, basestring):
             query_params['q'] = query
@@ -354,7 +354,7 @@ class ElasticSearch(object):
 
         return self._send_request(
             'GET',
-            [self._concat(indexes), self._concat(doc_types), kind],
+            [self._concat(index), self._concat(doc_type), kind],
             body,
             query_params=query_params)
 
@@ -367,6 +367,8 @@ class ElasticSearch(object):
         :arg query: A dictionary that will convert to ES's query DSL or a
             string that will serve as a textual query to be passed as the ``q``
             query string parameter
+        :arg index: An index or iterable of indexes to search
+        :arg doc_type: A document type or iterable thereof to search
         """
         return self._search_or_count('_search', query, **kwargs)
 
@@ -378,22 +380,32 @@ class ElasticSearch(object):
         :arg query: A dictionary that will convert to ES's query DSL or a
             string that will serve as a textual query to be passed as the ``q``
             query string parameter
+        :arg index: An index or iterable of indexes to search
+        :arg doc_type: A document type or iterable thereof to search
         """
         return self._search_or_count('_count', query, **kwargs)
 
     @es_kwargs()
-    def get_mapping(self, indexes=None, doc_types=None, query_params=None):
-        """Fetch the mapping definition for a specific index and type."""
+    def get_mapping(self, index=None, doc_type=None, query_params=None):
+        """
+        Fetch the mapping definition for a specific index and type.
+
+        :arg index: An index or iterable thereof
+        :arg doc_type: A document type or iterable thereof
+        """
         return self._send_request(
             'GET',
-            [self._concat(indexes), self._concat(doc_types), '_mapping'],
+            [self._concat(index), self._concat(doc_type), '_mapping'],
             query_params=query_params)
 
     @es_kwargs('ignore_conflicts')
-    def put_mapping(self, indexes, doc_type, mapping, query_params=None):
+    def put_mapping(self, index, doc_type, mapping, query_params=None):
         """
         Register specific mapping definition for a specific type against one or
         more indices.
+
+        :arg index: An index or iterable thereof
+        :arg doc_type: The document type to set the mapping of
         """
         # TODO: Perhaps add a put_all_mappings() for consistency and so we
         # don't need to expose the "_all" magic string. We haven't done it yet
@@ -401,7 +413,7 @@ class ElasticSearch(object):
         # "_all" to update all mappings.
         return self._send_request(
             'PUT',
-            [self._concat(indexes), doc_type, '_mapping'],
+            [self._concat(index), doc_type, '_mapping'],
             mapping,
             query_params=query_params)
 
@@ -424,11 +436,13 @@ class ElasticSearch(object):
     ## Index Admin API
 
     @es_kwargs('recovery', 'snapshot')
-    def status(self, indexes=None, query_params=None):
+    def status(self, index=None, query_params=None):
         """
         Retrieve the status of one or more indices
+
+        :arg index: An index or iterable thereof
         """
-        return self._send_request('GET', [self._concat(indexes), '_status'],
+        return self._send_request('GET', [self._concat(index), '_status'],
                                   query_params=query_params)
 
     @es_kwargs()
@@ -442,12 +456,16 @@ class ElasticSearch(object):
                                   query_params=query_params)
 
     @es_kwargs()
-    def delete_index(self, indexes, query_params=None):
-        """Delete an index."""
-        if not indexes:
+    def delete_index(self, index, query_params=None):
+        """
+        Delete an index.
+
+        :arg index: An index or iterable thereof
+        """
+        if not index:
             raise ValueError('No indexes specified. To delete all indexes, use'
                              ' delete_all_indexes().')
-        return self._send_request('DELETE', [self._concat(indexes)],
+        return self._send_request('DELETE', [self._concat(index)],
                                   query_params=query_params)
 
     def delete_all_indexes(self, **kwargs):
@@ -467,17 +485,19 @@ class ElasticSearch(object):
                                   query_params=query_params)
 
     @es_kwargs()
-    def update_settings(self, indexes, settings, query_params=None):
+    def update_settings(self, index, settings, query_params=None):
         """
-        :arg indexes: An iterable of names of indexes to update
+        Change the settings of one or more indexes.
+
+        :arg index: An index or iterable of indexes
         """
-        if not indexes:
+        if not index:
             raise ValueError('No indexes specified. To update all indexes, use'
                              ' update_all_settings().')
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
         return self._send_request('PUT',
-                                  [self._concat(indexes), '_settings'],
+                                  [self._concat(index), '_settings'],
                                   body=settings,
                                   query_params=query_params)
 
@@ -488,46 +508,61 @@ class ElasticSearch(object):
                                   query_params=query_params)
 
     @es_kwargs('refresh')
-    def flush(self, indexes=None, query_params=None):
-        """Flush one or more indices (clear memory)."""
+    def flush(self, index=None, query_params=None):
+        """
+        Flush one or more indices (clear memory).
+
+        :arg index: An index or iterable of indexes
+        """
         return self._send_request('POST',
-                                  [self._concat(indexes), '_flush'],
+                                  [self._concat(index), '_flush'],
                                   query_params=query_params)
 
     @es_kwargs()
-    def refresh(self, indexes=None, query_params=None):
-        """Refresh one or more indices."""
-        return self._send_request('POST', [self._concat(indexes), '_refresh'],
+    def refresh(self, index=None, query_params=None):
+        """
+        Refresh one or more indices.
+
+        :arg index: An index or iterable of indexes
+        """
+        return self._send_request('POST', [self._concat(index), '_refresh'],
                                   query_params=query_params)
 
     @es_kwargs()
-    def gateway_snapshot(self, indexes=None, query_params=None):
-        """Gateway snapshot one or more indices."""
+    def gateway_snapshot(self, index=None, query_params=None):
+        """
+        Gateway snapshot one or more indices.
+
+        :arg index: An index or iterable of indexes
+        """
         return self._send_request(
             'POST',
-            [self._concat(indexes), '_gateway', 'snapshot'],
+            [self._concat(index), '_gateway', 'snapshot'],
             query_params=query_params)
 
     @es_kwargs('max_num_segments', 'only_expunge_deletes', 'refresh', 'flush',
                'wait_for_merge')
-    def optimize(self, indexes=None, query_params=None):
-        """Optimize one ore more indices."""
+    def optimize(self, index=None, query_params=None):
+        """
+        Optimize one ore more indices.
+
+        :arg index: An index or iterable of indexes
+        """
         return self._send_request('POST',
-                                  [self._concat(indexes), '_optimize'],
+                                  [self._concat(index), '_optimize'],
                                   query_params=query_params)
 
     @es_kwargs('level', 'wait_for_status', 'wait_for_relocating_shards',
                'wait_for_nodes', 'timeout')
-    def health(self, indexes=None, query_params=None):
+    def health(self, index=None, query_params=None):
         """
         Report on the health of the cluster or certain indices.
 
-        :arg indexes: The index or iterable of indexes to examine
-        :arg kwargs: Passed through to the Cluster Health API verbatim
+        :arg index: The index or iterable of indexes to examine
         """
         return self._send_request(
             'GET',
-            ['_cluster', 'health', self._concat(indexes)],
+            ['_cluster', 'health', self._concat(index)],
             query_params=query_params)
 
     @staticmethod
