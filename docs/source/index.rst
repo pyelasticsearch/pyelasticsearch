@@ -45,7 +45,7 @@ Get just Jessica's document:
 
 Perform a simple search:
 
->>> es.search('name:joe OR name:freddy', indexes='contacts')
+>>> es.search('name:joe OR name:freddy', index='contacts')
 {u'_shards': {u'failed': 0, u'successful': 42, u'total': 42},
  u'hits': {u'hits': [{u'_id': u'1',
                       u'_index': u'contacts',
@@ -86,7 +86,7 @@ Perform a search using the `elasticsearch query DSL`_:
 ...             },
 ...         },
 ...     }
->>> es.search(query, indexes='contacts')
+>>> es.search(query, index='contacts')
 {u'_shards': {u'failed': 0, u'successful': 42, u'total': 42},
  u'hits': {u'hits': [{u'_id': u'3',
                       u'_index': u'contacts',
