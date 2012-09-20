@@ -8,8 +8,8 @@ provides features like...
 * Transparent conversion of Python data types to and from JSON
 * Connection pooling
 * Load balancing of requests across nodes in a cluster
-* Failed-node marking to avoid down nodes for a period
-* Optional automatic retry of failed requests
+* Failed-node marking to avoid downed nodes for a period
+* Optional automatic retrying of failed requests
 
 
 A Taste of the API
@@ -45,7 +45,7 @@ Get just Jessica's document:
 
 Perform a simple search:
 
->>> es.search('name:joe OR name:freddy')
+>>> es.search('name:joe OR name:freddy', indexes='contacts')
 {u'_shards': {u'failed': 0, u'successful': 42, u'total': 42},
  u'hits': {u'hits': [{u'_id': u'1',
                       u'_index': u'contacts',
@@ -86,7 +86,7 @@ Perform a search using the `elasticsearch query DSL`_:
 ...             },
 ...         },
 ...     }
->>> es.search(query)
+>>> es.search(query, indexes='contacts')
 {u'_shards': {u'failed': 0, u'successful': 42, u'total': 42},
  u'hits': {u'hits': [{u'_id': u'3',
                       u'_index': u'contacts',
