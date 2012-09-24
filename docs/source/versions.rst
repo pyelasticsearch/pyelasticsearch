@@ -16,7 +16,7 @@ Version History
 
   Other changes:
   
-  * Add Sphinx documentation.
+  * Add beginnings of Sphinx documentation.
 
 0.2.1
   * Recognize and convert datetimes and dates in pass-through kwargs. This is
