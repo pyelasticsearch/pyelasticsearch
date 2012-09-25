@@ -2,6 +2,9 @@
 Version History
 ===============
 
+0.3.1
+  * Fix ``pip install`` error.
+
 0.3
   Backward-incompatible changes:
 

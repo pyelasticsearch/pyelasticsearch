@@ -19,7 +19,7 @@ from pyelasticsearch.exceptions import (ElasticHttpError, NonJsonResponseError,
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'NonJsonResponseError',
            'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError']
-__version__ = '0.3'
+__version__ = '0.3.1'
 __version_info__ = tuple(__version__.split('.'))
 
 get_version = lambda: __version_info__
