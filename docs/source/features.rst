@@ -8,7 +8,7 @@ JSON Conversion
 pyelasticsearch converts transparently between Python datastructures and JSON.
 In request bodies, all the standard conversions are made: strings, numeric
 types, nulls, etc. In addition, we convert ``datetime`` and ``date`` instances
-to the format ES's understands: ``2012-02-23T14:26:01``. ``date`` objects are
+to the format ES understands: ``2012-02-23T14:26:01``. ``date`` objects are
 taken to represent midnight on their day.
 
 A future release will convert more types, like datetimes, to Python in
@@ -44,10 +44,11 @@ Forward-Compatibility Kwargs
 All methods that correspond to ES calls take an arbitrary set of kwargs that
 can be used to pass query string parameters directly to ES. Certain kwargs
 (called out by the ``@es_kwargs`` decorator) are explicitly recognized as being
-claimed by ES and will never be trod upon by pyelasticsearch. To avoid
-conflicts, kwargs not yet so recognized should have "\es_" prepended by the
-caller. pyelasticsearch will strip off the "\es_" and pass the rest along to ES
-unscathed. Ideally, we'll then add support for those args in a future release.
+claimed by ES and will never be trod upon by future versions of
+pyelasticsearch. To avoid conflicts, kwargs not yet so recognized should have
+"\es_" prepended by the caller. pyelasticsearch will strip off the "\es_" and
+pass the rest along to ES unscathed. Ideally, we'll then add explicit
+recognition of those args in a future release.
 
 These "pass-through" kwargs are converted to text as follows:
 

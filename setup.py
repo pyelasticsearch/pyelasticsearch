@@ -29,6 +29,7 @@ setup(
     author_email='python@robsinbox.com',
     packages=find_packages(exclude=['ez_setup']),
     include_package_data=True,
+    zip_safe=False,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
