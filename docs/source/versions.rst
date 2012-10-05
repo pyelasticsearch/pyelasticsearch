@@ -2,6 +2,9 @@
 Version History
 ===============
 
+0.3.2
+  * Complete Sphinx documentation.
+
 0.3.1
   * Fix ``pip install`` error.
 
