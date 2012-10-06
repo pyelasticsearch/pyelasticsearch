@@ -31,6 +31,32 @@ DATETIME_REGEX = re.compile(
     r'(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
 
 
+def _add_es_kwarg_docs(params, method):
+    """
+    Add stub documentation for any args in ``params`` that aren't already in
+    the docstring of ``method``.
+
+    The stubs may not tell much about each arg, but they serve the important
+    purpose of letting the user know that they're safe to use--we won't be
+    paving over them in the future for something pyelasticsearch-specific.
+    """
+    doc = method.__doc__
+    for p in params:
+        if ('\n        :arg %s: ' % p) not in doc:
+            # Find the last documented arg so we can put our generated docs
+            # after it. No need to explicitly compile this; the regex cache
+            # should serve.
+            insertion_point = re.search(
+                r'        :arg (.*?)(?=\n+        (?:$|[^: ]))',
+                doc,
+                re.MULTILINE | re.DOTALL).end()
+
+            doc = ''.join([doc[:insertion_point],
+                           '\n        :arg %s: See the ES docs.' % p,
+                           doc[insertion_point:]])
+    method.__doc__ = doc
+
+
 def es_kwargs(*args_to_convert):
     """
     Mark which kwargs will become query string params in the eventual ES call.
@@ -39,10 +65,16 @@ def es_kwargs(*args_to_convert):
     beginning with "es_", subtracts them from the ordinary kwargs, and passes
     them to the decorated function through the ``query_params`` kwarg. The
     remaining kwargs and the args are passed through unscathed.
+
+    Also, if any of the given kwargs are undocumented in the decorated method's
+    docstring, add stub documentation for them.
     """
     convertible_args = set(args_to_convert)
 
     def decorator(func):
+        # Add docs for any missing query params:
+        _add_es_kwarg_docs(args_to_convert, func)
+
         @wraps(func)
         def decorate(*args, **kwargs):
             # Make kwargs the map of normal kwargs and query_params the map of
@@ -53,7 +85,6 @@ def es_kwargs(*args_to_convert):
                     query_params[k[3:]] = kwargs.pop(k)
                 elif k in convertible_args:
                     query_params[k] = kwargs.pop(k)
-
             return func(*args, query_params=query_params, **kwargs)
         return decorate
     return decorator
@@ -202,7 +233,7 @@ class ElasticSearch(object):
         return json.dumps(body, cls=self.json_encoder)
 
     def _decode_response(self, response):
-        """Return a native-Python representation of a JSON blob."""
+        """Return a native-Python representation of a response's JSON blob."""
         json_response = response.json
         if json_response is None:
             raise InvalidJsonResponseError(response)
@@ -245,7 +276,7 @@ class ElasticSearch(object):
         :arg timeout: A duration to wait for the relevant primary shard to
             become available, in the event that it isn't: for example, "5m"
 
-        See the `ES's index API`_ for more detail.
+        See `ES's index API`_ for more detail.
 
         .. _`ES's index API`:
             http://www.elasticsearch.org/guide/reference/api/index_.html
@@ -279,10 +310,8 @@ class ElasticSearch(object):
         :arg docs: An iterable of mappings, convertible to JSON, representing
             documents to index
         :arg id_field: The field of each document that holds its ID
-        :arg consistency:
-        :arg refresh:
 
-        See the `ES's bulk API`_ for more detail.
+        See `ES's bulk API`_ for more detail.
 
         .. _`ES's bulk API`:
             http://www.elasticsearch.org/guide/reference/api/bulk.html
@@ -318,6 +347,11 @@ class ElasticSearch(object):
         :arg index: The name of the index from which to delete
         :arg doc_type: The type of the document to delete
         :arg id: The ID of the document to delete
+
+        See `ES's delete API`_ for more detail.
+
+        .. _`ES's delete API`:
+            http://www.elasticsearch.org/guide/reference/api/delete.html
         """
         # TODO: Raise ValueError if id boils down to a 0-length string.
         return self._send_request('DELETE', [index, doc_type, id],
@@ -332,6 +366,11 @@ class ElasticSearch(object):
             support this being empty or "_all" or a comma-delimited list of
             index names (in 0.19.9).
         :arg doc_type: The name of a document type
+
+        See `ES's delete API`_ for more detail.
+
+        .. _`ES's delete API`:
+            http://www.elasticsearch.org/guide/reference/api/delete.html
         """
         return self._send_request('DELETE', [index, doc_type],
                                   query_params=query_params)
@@ -341,13 +380,33 @@ class ElasticSearch(object):
     def delete_by_query(self, index, doc_type, query, query_params=None):
         """
         Delete typed JSON documents from a specific index based on query.
+
+        :arg index: The name of the index from which to delete
+        :arg doc_type: The type of document to delete
+        :arg query: A dict of query DSL selecting the documents to delete
+
+        See `ES's delete-by-query API`_ for more detail.
+
+        .. _`ES's delete-by-query API`:
+            http://www.elasticsearch.org/guide/reference/api/delete-by-query.html
         """
         return self._send_request('DELETE', [index, doc_type, '_query'], query,
                                   query_params=query_params)
 
     @es_kwargs('realtime', 'fields', 'routing', 'preference', 'refresh')
     def get(self, index, doc_type, id, query_params=None):
-        """Get a typed JSON document from an index by ID."""
+        """
+        Get a typed JSON document from an index by ID.
+
+        :arg index: The name of the index from which to retrieve
+        :arg doc_type: The type of document to get
+        :arg id: The ID of the document to retrieve
+
+        See `ES's get API`_ for more detail.
+
+        .. _`ES's get API`:
+            http://www.elasticsearch.org/guide/reference/api/get.html
+        """
         return self._send_request('GET', [index, doc_type, id],
                                   query_params=query_params)
 
@@ -376,6 +435,11 @@ class ElasticSearch(object):
             query string parameter
         :arg index: An index or iterable of indexes to search
         :arg doc_type: A document type or iterable thereof to search
+
+        See `ES's search API`_ for more detail.
+
+        .. _`ES's search API`:
+            http://www.elasticsearch.org/guide/reference/api/search/
         """
         return self._search_or_count('_search', query, **kwargs)
 
@@ -389,6 +453,11 @@ class ElasticSearch(object):
             query string parameter
         :arg index: An index or iterable of indexes to search
         :arg doc_type: A document type or iterable thereof to search
+
+        See `ES's count API`_ for more detail.
+
+        .. _`ES's count API`:
+            http://www.elasticsearch.org/guide/reference/api/count.html
         """
         return self._search_or_count('_count', query, **kwargs)
 
@@ -399,7 +468,16 @@ class ElasticSearch(object):
 
         :arg index: An index or iterable thereof
         :arg doc_type: A document type or iterable thereof
+
+        Omit both arguments to get mappings for all types and indexes.
+
+        See `ES's get-mapping API`_ for more detail.
+
+        .. _`ES's get-mapping API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-get-mapping.html
         """
+        # TODO: Think about turning index=None into _all if doc_type is non-
+        # None, per the ES doc page.
         return self._send_request(
             'GET',
             [self._concat(index), self._concat(doc_type), '_mapping'],
@@ -413,6 +491,13 @@ class ElasticSearch(object):
 
         :arg index: An index or iterable thereof
         :arg doc_type: The document type to set the mapping of
+        :arg mapping: A dict representing the mapping to install. For example,
+            this dict can have top-level keys that are the names of doc types.
+
+        See `ES's put-mapping API`_ for more detail.
+
+        .. _`ES's put-mapping API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-put-mapping.html
         """
         # TODO: Perhaps add a put_all_mappings() for consistency and so we
         # don't need to expose the "_all" magic string. We haven't done it yet
@@ -434,8 +519,19 @@ class ElasticSearch(object):
         """
         Execute a "more like this" search query against one or more fields and
         get back search hits.
+
+        :arg index: The index to search and where the document for comparison
+            lives
+        :arg doc_type: The type of document to find others like
+        :arg id: The ID of the document to find others like
+        :arg fields: A list of fields to compare on
+
+        See `ES's more-like-this API`_ for more detail.
+
+        .. _`ES's more-like-this API`:
+            http://www.elasticsearch.org/guide/reference/api/more-like-this.html
         """
-        query_params['fields'] = self._concat(fields)
+        query_params['fields'] = self._concat(fields)  # TODO: ES docs say "mlt_fields".
         return self._send_request('GET',
                                   [index, doc_type, id, '_mlt'],
                                   query_params=query_params)
@@ -448,6 +544,11 @@ class ElasticSearch(object):
         Retrieve the status of one or more indices
 
         :arg index: An index or iterable thereof
+
+        See `ES's index-status API`_ for more detail.
+
+        .. _`ES's index-status API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-status.html
         """
         return self._send_request('GET', [self._concat(index), '_status'],
                                   query_params=query_params)
@@ -457,7 +558,13 @@ class ElasticSearch(object):
         """
         Create an index with optional settings.
 
-        :arg settings: A dictionary which will be converted to JSON
+        :arg index: The name of the index to create
+        :arg settings: A dictionary of settings
+
+        See `ES's create-index API`_ for more detail.
+
+        .. _`ES's create-index API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-create-index.html
         """
         return self._send_request('PUT', [index], body=settings,
                                   query_params=query_params)
@@ -467,7 +574,12 @@ class ElasticSearch(object):
         """
         Delete an index.
 
-        :arg index: An index or iterable thereof
+        :arg index: An index or iterable thereof to delete
+
+        See `ES's delete-index API`_ for more detail.
+
+        .. _`ES's delete-index API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-delete-index.html
         """
         if not index:
             raise ValueError('No indexes specified. To delete all indexes, use'
@@ -481,13 +593,31 @@ class ElasticSearch(object):
 
     @es_kwargs()
     def close_index(self, index, query_params=None):
-        """Close an index."""
+        """
+        Close an index.
+
+        :arg index: The index to close
+
+        See `ES's close-index API`_ for more detail.
+
+        .. _`ES's close-index API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
+        """
         return self._send_request('POST', [index, '_close'],
                                   query_params=query_params)
 
     @es_kwargs()
     def open_index(self, index, query_params=None):
-        """Open an index."""
+        """
+        Open an index.
+
+        :arg index: The index to open
+
+        See `ES's open-index API`_ for more detail.
+
+        .. _`ES's open-index API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
+        """
         return self._send_request('POST', [index, '_open'],
                                   query_params=query_params)
 
@@ -497,6 +627,12 @@ class ElasticSearch(object):
         Change the settings of one or more indexes.
 
         :arg index: An index or iterable of indexes
+        :arg settings: A dictionary of settings
+
+        See `ES's update-settings API`_ for more detail.
+
+        .. _`ES's update-settings API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-update-settings.html
         """
         if not index:
             raise ValueError('No indexes specified. To update all indexes, use'
@@ -510,7 +646,16 @@ class ElasticSearch(object):
 
     @es_kwargs()
     def update_all_settings(self, settings, query_params=None):
-        """Update the settings of all indexes."""
+        """
+        Update the settings of all indexes.
+
+        :arg settings: A dictionary of settings
+
+        See `ES's update-settings API`_ for more detail.
+
+        .. _`ES's update-settings API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-update-settings.html
+        """
         return self._send_request('PUT', ['_settings'], body=settings,
                                   query_params=query_params)
 
@@ -520,6 +665,11 @@ class ElasticSearch(object):
         Flush one or more indices (clear memory).
 
         :arg index: An index or iterable of indexes
+
+        See `ES's flush API`_ for more detail.
+
+        .. _`ES's flush API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-flush.html
         """
         return self._send_request('POST',
                                   [self._concat(index), '_flush'],
@@ -531,6 +681,11 @@ class ElasticSearch(object):
         Refresh one or more indices.
 
         :arg index: An index or iterable of indexes
+
+        See `ES's refresh API`_ for more detail.
+
+        .. _`ES's refresh API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-refresh.html
         """
         return self._send_request('POST', [self._concat(index), '_refresh'],
                                   query_params=query_params)
@@ -541,6 +696,11 @@ class ElasticSearch(object):
         Gateway snapshot one or more indices.
 
         :arg index: An index or iterable of indexes
+
+        See `ES's gateway-snapshot API`_ for more detail.
+
+        .. _`ES's gateway-snapshot API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-gateway-snapshot.html
         """
         return self._send_request(
             'POST',
@@ -551,9 +711,14 @@ class ElasticSearch(object):
                'wait_for_merge')
     def optimize(self, index=None, query_params=None):
         """
-        Optimize one ore more indices.
+        Optimize one or more indices.
 
         :arg index: An index or iterable of indexes
+
+        See `ES's optimize API`_ for more detail.
+
+        .. _`ES's optimize API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-optimize.html
         """
         return self._send_request('POST',
                                   [self._concat(index), '_optimize'],
@@ -566,6 +731,11 @@ class ElasticSearch(object):
         Report on the health of the cluster or certain indices.
 
         :arg index: The index or iterable of indexes to examine
+
+        See `ES's cluster-health API`_ for more detail.
+
+        .. _`ES's cluster-health API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-cluster-health.html
         """
         return self._send_request(
             'GET',

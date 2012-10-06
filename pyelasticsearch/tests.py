@@ -433,6 +433,11 @@ class KwargsForQueryTests(unittest.TestCase):
         """
         @es_kwargs('refresh', 'es_timeout')
         def index(doc, query_params=None, other_kwarg=None):
+            """
+        Hi
+
+        :arg some_arg: Here just so es_kwargs doesn't crash
+        """
             return doc, query_params, other_kwarg
 
         self.assertEqual(index(3, refresh=True, es_timeout=7, other_kwarg=1),
@@ -467,6 +472,59 @@ class KwargsForQueryTests(unittest.TestCase):
         self.assertTrue('snorkfest=true' in url)
         self.assertTrue('borkfest=gerbils%3Agreat' in url)
         self.assertTrue('es_' not in url)  # We stripped the "es_" prefixes.
+
+    def test_arg_cross_refs_with_trailing(self):
+        """
+        Make sure ``es_kwargs`` adds "see ES docs" cross references for any
+        es_kwargs args not already documented in the decorated method's
+        docstring, in cases where there is trailing material after the arg
+        list.
+        """
+        @es_kwargs('gobble', 'degook')
+        def some_method(foo, bar, query_params=None):
+            """
+        Do stuff.
+
+        :arg degook: Whether to remove the gook
+
+        It's neat.
+        """
+
+        # Make sure it adds (only) the undocumented args and preserves anything
+        # that comes after the args block:
+        self.assertEqual(
+            some_method.__doc__,
+            """
+        Do stuff.
+
+        :arg degook: Whether to remove the gook
+        :arg gobble: See the ES docs.
+
+        It's neat.
+        """)
+
+    def test_arg_cross_refs_with_eof(self):
+        """
+        Make sure ``es_kwargs`` adds "see ES docs" cross references for any
+        es_kwargs args not already documented in the decorated method's
+        docstring, in cases where the docstring ends after the arg list.
+        """
+        @es_kwargs('gobble', 'degook')
+        def some_method(foo, bar, query_params=None):
+            """
+        Do stuff.
+
+        :arg degook: Whether to remove the gook
+        """
+
+        self.assertEqual(
+            some_method.__doc__,
+            """
+        Do stuff.
+
+        :arg degook: Whether to remove the gook
+        :arg gobble: See the ES docs.
+        """)
 
 
 if __name__ == '__main__':
