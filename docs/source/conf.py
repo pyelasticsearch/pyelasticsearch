@@ -93,6 +93,7 @@ pygments_style = 'sphinx'
 
 autoclass_content = 'both'
 
+autodoc_member_order = 'alphabetical'
 
 # -- Options for HTML output ---------------------------------------------------
 

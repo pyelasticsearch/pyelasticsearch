@@ -23,10 +23,7 @@ Unless otherwise indicated, methods return the JSON-decoded response sent by
 elasticsearch.
 
 .. autoclass:: ElasticSearch
-
-    .. automethod:: ElasticSearch.index(index, doc_type, doc, id=None, force_insert=False[, other kwargs listed below])
-
-    .. automethod:: ElasticSearch.bulk_index(self, index, doc_type, docs, id_field='id'[, other kwargs listed below])
+   :members:
 
 
 Error Handling
