@@ -29,11 +29,12 @@ setup(
     author_email='python@robsinbox.com',
     maintainer='Jannis Leidel',
     maintainer_email='jannis@leidel.info',
+    license='BSD',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
