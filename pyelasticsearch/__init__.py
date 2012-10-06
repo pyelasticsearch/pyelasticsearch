@@ -40,6 +40,7 @@ def es_kwargs(*args_to_convert):
     remaining kwargs and the args are passed through unscathed.
     """
     convertible_args = set(args_to_convert)
+
     def decorator(func):
         @wraps(func)
         def decorate(*args, **kwargs):
@@ -82,8 +83,15 @@ class ElasticSearch(object):
         self.logger = getLogger('pyelasticsearch')
         self.session = requests.session()
 
-    @staticmethod
-    def _concat(items):
+        json_converter = self.from_python
+
+        class DateSavvyJsonEncoder(json.JSONEncoder):
+            def default(self, value):
+                """Convert more Python data types to ES-understandable JSON."""
+                return json_converter(value)
+        self.json_encoder = DateSavvyJsonEncoder
+
+    def _concat(self, items):
         """
         Return a comma-delimited concatenation of the elements of ``items``,
         with any occurrences of "_all" omitted.
@@ -113,7 +121,7 @@ class ElasticSearch(object):
         if iso:
             return iso
         raise TypeError("_to_query() doesn't know how to represent %r in an ES"
-                        " query string." % (obj,))
+                        " query string." % obj)
 
     def _send_request(self,
                       method,
@@ -190,7 +198,7 @@ class ElasticSearch(object):
 
     def _encode_json(self, body):
         """Return body encoded as JSON."""
-        return json.dumps(body, cls=DateSavvyJsonEncoder)
+        return json.dumps(body, cls=self.json_encoder)
 
     def _decode_response(self, response):
         """Return a native-Python representation of a JSON blob."""
@@ -301,9 +309,7 @@ class ElasticSearch(object):
                                   encode_body=False,
                                   query_params=query_params)
 
-    _DELETE_KWARGS = ['routing', 'parent', 'replication', 'consistency',
-                      'refresh']
-    @es_kwargs(*_DELETE_KWARGS)
+    @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete(self, index, doc_type, id, query_params=None):
         """
         Delete a typed JSON document from a specific index based on its ID.
@@ -316,7 +322,7 @@ class ElasticSearch(object):
         return self._send_request('DELETE', [index, doc_type, id],
                                   query_params=query_params)
 
-    @es_kwargs(*_DELETE_KWARGS)
+    @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete_all(self, index, doc_type, query_params=None):
         """
         Delete all documents of the given doctype from an index.
@@ -565,8 +571,7 @@ class ElasticSearch(object):
             ['_cluster', 'health', self._concat(index)],
             query_params=query_params)
 
-    @staticmethod
-    def from_python(value):
+    def from_python(self, value):
         """
         Convert Python values to a form suitable for ElasticSearch's JSON.
         """
@@ -577,8 +582,7 @@ class ElasticSearch(object):
             return unicode(value, errors='replace')  # TODO: Be stricter.
         return value
 
-    @staticmethod
-    def to_python(value):
+    def to_python(self, value):
         """Convert values from ElasticSearch to native Python values."""
         if isinstance(value, (int, float, long, complex, list, tuple, bool)):
             return value
@@ -613,12 +617,6 @@ class ElasticSearch(object):
             pass
 
         return value
-
-
-class DateSavvyJsonEncoder(json.JSONEncoder):
-    def default(self, value):
-        """Convert more Python data types to ES-understandable JSON."""
-        return ElasticSearch.from_python(value)
 
 
 def _iso_datetime(value):
