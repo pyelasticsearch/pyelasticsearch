@@ -11,6 +11,6 @@ before_install:
 
 install:
   - pip install -e .
-  - pip install simplejson
+  - pip install simplejson mock
 
 script: python setup.py test
