@@ -10,7 +10,7 @@ import requests
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
-from pyelasticsearch import es_kwargs
+from pyelasticsearch.client import es_kwargs
 
 
 def arbitrary_response():
