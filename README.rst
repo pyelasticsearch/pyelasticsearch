@@ -17,8 +17,4 @@ provides features like...
 
 .. _`elasticsearch`: http://www.elasticsearch.org/
 
-
-Full Documentation
-==================
-
-http://pyelasticsearch.readthedocs.org/
+Full documentation: http://pyelasticsearch.readthedocs.org/
