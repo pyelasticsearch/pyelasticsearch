@@ -1,6 +1,7 @@
 include LICENSE
 include README.rst
 include AUTHORS
+include .tox.ini
 include docs/Makefile
 include docs/make.bat
 include docs/source/*.rst
