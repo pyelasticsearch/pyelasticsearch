@@ -228,7 +228,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assertRaises(ValueError, conn._encode_json, object())
         resp = requests.Response()
         resp._content = '{"busted" "json" "that": ["is] " wrong'
-        self.assertRaises(NonJsonResponseError, conn._decode_response, resp)
+        self.assertRaises(InvalidJsonResponseError, conn._decode_response, resp)
 
 
 class SearchTestCase(ElasticSearchTestCase):

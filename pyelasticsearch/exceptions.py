@@ -1,3 +1,6 @@
+from requests import Timeout, ConnectionError
+
+
 class ElasticHttpError(Exception):
     """Exception raised when ES returns a non-OK (>=400) HTTP status code"""
     # TODO: If helpful in practice, split this into separate subclasses for 4xx
@@ -28,7 +31,7 @@ class ElasticHttpNotFoundError(ElasticHttpError):
     """Exception raised when a request to ES returns a 404"""
 
 
-class NonJsonResponseError(Exception):
+class InvalidJsonResponseError(Exception):
     """
     Exception raised in the unlikely event that ES returns a non-JSON response
     """

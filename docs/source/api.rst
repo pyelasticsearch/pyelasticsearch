@@ -38,12 +38,12 @@ exceptions:
 .. automodule:: pyelasticsearch.exceptions
     :members:
 
-    .. class:: ConnectionError
+    .. exception:: ConnectionError
 
         Exception raised there is a connection error and we are out of retries.
         (See the ``max_retries`` argument to :class:`ElasticSearch`.)
 
-    .. class:: Timeout
+    .. exception:: Timeout
 
         Exception raised when an HTTP request times out and we are out of
         retries. (See the ``max_retries`` argument to :class:`ElasticSearch`.)

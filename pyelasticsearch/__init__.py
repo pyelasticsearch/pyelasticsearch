@@ -8,16 +8,17 @@ import re
 from urllib import urlencode
 
 import requests
-from requests import Timeout, ConnectionError
 # import either simplejson or the json module in Python >= 2.6
 from requests.compat import json
 
 from pyelasticsearch.downtime import DowntimePronePool
-from pyelasticsearch.exceptions import (ElasticHttpError, NonJsonResponseError,
+from pyelasticsearch.exceptions import (Timeout, ConnectionError,
+                                        ElasticHttpError,
+                                        InvalidJsonResponseError,
                                         ElasticHttpNotFoundError)
 
 __author__ = 'Robert Eanes'
-__all__ = ['ElasticSearch', 'ElasticHttpError', 'NonJsonResponseError',
+__all__ = ['ElasticSearch', 'ElasticHttpError', 'InvalidJsonResponseError',
            'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError']
 __version__ = '0.3.1'
 __version_info__ = tuple(__version__.split('.'))
@@ -204,7 +205,7 @@ class ElasticSearch(object):
         """Return a native-Python representation of a JSON blob."""
         json_response = response.json
         if json_response is None:
-            raise NonJsonResponseError(response)
+            raise InvalidJsonResponseError(response)
         return json_response
 
     ## REST API
