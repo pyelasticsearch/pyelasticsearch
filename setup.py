@@ -27,6 +27,8 @@ setup(
                                    .splitlines()[1:]),
     author='Robert Eanes',
     author_email='python@robsinbox.com',
+    maintainer='Jannis Leidel',
+    maintainer_email='jannis@leidel.info',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
