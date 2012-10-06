@@ -74,7 +74,7 @@ Backward-incompatible changes:
 
 Other changes:
 
-* Add beginnings of Sphinx documentation.
+* Add Sphinx documentation.
 * Add load-balancing across multiple nodes.
 * Add failover in the case where a node doesn't respond.
 * Add ``close_index``, ``open_index``, ``update_settings``, ``health``.
