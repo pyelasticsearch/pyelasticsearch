@@ -66,7 +66,7 @@ Lists and tuples
     ``one-index,two-index``
 
 Datetimes and dates
-    Datetimes are converted to ISO strings, like "2001-12-25T13:04:56". Dates
-    convert to midnight: "2001-12-25T00:00:00".
+    Datetimes are converted to ISO strings, like ``2001-12-25T13:04:56``,
+    dates convert to midnight: ``2001-12-25T00:00:00``.
 
 Anything else raises a TypeError.
