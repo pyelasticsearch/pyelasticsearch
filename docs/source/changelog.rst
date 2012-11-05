@@ -5,32 +5,30 @@ v0.2 (2012-10-06)
 -----------------
 
 Many thanks to Erik Rose for almost completely rewriting the API to follow
-best practices, improve the API user experience and making pyelasticsearch
+best practices, improve the API user experience, and make pyelasticsearch
 future-proof.
 
 .. warning::
 
-  This release is **backwards incompatible** in numerous ways, please
-  read the following section carefully. In doubt you can easily stick
-  to pyelasticsearch ``0.1``.
+  This release is **backward-incompatible** in numerous ways, please
+  read the following section carefully. If in doubt, you can easily stick
+  with pyelasticsearch 0.1.
 
 Backward-incompatible changes:
 
-* ``search()`` and ``count()`` no longer take the query-string-dwelling query
-  (if any) as an arg. Now each simply takes either a textual or a dict query
-  as its first argument. There's no more silliness about needing to use
-  either a ``q`` or a ``body`` kwarg. This means callers no longer have to
-  pass an empty string as the first arg when they want to use a JSON query
-  (a very common case).
+* Simplify ``search()`` and ``count()`` calling conventions. Each now supports
+  either a textual or a dict-based query as its first argument. There's no
+  longer a need to, for example, pass an empty string as the first arg in order
+  to use a JSON query (a common case).
 
-* Standardized on the singular for the names of the ``index`` and ``doc_type``
+* Standardize on the singular for the names of the ``index`` and ``doc_type``
   kwargs. It's not always obvious whether an ES API allows for multiple
   indexes. This was leading me to have to look aside to the docs to determine
   whether the kwarg was called ``index`` or ``indexes``. Using the singular
   everywhere will result in fewer doc lookups, especially for the common case
   of a single index.
 
-* Renamed ``morelikethis`` to ``more_like_this`` for consistency with other
+* Rename ``morelikethis`` to ``more_like_this`` for consistency with other
   methods.
 
 * ``index()`` now takes ``(index, doc_type, doc)`` rather than ``(doc, index,
@@ -49,8 +47,8 @@ Backward-incompatible changes:
     none are specified; use ``update_all_settings()`` instead.
 
 * ``setup_logging()`` is gone. If you want to configure logging, use the
-  logging module's usual ways. We still log to the "pyelasticsearch" named
-  logger.
+  logging module's usual facilities. We still log to the "pyelasticsearch"
+  named logger.
 
 * Rethink error handling:
 
