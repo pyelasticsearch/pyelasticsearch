@@ -285,7 +285,6 @@ class DangerousOperationTests(ElasticSearchTestCase):
     Tests that confirm callers can't do dangerous operations by accident and
     that the substitute routines work
     """
-
     def test_delete_all(self):
         """Make sure ``delete_all()`` sends the right request."""
         with patch.object(self.conn, '_send_request') as _send_request:
