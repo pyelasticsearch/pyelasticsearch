@@ -41,11 +41,11 @@ setup(
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
-    requires=[
-        'requests(>=0.9.0)',
+    requires=[  # Needed?
+        'requests(>=0.13.3)',
     ],
     install_requires=[
-        'requests>=0.9.0',
+        'requests>=0.13.3',
     ],
     tests_require=['mock'],
     test_suite='pyelasticsearch.tests',

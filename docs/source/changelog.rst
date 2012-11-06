@@ -1,6 +1,12 @@
 Changelog
 =========
 
+1.0 (unreleased)
+----------------
+
+* Correct the `requests` requirement to require a version that has everything
+  we need.
+
 v0.2 (2012-10-06)
 -----------------
 
