@@ -1,8 +1,14 @@
 Changelog
 =========
 
-v0.2 (2012-10-06)
------------------
+0.3 (unreleased)
+----------------
+
+* Add ``update()`` method.
+
+
+0.2 (2012-10-06)
+----------------
 
 Many thanks to Erik Rose for almost completely rewriting the API to follow
 best practices, improve the API user experience and making pyelasticsearch
@@ -88,7 +94,8 @@ Other changes:
   caller to wrap a single index name in a list.
 * Many other internal improvements
 
-v0.1 (2012-08-30)
------------------
+
+0.1 (2012-08-30)
+----------------
 
 Initial release based on the work of Robert Eanes and other the other authors.
