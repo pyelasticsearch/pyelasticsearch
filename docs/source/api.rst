@@ -36,6 +36,8 @@ elasticsearch.
 
     .. automethod:: get(index, doc_type, id[, other kwargs listed below])
 
+    .. automethod:: update(index, doc_type, id, script[, other kwargs listed below])
+
     .. automethod:: search(query, index, doc_type[, other kwargs listed below])
 
     .. automethod:: count(query, index, doc_type[, other kwargs listed below])
