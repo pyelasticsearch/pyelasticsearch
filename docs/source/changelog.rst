@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.3 (unreleased)
+1.0 (unreleased)
 ----------------
 
 * Add ``update()`` method.
