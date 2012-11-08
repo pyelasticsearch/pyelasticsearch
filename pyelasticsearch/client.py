@@ -221,7 +221,7 @@ class ElasticSearch(object):
 
     def _encode_json(self, body):
         """Return body encoded as JSON."""
-        return json.dumps(body, cls=self.json_encoder)
+        return json.dumps(body, cls=self.json_encoder, use_decimal=True)
 
     def _decode_response(self, response):
         """Return a native-Python representation of a response's JSON blob."""
