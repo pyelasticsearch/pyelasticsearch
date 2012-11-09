@@ -245,6 +245,10 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.count('name:joe', index='test-index')
         self.assertResultContains(result, {'count': 1})
 
+    def testSearchStringPaginated(self):
+        result = self.conn.search('*:*', index='test-index', es_from=1, es_size=1)
+        self.assertResultContains(result, {'hits': {'hits': [{'_score': 1, '_type': 'test-type', '_id': '2', '_source': {'name': 'Bill Baloney'}, '_index': 'test-index'}], 'total': 2, 'max_score': 1}})
+
     def testSearchByField(self):
         result = self.conn.search('name:joe', index='test-index')
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
