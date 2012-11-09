@@ -401,6 +401,23 @@ class ElasticSearch(object):
         return self._send_request('GET', [index, doc_type, id],
                                   query_params=query_params)
 
+    @es_kwargs('routing')
+    def mget(self, index, doc_type, ids, query_params=None):
+        """
+        Get multiple typed JSON documents from an index by their IDs.
+
+        :arg index: The name of the index from which to retrieve
+        :arg doc_type: The type of document to get
+        :arg ids: An iterable of IDs of the document to retrieve
+
+        See `ES's multi get API`_ for more detail.
+
+        .. _`ES's multi get API`:
+            http://www.elasticsearch.org/guide/reference/api/multi-get.html
+        """
+        return self._send_request('GET', [index, doc_type, '_mget'],
+            {"ids": list(ids)}, query_params=query_params)
+
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
         if isinstance(query, basestring):
