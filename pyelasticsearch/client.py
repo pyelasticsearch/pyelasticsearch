@@ -330,6 +330,32 @@ class ElasticSearch(object):
                                   encode_body=False,
                                   query_params=query_params)
 
+    @es_kwargs('tokenizer', 'filters', 'analyzer', 'field', 'format')
+    def analyze(self, text, index=None, query_params=None):
+        """
+        Analyze text using an index or specified settings
+
+        :arg text: The text you want analyzed
+        :arg index: The name of the index if you want to use the default
+            index analyzer or None
+        :arg field: Will cause the analysis to happen based on the analyzer
+            configured in the mapping for the field specified
+        :arg format: By default, the format the tokens are returned in are in
+            json and its called detailed. The text format value provides the
+            analyzed data in a text stream that is a bit more readable
+
+        See `ES's Analyze API`_ for more detail.
+
+        .. _`ES's Analyze API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-analyze.html
+        """
+
+        return self._send_request(
+            'GET',
+            [self._concat(index), '_analyze'],
+            body=text,
+            query_params=query_params)
+
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete(self, index, doc_type, id, query_params=None):
         """
