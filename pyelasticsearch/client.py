@@ -33,7 +33,7 @@ def _add_es_kwarg_docs(params, method):
     """
     doc = method.__doc__
     for p in params:
-        if ('\n        :arg %s: ' % p) not in doc:
+        if doc and ('\n        :arg %s: ' % p) not in doc:
             # Find the last documented arg so we can put our generated docs
             # after it. No need to explicitly compile this; the regex cache
             # should serve.
