@@ -508,7 +508,7 @@ class ElasticSearch(object):
                'max_query_terms', 'stop_words', 'min_doc_freq', 'max_doc_freq',
                'min_word_len', 'max_word_len', 'boost_terms', 'boost',
                'analyzer')
-    def more_like_this(self, index, doc_type, id, fields, query_params=None):
+    def more_like_this(self, index, doc_type, id, fields, body='', query_params=None):
         """
         Execute a "more like this" search query against one or more fields and
         get back search hits.
@@ -527,6 +527,7 @@ class ElasticSearch(object):
         query_params['fields'] = self._concat(fields)  # TODO: ES docs say "mlt_fields".
         return self._send_request('GET',
                                   [index, doc_type, id, '_mlt'],
+                                  body=body,
                                   query_params=query_params)
 
     ## Index Admin API
