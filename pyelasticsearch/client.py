@@ -88,6 +88,8 @@ class ElasticSearch(object):
     """
     def __init__(self, urls, timeout=60, max_retries=0, revival_delay=300):
         """
+        :arg urls: A URL or iterable of URLs of ES nodes. These are full URLs
+            with port numbers, like ``http://elasticsearch.example.com:9200``.
         :arg timeout: Number of seconds to wait for each request before raising
             Timeout
         :arg max_retries: How many other servers to try, in series, after a
