@@ -242,7 +242,7 @@ class SearchTestCase(ElasticSearchTestCase):
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'})
 
     def testMultiGetByID(self):
-        result = self.conn.mget('test-index', 'test-type', [1, 2])
+        result = self.conn.multi_get('test-index', 'test-type', [1, 2])
         self.assertTrue('docs' in result)
         self.assertResultContains(result['docs'][0], {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index', 'exists': True})
         self.assertResultContains(result['docs'][1], {'_type': 'test-type', '_id': '2', '_source': {'name': 'Bill Baloney'}, '_index': 'test-index', 'exists': True})

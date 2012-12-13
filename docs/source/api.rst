@@ -36,7 +36,7 @@ elasticsearch.
 
     .. automethod:: get(index, doc_type, id[, other kwargs listed below])
 
-    .. automethod:: mget(index, doc_type, ids[, other kwargs listed below])
+    .. automethod:: multi_get(index, doc_type, ids[, other kwargs listed below])
 
     .. automethod:: search(query, index, doc_type[, other kwargs listed below])
 

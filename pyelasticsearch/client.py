@@ -402,7 +402,7 @@ class ElasticSearch(object):
                                   query_params=query_params)
 
     @es_kwargs('routing')
-    def mget(self, index, doc_type, ids, query_params=None):
+    def multi_get(self, index, doc_type, ids, query_params=None):
         """
         Get multiple typed JSON documents from an index by their IDs.
 
