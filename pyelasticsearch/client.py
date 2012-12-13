@@ -8,8 +8,7 @@ import re
 from urllib import urlencode
 
 import requests
-# import either simplejson or the json module in Python >= 2.6
-from requests.compat import json
+import simplejson as json  # for use_decimal
 
 from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
@@ -110,11 +109,11 @@ class ElasticSearch(object):
 
         json_converter = self.from_python
 
-        class DateSavvyJsonEncoder(json.JSONEncoder):
+        class JsonEncoder(json.JSONEncoder):
             def default(self, value):
                 """Convert more Python data types to ES-understandable JSON."""
                 return json_converter(value)
-        self.json_encoder = DateSavvyJsonEncoder
+        self.json_encoder = JsonEncoder
 
     def _concat(self, items):
         """

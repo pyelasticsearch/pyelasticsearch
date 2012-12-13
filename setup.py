@@ -46,9 +46,11 @@ setup(
     ],
     requires=[  # Needed?
         'requests(>=0.13.3)',
+        'simplejson(>=2.1.0)'
     ],
     install_requires=[
         'requests>=0.13.3',
+        'simplejson>=2.1.0'
     ],
     tests_require=['mock'],
     test_suite='pyelasticsearch.tests',

@@ -3,6 +3,7 @@
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
 from datetime import datetime, date
+from decimal import Decimal
 import unittest
 
 from mock import patch
@@ -26,7 +27,7 @@ class ElasticSearchTestCase(unittest.TestCase):
     def tearDown(self):
         try:
             self.conn.delete_index('test-index')
-        except:
+        except Exception:
             pass
 
     def assertResultContains(self, result, expected):
@@ -546,6 +547,18 @@ class KwargsForQueryTests(unittest.TestCase):
         :arg degook: Whether to remove the gook
         :arg gobble: See the ES docs.
         """)
+
+
+class JsonTests(ElasticSearchTestCase):
+    """Tests for JSON encoding and decoding"""
+
+    def test_decimal_dumps(self):
+        """Make sure we can encode ``Decimal`` objects and that they don't end
+        up with quotes around them, which would suggest to ES to represent them
+        as strings if inferring a mapping."""
+        ones = '1.111111111111111111'
+        self.assertEqual(self.conn._encode_json({'hi': Decimal(ones)}),
+                         '{"hi": %s}' % ones)
 
 
 if __name__ == '__main__':
