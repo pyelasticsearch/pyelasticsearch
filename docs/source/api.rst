@@ -44,7 +44,7 @@ elasticsearch.
 
     .. automethod:: put_mapping(index, doc_type, mapping[, other kwargs listed below])
 
-    .. automethod:: more_like_this(index, doc_type, id, fields[, other kwargs listed below])
+    .. automethod:: more_like_this(index, doc_type, id, fields, body=''[, other kwargs listed below])
 
     .. automethod:: status(index=None[, other kwargs listed below])
 
