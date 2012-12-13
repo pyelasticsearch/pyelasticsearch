@@ -515,6 +515,8 @@ class ElasticSearch(object):
             lives
         :arg doc_type: The type of document to find others like
         :arg id: The ID of the document to find others like
+        :arg body: A dictionary that will convert to ES's query DSL and be
+            passed as the request body
         :arg fields: A list of fields to compare on
 
         See `ES's more-like-this API`_ for more detail.

@@ -296,7 +296,7 @@ class SearchTestCase(ElasticSearchTestCase):
                         }
                     }
                 }
-            }       
+            }
         result = self.conn.more_like_this('test-index', 'test-type', 1, ['name'], body=body, min_term_freq=1, min_doc_freq=1)
         self.assertResultContains(result,
                 {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '3', '_source': {'age': 16, 'name': 'Joe Justin'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
