@@ -196,8 +196,8 @@ class ElasticSearch(object):
             server_url, was_dead = self.servers.get()
             url = server_url + path
             self.logger.debug(
-                'request: curl -X%s \'%s\' -d \'%s\'' % (
-                    method, url, kwargs.get('data', {})))
+                "Making a request equivalent to this: curl -X%s '%s' -d '%s'" %
+                (method, url, kwargs.get('data', {})))
 
             try:
                 # prefetch=True so the connection can be quickly returned to
