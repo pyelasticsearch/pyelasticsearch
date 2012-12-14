@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.0 (unreleased)
+v1.0 (unreleased)
 ----------------
 
 * Correct the ``requests`` requirement to require a version that has everything
@@ -11,7 +11,7 @@ Changelog
   explicitly support.
 
 
-0.2 (2012-10-06)
+v0.2 (2012-10-06)
 ----------------
 
 Many thanks to Erik Rose for almost completely rewriting the API to follow
@@ -97,7 +97,7 @@ Other changes:
 * Many other internal improvements
 
 
-0.1 (2012-08-30)
+v0.1 (2012-08-30)
 ----------------
 
 Initial release based on the work of Robert Eanes and other the other authors.
