@@ -147,14 +147,19 @@ class ElasticSearch(object):
         raise TypeError("_to_query() doesn't know how to represent %r in an ES"
                         " query string." % obj)
 
-    def _send_request(self,
-                      method,
-                      path_components,
-                      body='',
-                      query_params=None,
-                      encode_body=True):
+    def send_request(self,
+                     method,
+                     path_components,
+                     body='',
+                     query_params=None,
+                     encode_body=True):
         """
         Send an HTTP request to ES, and return the JSON-decoded response.
+
+        This is mostly an internal method, but it also comes in handy if you
+        need to use a brand new ES API that isn't yet explicitly supported by
+        pyelasticsearch, while still taking advantage of our connection pooling
+        and retrying.
 
         Retry the request on different servers if the first one is down and
         ``self.max_retries`` > 0.
@@ -163,7 +168,8 @@ class ElasticSearch(object):
         :arg path_components: An iterable of path components, to be joined by
             "/"
         :arg body: The request body
-        :arg query_params: A map of querystring param names to values or None
+        :arg query_params: A map of querystring param names to values or
+            ``None``
         :arg encode_body: Whether to encode the body of the request as JSON
         """
         def join_path(path_components):
@@ -286,7 +292,7 @@ class ElasticSearch(object):
         if force_insert:
             query_params['op_type'] = 'create'
 
-        return self._send_request('POST' if id is None else 'PUT',
+        return self.send_request('POST' if id is None else 'PUT',
                                   [index, doc_type, id],
                                   doc,
                                   query_params)
@@ -325,7 +331,7 @@ class ElasticSearch(object):
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
         query_params['op_type'] = 'create'  # TODO: Why?
-        return self._send_request('POST',
+        return self.send_request('POST',
                                   [index, '_bulk'],
                                   body,
                                   encode_body=False,
@@ -346,7 +352,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/delete.html
         """
         # TODO: Raise ValueError if id boils down to a 0-length string.
-        return self._send_request('DELETE', [index, doc_type, id],
+        return self.send_request('DELETE', [index, doc_type, id],
                                   query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
@@ -364,7 +370,7 @@ class ElasticSearch(object):
         .. _`ES's delete API`:
             http://www.elasticsearch.org/guide/reference/api/delete.html
         """
-        return self._send_request('DELETE', [index, doc_type],
+        return self.send_request('DELETE', [index, doc_type],
                                   query_params=query_params)
 
     @es_kwargs('q', 'df', 'analyzer', 'default_operator', 'source' 'routing',
@@ -382,7 +388,7 @@ class ElasticSearch(object):
         .. _`ES's delete-by-query API`:
             http://www.elasticsearch.org/guide/reference/api/delete-by-query.html
         """
-        return self._send_request('DELETE', [index, doc_type, '_query'], query,
+        return self.send_request('DELETE', [index, doc_type, '_query'], query,
                                   query_params=query_params)
 
     @es_kwargs('realtime', 'fields', 'routing', 'preference', 'refresh')
@@ -399,7 +405,7 @@ class ElasticSearch(object):
         .. _`ES's get API`:
             http://www.elasticsearch.org/guide/reference/api/get.html
         """
-        return self._send_request('GET', [index, doc_type, id],
+        return self.send_request('GET', [index, doc_type, id],
                                   query_params=query_params)
 
 
@@ -423,8 +429,8 @@ class ElasticSearch(object):
             body['params'] = params
         if lang:
             body['lang'] = lang
-        return self._send_request('POST', [index, doc_type, id], body=body,
-                                  query_params=query_params)
+        return self.send_request('POST', [index, doc_type, id], body=body,
+                                 query_params=query_params)
 
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
@@ -434,7 +440,7 @@ class ElasticSearch(object):
         else:
             body = query
 
-        return self._send_request(
+        return self.send_request(
             'GET',
             [self._concat(index), self._concat(doc_type), kind],
             body,
@@ -494,7 +500,7 @@ class ElasticSearch(object):
         """
         # TODO: Think about turning index=None into _all if doc_type is non-
         # None, per the ES doc page.
-        return self._send_request(
+        return self.send_request(
             'GET',
             [self._concat(index), self._concat(doc_type), '_mapping'],
             query_params=query_params)
@@ -519,7 +525,7 @@ class ElasticSearch(object):
         # don't need to expose the "_all" magic string. We haven't done it yet
         # since this routine is not dangerous: ES makes you explicily pass
         # "_all" to update all mappings.
-        return self._send_request(
+        return self.send_request(
             'PUT',
             [self._concat(index), doc_type, '_mapping'],
             mapping,
@@ -550,7 +556,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/more-like-this.html
         """
         query_params['fields'] = self._concat(fields)  # TODO: ES docs say "mlt_fields".
-        return self._send_request('GET',
+        return self.send_request('GET',
                                   [index, doc_type, id, '_mlt'],
                                   body=body,
                                   query_params=query_params)
@@ -569,7 +575,7 @@ class ElasticSearch(object):
         .. _`ES's index-status API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-status.html
         """
-        return self._send_request('GET', [self._concat(index), '_status'],
+        return self.send_request('GET', [self._concat(index), '_status'],
                                   query_params=query_params)
 
     @es_kwargs()
@@ -585,7 +591,7 @@ class ElasticSearch(object):
         .. _`ES's create-index API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-create-index.html
         """
-        return self._send_request('PUT', [index], body=settings,
+        return self.send_request('PUT', [index], body=settings,
                                   query_params=query_params)
 
     @es_kwargs()
@@ -603,7 +609,7 @@ class ElasticSearch(object):
         if not index:
             raise ValueError('No indexes specified. To delete all indexes, use'
                              ' delete_all_indexes().')
-        return self._send_request('DELETE', [self._concat(index)],
+        return self.send_request('DELETE', [self._concat(index)],
                                   query_params=query_params)
 
     def delete_all_indexes(self, **kwargs):
@@ -622,7 +628,7 @@ class ElasticSearch(object):
         .. _`ES's close-index API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
         """
-        return self._send_request('POST', [index, '_close'],
+        return self.send_request('POST', [index, '_close'],
                                   query_params=query_params)
 
     @es_kwargs()
@@ -637,7 +643,7 @@ class ElasticSearch(object):
         .. _`ES's open-index API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
         """
-        return self._send_request('POST', [index, '_open'],
+        return self.send_request('POST', [index, '_open'],
                                   query_params=query_params)
 
     @es_kwargs()
@@ -658,7 +664,7 @@ class ElasticSearch(object):
                              ' update_all_settings().')
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
-        return self._send_request('PUT',
+        return self.send_request('PUT',
                                   [self._concat(index), '_settings'],
                                   body=settings,
                                   query_params=query_params)
@@ -675,7 +681,7 @@ class ElasticSearch(object):
         .. _`ES's update-settings API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-update-settings.html
         """
-        return self._send_request('PUT', ['_settings'], body=settings,
+        return self.send_request('PUT', ['_settings'], body=settings,
                                   query_params=query_params)
 
     @es_kwargs('refresh')
@@ -690,7 +696,7 @@ class ElasticSearch(object):
         .. _`ES's flush API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-flush.html
         """
-        return self._send_request('POST',
+        return self.send_request('POST',
                                   [self._concat(index), '_flush'],
                                   query_params=query_params)
 
@@ -706,7 +712,7 @@ class ElasticSearch(object):
         .. _`ES's refresh API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-refresh.html
         """
-        return self._send_request('POST', [self._concat(index), '_refresh'],
+        return self.send_request('POST', [self._concat(index), '_refresh'],
                                   query_params=query_params)
 
     @es_kwargs()
@@ -721,7 +727,7 @@ class ElasticSearch(object):
         .. _`ES's gateway-snapshot API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-gateway-snapshot.html
         """
-        return self._send_request(
+        return self.send_request(
             'POST',
             [self._concat(index), '_gateway', 'snapshot'],
             query_params=query_params)
@@ -739,7 +745,7 @@ class ElasticSearch(object):
         .. _`ES's optimize API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-optimize.html
         """
-        return self._send_request('POST',
+        return self.send_request('POST',
                                   [self._concat(index), '_optimize'],
                                   query_params=query_params)
 
@@ -756,7 +762,7 @@ class ElasticSearch(object):
         .. _`ES's cluster-health API`:
             http://www.elasticsearch.org/guide/reference/api/admin-cluster-health.html
         """
-        return self._send_request(
+        return self.send_request(
             'GET',
             ['_cluster', 'health', self._concat(index)],
             query_params=query_params)

@@ -74,6 +74,8 @@ elasticsearch.
 
     .. automethod:: health(index=None[, other kwargs listed below])
 
+    .. automethod:: send_request
+
 
 Error Handling
 ==============
