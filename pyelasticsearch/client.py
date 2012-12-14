@@ -402,6 +402,30 @@ class ElasticSearch(object):
         return self._send_request('GET', [index, doc_type, id],
                                   query_params=query_params)
 
+
+    @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
+               'percolate', 'refresh', 'retry_on_conflict')
+    def update(self, index, doc_type, id, script, params=None, lang=None,
+               query_params=None):
+        """
+        Update a document by means of a script.
+
+        :arg index: The name of the index containing the document
+        :arg doc_type: The type of the document
+        :arg id: The ID of the document
+        :arg script: The script to be used to update the document
+        :arg params: A dict of the params to be put in scope of the script
+        :arg lang: The language of the script. Omit to use the default,
+            specified by ``script.default_lang``.
+        """
+        body = {'script': script}
+        if params:
+            body['params'] = params
+        if lang:
+            body['lang'] = lang
+        return self._send_request('POST', [index, doc_type, id], body=body,
+                                  query_params=query_params)
+
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
         if isinstance(query, basestring):

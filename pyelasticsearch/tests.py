@@ -230,6 +230,23 @@ class IndexingTestCase(ElasticSearchTestCase):
         resp._content = '{"busted" "json" "that": ["is] " wrong'
         self.assertRaises(InvalidJsonResponseError, conn._decode_response, resp)
 
+    def testUpdate(self):
+        """Smoke-test the ``update()`` API."""
+        SCRIPT = 'ctx._source.thing += count'
+        with patch.object(self.conn, '_send_request') as _send_request:
+            self.conn.update('some_index',
+                             'some_type',
+                             3,
+                             SCRIPT,
+                             params={'count': 5},
+                             lang='python')
+        _send_request.assert_called_once_with(
+            'POST', ['some_index', 'some_type', 3],
+            body={'script': SCRIPT,
+                  'params': {'count': 5},
+                  'lang': 'python'},
+                  query_params={})
+
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):

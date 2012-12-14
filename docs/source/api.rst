@@ -38,6 +38,8 @@ elasticsearch.
 
     .. automethod:: search(query[, other kwargs listed below])
 
+    .. automethod:: update(index, doc_type, id, script[, other kwargs listed below])
+
     .. automethod:: count(query, index, doc_type[, other kwargs listed below])
 
     .. automethod:: get_mapping(index=None, doc_type=None)
