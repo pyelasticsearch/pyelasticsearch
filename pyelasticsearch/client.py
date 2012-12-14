@@ -157,6 +157,11 @@ class ElasticSearch(object):
         """
         Send an HTTP request to ES, and return the JSON-decoded response.
 
+        This is mostly an internal method, but it also comes in handy if you
+        need to use a brand new ES API that isn't yet explicitly supported by
+        pyelasticsearch, while still taking advantage of our connection pooling
+        and retrying.
+
         Retry the request on different servers if the first one is down and
         ``self.max_retries`` > 0.
 
@@ -164,7 +169,8 @@ class ElasticSearch(object):
         :arg path_components: An iterable of path components, to be joined by
             "/"
         :arg body: The request body
-        :arg query_params: A map of querystring param names to values or None
+        :arg query_params: A map of querystring param names to values or
+            ``None``
         :arg encode_body: Whether to encode the body of the request as JSON
         """
         def join_path(path_components):

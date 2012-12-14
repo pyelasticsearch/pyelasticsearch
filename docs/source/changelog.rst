@@ -4,8 +4,10 @@ Changelog
 1.0 (unreleased)
 ----------------
 
-* Correct the `requests` requirement to require a version that has everything
+* Correct the ``requests`` requirement to require a version that has everything
   we need.
+* Make ``send_request`` method public so you can use ES APIs we don't yet
+  explicitly support.
 
 v0.2 (2012-10-06)
 -----------------
