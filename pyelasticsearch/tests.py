@@ -65,29 +65,29 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testUpdateSettings(self):
         """Make sure ``update_settings()`` sends the expected request."""
-        with patch.object(self.conn, '_send_request') as _send_request:
+        with patch.object(self.conn, 'send_request') as send_request:
             self.conn.update_settings(['test-index', 'toast-index'],
                                       {'index': {'number_of_replicas': 2}})
-        _send_request.assert_called_once_with(
+        send_request.assert_called_once_with(
             'PUT',
             ['test-index,toast-index', '_settings'],
             body={'index': {'number_of_replicas': 2}},
             query_params={})
 
     def testHealth(self):
-        with patch.object(self.conn, '_send_request') as _send_request:
+        with patch.object(self.conn, 'send_request') as send_request:
             self.conn.health(['test-index', 'toast-index'],
                              wait_for_status='yellow',
                              wait_for_nodes='>=1')
-        _send_request.assert_called_once_with(
+        send_request.assert_called_once_with(
             'GET',
             ['_cluster', 'health', 'test-index,toast-index'],
             query_params={'wait_for_status': 'yellow',
                           'wait_for_nodes': '>=1'})
 
-        with patch.object(self.conn, '_send_request') as _send_request:
+        with patch.object(self.conn, 'send_request') as send_request:
             self.conn.health()
-        _send_request.assert_called_once_with(
+        send_request.assert_called_once_with(
             'GET', ['_cluster', 'health', ''], query_params={})
 
     def testDeleteByID(self):
@@ -327,9 +327,9 @@ class DangerousOperationTests(ElasticSearchTestCase):
     """
     def test_delete_all(self):
         """Make sure ``delete_all()`` sends the right request."""
-        with patch.object(self.conn, '_send_request') as _send_request:
+        with patch.object(self.conn, 'send_request') as send_request:
             self.conn.delete_all('test-index', 'tweet')
-        _send_request.assert_called_once_with(
+        send_request.assert_called_once_with(
             'DELETE',
             ['test-index', 'tweet'],
             query_params={})
@@ -342,9 +342,9 @@ class DangerousOperationTests(ElasticSearchTestCase):
 
     def test_delete_all_indexes(self):
         """Make sure ``delete_all_indexes()`` sends the right request."""
-        with patch.object(self.conn, '_send_request') as _send_request:
+        with patch.object(self.conn, 'send_request') as send_request:
             self.conn.delete_all_indexes()
-        _send_request.assert_called_once_with('DELETE', [''], query_params={})
+        send_request.assert_called_once_with('DELETE', [''], query_params={})
 
     def update_settings_no_args(self):
         """
@@ -355,9 +355,9 @@ class DangerousOperationTests(ElasticSearchTestCase):
 
     def update_all_settings(self):
         """Make sure ``update_all_settings()`` sends the right request."""
-        with patch.object(self.conn, '_send_request') as _send_request:
+        with patch.object(self.conn, 'send_request') as send_request:
             self.conn.update_all_settings({'joe': 'bob'})
-        _send_request.assert_called_once_with(
+        send_request.assert_called_once_with(
             'PUT', ['_settings'], body={'joe': 'bob'})
 
 
