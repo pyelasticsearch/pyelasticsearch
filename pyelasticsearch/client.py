@@ -120,18 +120,10 @@ class ElasticSearch(object):
         urls = [u.rstrip('/') for u in urls]
         self.servers = DowntimePronePool(urls, revival_delay)
         self.revival_delay = revival_delay
-
         self.timeout = timeout
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
         self.session = requests.session()
-
-        json_converter = self.from_python
-
-        class JsonEncoder(json.JSONEncoder):
-            def default(self, value):
-                """Convert more Python data types to ES-understandable JSON."""
-                return json_converter(value)
         self.json_encoder = JsonEncoder
 
     def _concat(self, items):
@@ -150,7 +142,7 @@ class ElasticSearch(object):
 
     @classmethod
     def _to_query(cls, obj):
-        """Convert a native-Python object to a query string representation."""
+        """Convert a native-Python object to a query-string representation."""
         # Quick and dirty thus far
         if isinstance(obj, string_types):
             return obj
@@ -257,9 +249,11 @@ class ElasticSearch(object):
 
         raise error_class(response.status_code, error_message)
 
-    def _encode_json(self, body):
-        """Return body encoded as JSON."""
-        return json.dumps(body, cls=self.json_encoder, use_decimal=True)
+    def _encode_json(self, value):
+        """
+        Convert a Python value to a form suitable for ElasticSearch's JSON DSL.
+        """
+        return json.dumps(value, cls=self.json_encoder, use_decimal=True)
 
     def _decode_response(self, response):
         """Return a native-Python representation of a response's JSON blob."""
@@ -897,10 +891,10 @@ class ElasticSearch(object):
         return self.send_request(
             'GET', ['_cluster', 'state'], query_params=query_params)
 
-    def from_python(self, value):
-        """
-        Convert Python values to a form suitable for ElasticSearch's JSON.
-        """
+
+class JsonEncoder(json.JSONEncoder):
+    def default(self, value):
+        """Convert more Python data types to ES-understandable JSON."""
         iso = _iso_datetime(value)
         if iso:
             return iso
@@ -908,8 +902,7 @@ class ElasticSearch(object):
             return unicode(value, errors='replace')  # TODO: Be stricter.
         if isinstance(value, set):
             return list(value)
-
-        return value
+        return super(JsonEncoder, self).default(value)
 
 
 def _iso_datetime(value):
