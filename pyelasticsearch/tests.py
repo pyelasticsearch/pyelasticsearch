@@ -176,32 +176,6 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.delete_index('another-index')
         self.assertResultContains(result, {'ok': True})
 
-    def testFromPython(self):
-        self.assertEqual(self.conn.from_python('abc'), u'abc')
-        self.assertEqual(self.conn.from_python(u'☃'), u'☃')
-        self.assertEqual(self.conn.from_python(123), 123)
-        self.assertEqual(self.conn.from_python(12.2), 12.2)
-        self.assertEqual(self.conn.from_python(True), True)
-        self.assertEqual(self.conn.from_python(False), False)
-        self.assertEqual(self.conn.from_python(date(2011, 12, 30)), '2011-12-30T00:00:00')
-        self.assertEqual(self.conn.from_python(datetime(2011, 12, 30, 11, 59, 32)), '2011-12-30T11:59:32')
-        self.assertEqual(self.conn.from_python([1, 2, 3]), [1, 2, 3])
-        self.assertEqual(self.conn.from_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
-        self.assertEqual(self.conn.from_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
-
-    def testToPython(self):
-        self.assertEqual(self.conn.to_python(u'abc'), u'abc')
-        self.assertEqual(self.conn.to_python(u'☃'), u'☃')
-        self.assertEqual(self.conn.to_python(123), 123)
-        self.assertEqual(self.conn.to_python(12.2), 12.2)
-        self.assertEqual(self.conn.to_python(True), True)
-        self.assertEqual(self.conn.to_python(False), False)
-        self.assertEqual(self.conn.to_python('2011-12-30T00:00:00'), datetime(2011, 12, 30))
-        self.assertEqual(self.conn.to_python('2011-12-30T11:59:32'), datetime(2011, 12, 30, 11, 59, 32))
-        self.assertEqual(self.conn.to_python([1, 2, 3]), [1, 2, 3])
-        self.assertEqual(self.conn.to_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
-        self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
-
     def testBulkIndex(self):
         # Try counting the docs in a nonexistent index:
         self.assertRaises(ElasticHttpError, self.conn.count, '*:*', index=['test-index'])
@@ -569,13 +543,51 @@ class KwargsForQueryTests(unittest.TestCase):
 class JsonTests(ElasticSearchTestCase):
     """Tests for JSON encoding and decoding"""
 
-    def test_decimal_dumps(self):
+    def test_decimal_encoding(self):
         """Make sure we can encode ``Decimal`` objects and that they don't end
         up with quotes around them, which would suggest to ES to represent them
         as strings if inferring a mapping."""
         ones = '1.111111111111111111'
         self.assertEqual(self.conn._encode_json({'hi': Decimal(ones)}),
                          '{"hi": %s}' % ones)
+
+    def test_set_encoding(self):
+        """Make sure encountering a set doesn't raise a circular reference
+        error."""
+        self.assertEqual(self.conn._encode_json({'hi': set([1])}),
+                         '{"hi": [1]}')
+
+    def test_tuple_encoding(self):
+        """Make sure tuples encode as lists."""
+        self.assertEqual(self.conn._encode_json({'hi': (1, 2, 3)}),
+                         '{"hi": [1, 2, 3]}')
+
+    def test_encoding(self):
+        """Test encoding a zillion other types."""
+        self.assertEqual(self.conn.from_python('abc'), u'abc')
+        self.assertEqual(self.conn.from_python(u'☃'), u'☃')
+        self.assertEqual(self.conn.from_python(123), 123)
+        self.assertEqual(self.conn.from_python(12.2), 12.2)
+        self.assertEqual(self.conn.from_python(True), True)
+        self.assertEqual(self.conn.from_python(False), False)
+        self.assertEqual(self.conn.from_python(date(2011, 12, 30)), '2011-12-30T00:00:00')
+        self.assertEqual(self.conn.from_python(datetime(2011, 12, 30, 11, 59, 32)), '2011-12-30T11:59:32')
+        self.assertEqual(self.conn.from_python([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(self.conn.from_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
+
+    def test_decoding(self):
+        """Test decoding a bunch of types."""
+        self.assertEqual(self.conn.to_python(u'abc'), u'abc')
+        self.assertEqual(self.conn.to_python(u'☃'), u'☃')
+        self.assertEqual(self.conn.to_python(123), 123)
+        self.assertEqual(self.conn.to_python(12.2), 12.2)
+        self.assertEqual(self.conn.to_python(True), True)
+        self.assertEqual(self.conn.to_python(False), False)
+        self.assertEqual(self.conn.to_python('2011-12-30T00:00:00'), datetime(2011, 12, 30))
+        self.assertEqual(self.conn.to_python('2011-12-30T11:59:32'), datetime(2011, 12, 30, 11, 59, 32))
+        self.assertEqual(self.conn.to_python([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(self.conn.to_python(set(['a', 'b', 'c'])), set(['a', 'b', 'c']))
+        self.assertEqual(self.conn.to_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
 
 
 if __name__ == '__main__':

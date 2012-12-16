@@ -777,6 +777,9 @@ class ElasticSearch(object):
             return iso
         if isinstance(value, str):
             return unicode(value, errors='replace')  # TODO: Be stricter.
+        if isinstance(value, set):
+            return list(value)
+
         return value
 
     def to_python(self, value):
