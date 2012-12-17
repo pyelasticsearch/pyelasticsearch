@@ -9,6 +9,10 @@ v1.0 (unreleased)
 * Add ``update()`` method.
 * Make ``send_request`` method public so you can use ES APIs we don't yet
   explicitly support.
+* Handle JSON translation of Decimal class and sets.
+* Make ``more_like_this()`` take an arbitrary request body so you can filter
+  the returned docs.
+* Make explicit our undeclared dependency on simplejson.
 
 
 v0.2 (2012-10-06)
