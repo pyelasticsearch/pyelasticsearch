@@ -455,8 +455,10 @@ class ElasticSearch(object):
         :arg query: A dictionary that will convert to ES's query DSL or a
             string that will serve as a textual query to be passed as the ``q``
             query string parameter
-        :arg index: An index or iterable of indexes to search
-        :arg doc_type: A document type or iterable thereof to search
+        :arg index: An index or iterable of indexes to search. Omit to search
+            all.
+        :arg doc_type: A document type or iterable thereof to search. Omit to
+            search all.
 
         See `ES's search API`_ for more detail.
 
@@ -473,8 +475,10 @@ class ElasticSearch(object):
         :arg query: A dictionary that will convert to ES's query DSL or a
             string that will serve as a textual query to be passed as the ``q``
             query string parameter
-        :arg index: An index or iterable of indexes to search
-        :arg doc_type: A document type or iterable thereof to search
+        :arg index: An index or iterable of indexes to search. Omit to search
+            all.
+        :arg doc_type: A document type or iterable thereof to search. Omit to
+            search all.
 
         See `ES's count API`_ for more detail.
 
