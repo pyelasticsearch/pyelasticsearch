@@ -106,6 +106,7 @@ Delete the index::
   >>> es.delete_index('contacts')
   {u'acknowledged': True, u'ok': True}
 
+
 Contents
 --------
 
