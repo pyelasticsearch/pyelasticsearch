@@ -9,6 +9,7 @@ from urllib import urlencode
 
 import requests
 import simplejson as json  # for use_decimal
+from simplejson import JSONDecodeError
 
 from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
@@ -200,10 +201,7 @@ class ElasticSearch(object):
                 (method, url, kwargs.get('data', {})))
 
             try:
-                # prefetch=True so the connection can be quickly returned to
-                # the pool. This is the default in requests >=0.3.16.
-                resp = req_method(
-                    url, prefetch=True, timeout=self.timeout, **kwargs)
+                resp = req_method(url, timeout=self.timeout, **kwargs)
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
                 self.logger.info('%s marked as dead for %s seconds.',
@@ -233,8 +231,9 @@ class ElasticSearch(object):
 
     def _decode_response(self, response):
         """Return a native-Python representation of a response's JSON blob."""
-        json_response = response.json
-        if json_response is None:
+        try:
+            json_response = response.json()
+        except JSONDecodeError:
             raise InvalidJsonResponseError(response)
         return json_response
 

@@ -5,7 +5,7 @@ v1.0 (unreleased)
 ----------------
 
 * Correct the ``requests`` requirement to require a version that has everything
-  we need.
+  we need. In fact, require requests 1.x, which has a stable API.
 * Add ``update()`` method.
 * Make ``send_request`` method public so you can use ES APIs we don't yet
   explicitly support.

@@ -45,11 +45,11 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
     requires=[  # Needed?
-        'requests(>=0.13.3)',
+        'requests(>=1.0,<2.0)',
         'simplejson(>=2.1.0)'
     ],
     install_requires=[
-        'requests>=0.13.3',
+        'requests>=1.0,<2.0',
         'simplejson>=2.1.0'
     ],
     tests_require=['mock'],
