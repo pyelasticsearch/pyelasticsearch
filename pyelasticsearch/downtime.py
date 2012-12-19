@@ -23,6 +23,11 @@ class DowntimePronePool(object):
     detection later and class flappers as failures, immune to ``mark_live``.
     """
     def __init__(self, servers, revival_delay):
+        """
+        :arg servers: A list of servers (or whatever things you like)
+        :arg revival_delay: The number of seconds to wait before reviving a
+            dead server
+        """
         self.live = servers
         self.dead = deque()  # [(time to reinstate, url), ...], oldest first
         self.revival_delay = revival_delay
