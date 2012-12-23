@@ -21,8 +21,8 @@ ElasticSearch API
 
 Unless otherwise indicated, methods return the JSON-decoded response sent by
 elasticsearch. This way, you don't lose any part of the return value, no matter
-how esoteric. But fear not: if there was an error, exception will be raised, so
-it'll be hard to miss.
+how esoteric. But fear not: if there was an error, an exception will be raised,
+so it'll be hard to miss.
 
 .. autoclass:: ElasticSearch
 
