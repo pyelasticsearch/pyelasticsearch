@@ -12,6 +12,8 @@ v0.3 (unreleased)
 * Handle JSON translation of Decimal class and sets.
 * Make ``more_like_this()`` take an arbitrary request body so you can filter
   the returned docs.
+* Replace the ``fields`` arg of ``more_like_this`` with ``mlt_fields``. This
+  makes it actually work, as it's the param name ES expects.
 * Make explicit our undeclared dependency on simplejson.
 
 
