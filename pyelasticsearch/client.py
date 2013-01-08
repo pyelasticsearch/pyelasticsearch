@@ -536,7 +536,7 @@ class ElasticSearch(object):
             query_params=query_params)
 
     @es_kwargs('search_type', 'search_indices', 'search_types',
-               'search_scroll', 'search_size', 'search_from', 'mlt_fields',
+               'search_scroll', 'search_size', 'search_from',
                'like_text', 'percent_terms_to_match', 'min_term_freq',
                'max_query_terms', 'stop_words', 'min_doc_freq', 'max_doc_freq',
                'min_word_len', 'max_word_len', 'boost_terms', 'boost',
