@@ -85,6 +85,9 @@ class ElasticSearch(object):
     """
     An object which manages connections to elasticsearch and acts as a
     go-between for API calls to it
+
+    This object is thread-safe. You can create one instance and share it
+    among all threads.
     """
     def __init__(self, urls, timeout=60, max_retries=0, revival_delay=300):
         """
