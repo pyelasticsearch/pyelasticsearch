@@ -117,6 +117,7 @@ Contents
    features
    api
    changelog
+   dev
 
 
 Indices and tables
