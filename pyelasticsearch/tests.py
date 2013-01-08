@@ -293,6 +293,17 @@ class SearchTestCase(ElasticSearchTestCase):
         self.assertResultContains(result,
                 {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '3', '_source': {'age': 16, 'name': 'Joe Justin'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
+    def testMLTFields(self):
+        self.conn.index('test-index', 'test-type', {'name': 'Angus', 'sport': 'football'}, id=3)
+        self.conn.index('test-index', 'test-type', {'name': 'Cam', 'sport': 'football'}, id=4)
+        self.conn.index('test-index', 'test-type', {'name': 'Sophia', 'sport': 'baseball'}, id=5)
+
+        self.conn.refresh(['test-index'])
+
+        result = self.conn.more_like_this('test-index', 'test-type', 3, ['sport'], min_term_freq=1, min_doc_freq=1)
+        self.assertResultContains(result,
+                {u'hits': {u'hits': [{u'_score': 0.30685282, u'_type': u'test-type', u'_id': u'4', u'_source': {u'sport': u'football', u'name': u'Cam'}, u'_index': u'test-index'}], u'total': 1, u'max_score': 0.30685282}})
+
 
 class DangerousOperationTests(ElasticSearchTestCase):
     """
