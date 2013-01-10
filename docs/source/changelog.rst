@@ -1,7 +1,7 @@
 Changelog
 =========
 
-v0.3 (unreleased)
+v0.3 (2013-01-10)
 -----------------
 
 * Correct the ``requests`` requirement to require a version that has everything
