@@ -40,6 +40,10 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'})
 
+    def testQuotedCharsInID(self):
+        result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id="""<>?,./`~!@#$%^&*()_+=[]\{{}|:";'""")
+        self.assertResultContains(result, {'_type': 'test-type', '_id': """<>?,./`~!@#$%^&*()_+=[]\{{}|:";'""", 'ok': True, '_index': 'test-index'})
+
     def testIndexingWithoutID(self):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'})
         self.assertResultContains(result, {'_type': 'test-type', 'ok': True, '_index': 'test-index'})
