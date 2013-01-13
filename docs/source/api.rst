@@ -97,3 +97,50 @@ exceptions:
 
         Exception raised when an HTTP request times out and we are out of
         retries. (See the ``max_retries`` argument to :class:`ElasticSearch`.)
+
+
+Debugging
+=========
+
+pyelasticsearch logs to the ``pyelasticsearch`` logger using the
+Python logging module. If you configure that to show DEBUG-level
+messages, then it'll show the requests in curl form, responses, and
+when it marks servers as dead.
+
+Additionally, pyelasticsearch uses Requests which logs to the
+``requests`` logger using the Python logging module. If you configure
+that to show INFO-level messages, then you'll see all that stuff.
+
+::
+
+    import logging
+
+    logging.getLogger('pyelasticsearch').setLevel(logging.DEBUG)
+    logging.getLogger('requests').setLevel(logging.DEBUG)
+
+
+.. Note::
+
+   This assumes that logging is already set up with something like
+   this::
+
+       import logging
+
+       logging.basicConfig()
+
+
+pyelasticsearch will log lines like::
+
+    DEBUG:pyelasticsearch:Making a request equivalent to this: curl
+    -XGET 'http://localhost:9200/fooindex/testdoc/_search' -d '{"fa
+    cets": {"topics": {"terms": {"field": "topics"}}}}'
+
+
+You can copy and paste the curl line and it'll work on the command
+line.
+
+.. Note::
+
+   If you add a ``pretty=1`` to the query string of the url that
+   you're curling, then ElasticSearch will return a prettified
+   response that's easier to read.
