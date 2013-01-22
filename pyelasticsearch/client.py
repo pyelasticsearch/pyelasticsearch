@@ -251,7 +251,8 @@ class ElasticSearch(object):
 
         :arg index: The name of the index to which to add the document
         :arg doc_type: The type of the document
-        :arg doc: A mapping, convertible to JSON, representing the document
+        :arg doc: A Python mapping object, convertible to JSON, representing
+            the document
         :arg id: The ID to give the document. Leave blank to make one up.
         :arg force_insert: If ``True`` and a document of the given ID already
             exists, fail rather than updating it.
@@ -308,8 +309,8 @@ class ElasticSearch(object):
 
         :arg index: The name of the index to which to add the document
         :arg doc_type: The type of the document
-        :arg docs: An iterable of mappings, convertible to JSON, representing
-            documents to index
+        :arg docs: An iterable of Python mapping objects, convertible to JSON,
+            representing documents to index
         :arg id_field: The field of each document that holds its ID
 
         See `ES's bulk API`_ for more detail.

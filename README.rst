@@ -12,7 +12,7 @@ provides features like...
 * Transparent conversion of Python data types to and from JSON
 * Translating HTTP status codes representing failure into exceptions
 * Connection pooling
-* Load balancing of requests across nodes in a cluster
+* Load-balancing of requests across nodes in a cluster
 * Failed-node marking to avoid downed nodes for a period
 * Optional automatic retrying of failed requests
 
