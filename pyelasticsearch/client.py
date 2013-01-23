@@ -297,9 +297,9 @@ class ElasticSearch(object):
             query_params['op_type'] = 'create'
 
         return self.send_request('POST' if id is None else 'PUT',
-                                  [index, doc_type, id],
-                                  doc,
-                                  query_params)
+                                 [index, doc_type, id],
+                                 doc,
+                                 query_params)
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
@@ -336,10 +336,10 @@ class ElasticSearch(object):
         body = '\n'.join(body_bits) + '\n'
         query_params['op_type'] = 'create'  # TODO: Why?
         return self.send_request('POST',
-                                  [index, '_bulk'],
-                                  body,
-                                  encode_body=False,
-                                  query_params=query_params)
+                                 [index, '_bulk'],
+                                 body,
+                                 encode_body=False,
+                                 query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete(self, index, doc_type, id, query_params=None):
@@ -357,7 +357,7 @@ class ElasticSearch(object):
         """
         # TODO: Raise ValueError if id boils down to a 0-length string.
         return self.send_request('DELETE', [index, doc_type, id],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete_all(self, index, doc_type, query_params=None):
@@ -375,7 +375,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/delete.html
         """
         return self.send_request('DELETE', [index, doc_type],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs('q', 'df', 'analyzer', 'default_operator', 'source' 'routing',
                'replication', 'consistency')
@@ -393,7 +393,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/delete-by-query.html
         """
         return self.send_request('DELETE', [index, doc_type, '_query'], query,
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs('realtime', 'fields', 'routing', 'preference', 'refresh')
     def get(self, index, doc_type, id, query_params=None):
@@ -410,7 +410,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/get.html
         """
         return self.send_request('GET', [index, doc_type, id],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
 
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
@@ -584,7 +584,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-status.html
         """
         return self.send_request('GET', [self._concat(index), '_status'],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs()
     def create_index(self, index, settings=None, query_params=None):
@@ -600,7 +600,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-create-index.html
         """
         return self.send_request('PUT', [index], body=settings,
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs()
     def delete_index(self, index, query_params=None):
@@ -618,7 +618,7 @@ class ElasticSearch(object):
             raise ValueError('No indexes specified. To delete all indexes, use'
                              ' delete_all_indexes().')
         return self.send_request('DELETE', [self._concat(index)],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     def delete_all_indexes(self, **kwargs):
         """Delete all indexes."""
@@ -637,7 +637,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
         """
         return self.send_request('POST', [index, '_close'],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs()
     def open_index(self, index, query_params=None):
@@ -652,7 +652,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
         """
         return self.send_request('POST', [index, '_open'],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs()
     def update_settings(self, index, settings, query_params=None):
@@ -673,9 +673,9 @@ class ElasticSearch(object):
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
         return self.send_request('PUT',
-                                  [self._concat(index), '_settings'],
-                                  body=settings,
-                                  query_params=query_params)
+                                [self._concat(index), '_settings'],
+                                body=settings,
+                                query_params=query_params)
 
     @es_kwargs()
     def update_all_settings(self, settings, query_params=None):
@@ -690,7 +690,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-update-settings.html
         """
         return self.send_request('PUT', ['_settings'], body=settings,
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs('refresh')
     def flush(self, index=None, query_params=None):
@@ -705,8 +705,8 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-flush.html
         """
         return self.send_request('POST',
-                                  [self._concat(index), '_flush'],
-                                  query_params=query_params)
+                                 [self._concat(index), '_flush'],
+                                 query_params=query_params)
 
     @es_kwargs()
     def refresh(self, index=None, query_params=None):
@@ -721,7 +721,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-refresh.html
         """
         return self.send_request('POST', [self._concat(index), '_refresh'],
-                                  query_params=query_params)
+                                 query_params=query_params)
 
     @es_kwargs()
     def gateway_snapshot(self, index=None, query_params=None):
@@ -754,8 +754,8 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-optimize.html
         """
         return self.send_request('POST',
-                                  [self._concat(index), '_optimize'],
-                                  query_params=query_params)
+                                 [self._concat(index), '_optimize'],
+                                 query_params=query_params)
 
     @es_kwargs('level', 'wait_for_status', 'wait_for_relocating_shards',
                'wait_for_nodes', 'timeout')
