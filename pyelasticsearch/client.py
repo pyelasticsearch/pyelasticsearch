@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 from logging import getLogger
 import re
-from urllib import urlencode
+from urllib import urlencode, quote_plus
 
 import requests
 import simplejson as json  # for use_decimal
@@ -178,7 +178,8 @@ class ElasticSearch(object):
         """
         def join_path(path_components):
             """Smush together the path components, ignoring empty ones."""
-            path = '/'.join(str(p) for p in path_components if p)
+            path = '/'.join(quote_plus(str(p), '') for p in path_components if p)
+
             if not path.startswith('/'):
                 path = '/' + path
             return path
