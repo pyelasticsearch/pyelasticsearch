@@ -336,7 +336,7 @@ class ElasticSearch(object):
         body = '\n'.join(body_bits) + '\n'
         query_params['op_type'] = 'create'  # TODO: Why?
         return self.send_request('POST',
-                                  [index, '_bulk'],
+                                  ['_bulk'],
                                   body,
                                   encode_body=False,
                                   query_params=query_params)
