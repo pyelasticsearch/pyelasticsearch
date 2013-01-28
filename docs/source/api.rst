@@ -66,6 +66,14 @@ so it'll be hard to miss.
 
     .. automethod:: update_all_settings(settings)
 
+    .. automethod:: create_template(name, settings)
+
+    .. automethod:: get_template(name)
+
+    .. automethod:: delete_template(name)
+
+    .. automethod:: list_templates
+
     .. automethod:: flush(index=None[, other kwargs listed below])
 
     .. automethod:: refresh(index=None)
