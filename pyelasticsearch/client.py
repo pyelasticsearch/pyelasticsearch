@@ -758,6 +758,68 @@ class ElasticSearch(object):
                                  [self._concat(index), '_optimize'],
                                  query_params=query_params)
 
+    @es_kwargs()
+    def create_warmer(self, index, doc_type, name, warmer, query_params=None):
+        """
+        Create an index warmer.
+
+        :arg index: An index or iterable of indexes
+        :arg doc_type: The document type to set the warmer for, can be
+            None to let the warmer apply to all types.
+        :arg name: The name of the warmer
+        :arg warmer: The warmer definition
+
+        See `ES's index-warmer API`_ for more detail.
+
+        .. _`ES's index-warmer API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-warmers.html
+        """
+        return self.send_request(
+            'PUT',
+            [self._concat(index), self._concat(doc_type), '_warmer', name],
+            warmer,
+            query_params=query_params)
+
+    @es_kwargs()
+    def delete_warmer(self, index, doc_type=None, name=None, query_params=None):
+        """
+        Delete one or many index warmers.
+
+        :arg index: An index or iterable of indexes
+        :arg doc_type: The document type to set the warmer for
+        :arg name: The name of the warmer
+
+        See `ES's index-warmer API`_ for more detail.
+
+        .. _`ES's index-warmer API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-warmers.html
+        """
+        return self.send_request(
+            'DELETE',
+            [self._concat(index), self._concat(doc_type),
+             '_warmer', self._concat(name)],
+            query_params=query_params)
+
+    @es_kwargs()
+    def get_warmer(self, index, doc_type=None, name=None, query_params=None):
+        """
+        Get one or many index warmer settings.
+
+        :arg index: An index or iterable of indexes
+        :arg doc_type: The document type the warmer was set for
+        :arg name: The name of the warmer
+
+        See `ES's index-warmer API`_ for more detail.
+
+        .. _`ES's index-warmer API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-warmers.html
+        """
+        return self.send_request(
+            'GET',
+            [self._concat(index), self._concat(doc_type),
+             '_warmer', self._concat(name)],
+            query_params=query_params)
+
     @es_kwargs('level', 'wait_for_status', 'wait_for_relocating_shards',
                'wait_for_nodes', 'timeout')
     def health(self, index=None, query_params=None):

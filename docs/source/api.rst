@@ -74,6 +74,12 @@ so it'll be hard to miss.
 
     .. automethod:: optimize(index=None[, other kwargs listed below])
 
+    .. automethod:: create_warmer(index, doc_type, name, warmer)
+
+    .. automethod:: delete_warmer(index, doc_type=None, name=None)
+
+    .. automethod:: get_warmer(index, doc_type=None, name=None)
+
     .. automethod:: health(index=None[, other kwargs listed below])
 
     .. automethod:: send_request
