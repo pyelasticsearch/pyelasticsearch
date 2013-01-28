@@ -776,6 +776,24 @@ class ElasticSearch(object):
             ['_cluster', 'health', self._concat(index)],
             query_params=query_params)
 
+    @es_kwargs('filter_nodes', 'filter_routing_table', 'filter_metadata',
+               'filter_blocks', 'filter_indices')
+    def cluster_state(self, query_params=None):
+        """
+        The cluster state API allows to get comprehensive state
+        information of the whole cluster.
+
+        :arg query_params: A map of querystring param names to values or
+            ``None``
+
+        See `ES's cluster-state API`_ for more detail.
+
+        .. _`ES's cluster-state API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-cluster-state.html
+        """
+        return self.send_request(
+            'GET', ['_cluster', 'state'], query_params=query_params)
+
     def from_python(self, value):
         """
         Convert Python values to a form suitable for ElasticSearch's JSON.

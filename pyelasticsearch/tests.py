@@ -94,6 +94,11 @@ class IndexingTestCase(ElasticSearchTestCase):
         send_request.assert_called_once_with(
             'GET', ['_cluster', 'health', ''], query_params={})
 
+    def testClusterState(self):
+        result = self.conn.cluster_state(filter_routing_table=True)
+        self.assertTrue('nodes' in result)
+        self.assertFalse('routing_table' in result)
+
     def testDeleteByID(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.conn.refresh(['test-index'])
