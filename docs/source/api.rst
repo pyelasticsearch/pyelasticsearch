@@ -62,6 +62,8 @@ so it'll be hard to miss.
 
     .. automethod:: open_index(index)
 
+    .. automethod:: get_settings(index)
+
     .. automethod:: update_settings(index, settings)
 
     .. automethod:: update_all_settings(settings)
