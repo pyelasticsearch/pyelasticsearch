@@ -414,10 +414,11 @@ class ElasticSearch(object):
 
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
                'percolate', 'refresh', 'retry_on_conflict')
-    def update(self, index, doc_type, id, script, params=None, lang=None,
-               query_params=None):
+    def update(self, index, doc_type, id, script=None, params=None, lang=None,
+               query_params=None, doc=None, upsert=None):
         """
-        Update a document by means of a script.
+        Update an existing document. Raises `TypeError` if all of *script*, *doc* and *upsert*
+        evaluate as ``False``.
 
         :arg index: The name of the index containing the document
         :arg doc_type: The type of the document
@@ -426,14 +427,24 @@ class ElasticSearch(object):
         :arg params: A dict of the params to be put in scope of the script
         :arg lang: The language of the script. Omit to use the default,
             specified by ``script.default_lang``.
+        :arg doc: A partial document to be merged into the existing document
+        :arg upsert: Update/insert doc with params specified here
         """
-        body = {'script': script}
+        if not any((script, doc, upsert)):
+            raise TypeError("'script', 'doc' and 'upsert' cannot all evaluate as False, at least one must evaluate as True.")
+
+        body = {}
+        if script:
+            body['script'] = script
+        if lang and script:
+            body['lang'] = lang
+        if doc:
+            body['doc'] = doc
+        if upsert:
+            body['upsert'] = upsert
         if params:
             body['params'] = params
-        if lang:
-            body['lang'] = lang
-        return self.send_request('POST', [index, doc_type, id], body=body,
-                                 query_params=query_params)
+        return self.send_request('POST', [index, doc_type, id, '_update'], body=body, query_params=query_params)
 
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
