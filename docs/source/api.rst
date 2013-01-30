@@ -76,6 +76,8 @@ so it'll be hard to miss.
 
     .. automethod:: health(index=None[, other kwargs listed below])
 
+    .. automethod:: cluster_state([other kwargs listed below])
+
     .. automethod:: send_request
 
 

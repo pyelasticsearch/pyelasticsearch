@@ -31,9 +31,19 @@ def _add_es_kwarg_docs(params, method):
     purpose of letting the user know that they're safe to use--we won't be
     paving over them in the future for something pyelasticsearch-specific.
     """
+    def docs_for_kwarg(p):
+        return '\n        :arg %s: See the ES docs.' % p
+
     doc = method.__doc__
+
+    # Handle the case where there are no :arg declarations to key off:
+    if '\n        :arg' not in doc:
+        first_param, params = params[0], params[1:]
+        doc = doc.replace('\n        (Insert es_kwargs here.)',
+                          docs_for_kwarg(first_param))
+
     for p in params:
-        if doc and ('\n        :arg %s: ' % p) not in doc:
+        if ('\n        :arg %s: ' % p) not in doc:
             # Find the last documented arg so we can put our generated docs
             # after it. No need to explicitly compile this; the regex cache
             # should serve.
@@ -43,7 +53,7 @@ def _add_es_kwarg_docs(params, method):
                 re.MULTILINE | re.DOTALL).end()
 
             doc = ''.join([doc[:insertion_point],
-                           '\n        :arg %s: See the ES docs.' % p,
+                           docs_for_kwarg(p),
                            doc[insertion_point:]])
     method.__doc__ = doc
 
@@ -775,6 +785,23 @@ class ElasticSearch(object):
             'GET',
             ['_cluster', 'health', self._concat(index)],
             query_params=query_params)
+
+    @es_kwargs('filter_nodes', 'filter_routing_table', 'filter_metadata',
+               'filter_blocks', 'filter_indices')
+    def cluster_state(self, query_params=None):
+        """
+        The cluster state API allows to get comprehensive state
+        information of the whole cluster.
+
+        (Insert es_kwargs here.)
+
+        See `ES's cluster-state API`_ for more detail.
+
+        .. _`ES's cluster-state API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-cluster-state.html
+        """
+        return self.send_request(
+            'GET', ['_cluster', 'state'], query_params=query_params)
 
     def from_python(self, value):
         """
