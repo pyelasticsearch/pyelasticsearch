@@ -347,7 +347,6 @@ class ElasticSearch(object):
 
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        query_params['op_type'] = 'create'  # TODO: Why?
         return self.send_request('POST',
                                  [index, doc_type, '_bulk'],
                                  body,
