@@ -62,7 +62,7 @@ so it'll be hard to miss.
 
     .. automethod:: open_index(index)
 
-    .. automethod:: get_settings(index)
+    .. automethod:: get_settings(index[, other kwargs listed below])
 
     .. automethod:: update_settings(index, settings)
 

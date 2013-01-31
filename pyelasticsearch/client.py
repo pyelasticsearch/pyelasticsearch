@@ -668,8 +668,8 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-get-settings.html
         """
         return self.send_request('GET',
-                                [self._concat(index), '_settings'],
-                                query_params=query_params)
+                                 [self._concat(index), '_settings'],
+                                 query_params=query_params)
 
     @es_kwargs()
     def update_settings(self, index, settings, query_params=None):
