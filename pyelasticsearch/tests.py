@@ -27,7 +27,7 @@ class ElasticSearchTestCase(unittest.TestCase):
     def tearDown(self):
         try:
             self.conn.delete_index('test-index')
-        except Exception:
+        except ElasticHttpNotFoundError:
             pass
 
     def assertResultContains(self, result, expected):
@@ -359,13 +359,13 @@ class TemplateTests(unittest.TestCase):
     def tearDown(self):
         try:
             self.conn.delete_index('test-index-1')
-        except Exception:
+        except ElasticHttpNotFoundError:
             pass
         # clean up extra templates
         for t in self.added_templates:
             try:
                 self.conn.delete_template(t)
-            except Exception:
+            except ElasticHttpNotFoundError:
                 pass
 
     def test_create_template(self):
