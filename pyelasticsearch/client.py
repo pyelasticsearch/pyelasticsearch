@@ -334,20 +334,21 @@ class ElasticSearch(object):
         if not docs:
             raise ValueError('No documents provided for bulk indexing!')
 
+        # index and doc_type are provided in the URL, no need to
+        # repeat them in the action
+        encoded_action = self._encode_json({'index': {}})
         for doc in docs:
-            action = {'index': {'_index': index, '_type': doc_type}}
-
             if doc.get(id_field):
-                action['index']['_id'] = doc[id_field]
-
-            body_bits.append(self._encode_json(action))
+                body_bits.append(
+                    self._encode_json({'index': {'_id': doc[id_field]}}))
+            else:
+                body_bits.append(encoded_action)
             body_bits.append(self._encode_json(doc))
 
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        query_params['op_type'] = 'create'  # TODO: Why?
         return self.send_request('POST',
-                                 ['_bulk'],
+                                 [index, doc_type, '_bulk'],
                                  body,
                                  encode_body=False,
                                  query_params=query_params)
