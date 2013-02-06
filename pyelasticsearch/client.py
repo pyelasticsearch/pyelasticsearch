@@ -314,7 +314,7 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   query_params=None):
+                   version_type=None, query_params=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -323,6 +323,9 @@ class ElasticSearch(object):
         :arg docs: An iterable of Python mapping objects, convertible to JSON,
             representing documents to index
         :arg id_field: The field of each document that holds its ID
+        :arg version_type: The type of versioning to use. You can specify
+            'external' or 'internal' and provide a 'version' attribute in
+            each document for optimistic concurrency control.
 
         See `ES's bulk API`_ for more detail.
 
@@ -339,6 +342,8 @@ class ElasticSearch(object):
 
             if doc.get(id_field):
                 action['index']['_id'] = doc[id_field]
+            if version_type:
+                action['index']['_version_type'] = version_type
 
             body_bits.append(self._encode_json(action))
             body_bits.append(self._encode_json(doc))
