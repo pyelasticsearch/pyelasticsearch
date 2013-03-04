@@ -444,7 +444,7 @@ class ElasticSearch(object):
             body['params'] = params
         if lang:
             body['lang'] = lang
-        return self.send_request('POST', [index, doc_type, id], body=body,
+        return self.send_request('POST', [index, doc_type, id, '_update'], body=body,
                                  query_params=query_params)
 
     def _search_or_count(self, kind, query, index=None, doc_type=None,
