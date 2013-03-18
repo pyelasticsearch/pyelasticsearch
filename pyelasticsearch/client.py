@@ -685,6 +685,22 @@ class ElasticSearch(object):
                                  query_params=query_params)
 
     @es_kwargs()
+    def get_settings(self, index, query_params=None):
+        """
+        Get the settings of one or more indexes.
+
+        :arg index: An index or iterable of indexes
+
+        See `ES's get-settings API`_ for more detail.
+
+        .. _`ES's get-settings API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-get-settings.html
+        """
+        return self.send_request('GET',
+                                 [self._concat(index), '_settings'],
+                                 query_params=query_params)
+
+    @es_kwargs()
     def update_settings(self, index, settings, query_params=None):
         """
         Change the settings of one or more indexes.

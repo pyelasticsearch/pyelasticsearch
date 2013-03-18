@@ -67,6 +67,12 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.open_index('test-index')
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
+    def testGetSettings(self):
+        self.conn.create_index('test-index')
+        result = self.conn.get_settings('test-index')
+        self.assertTrue('test-index'in result)
+        self.assertTrue('settings' in result['test-index'])
+
     def testUpdateSettings(self):
         """Make sure ``update_settings()`` sends the expected request."""
         with patch.object(self.conn, 'send_request') as send_request:
