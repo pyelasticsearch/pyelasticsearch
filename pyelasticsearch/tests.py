@@ -264,8 +264,6 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.modify_alias(settings)
         result = self.conn.aliases('test-index')
         self.assertEqual(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
->>>>>>> binarydud/add_aliasing
-
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):

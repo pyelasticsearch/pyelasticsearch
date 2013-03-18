@@ -52,6 +52,10 @@ so it'll be hard to miss.
 
     .. automethod:: status(index=None[, other kwargs listed below])
 
+    .. automethod:: modify_alias(settings[, other kwargs listed below])
+
+    .. automethod:: aliases(index=None[, other kwargs listed below])
+
     .. automethod:: create_index(index, settings=None)
 
     .. automethod:: delete_index(index)
