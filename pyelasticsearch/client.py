@@ -188,7 +188,7 @@ class ElasticSearch(object):
         """
         def join_path(path_components):
             """Smush together the path components, ignoring empty ones."""
-            path = '/'.join(quote_plus(str(p), '') for p in path_components if p)
+            path = '/'.join(quote_plus(str(p), '') for p in path_components)
 
             if not path.startswith('/'):
                 path = '/' + path
