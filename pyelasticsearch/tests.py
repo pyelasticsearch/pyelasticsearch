@@ -237,21 +237,17 @@ class IndexingTestCase(ElasticSearchTestCase):
                 {"add": {"index": "test-index", "alias": "test-alias"}}
             ]
         }
-        result = self.conn.modify_alias(settings)
+        result = self.conn.update_aliases(settings)
         self.assertResultContains(result, {'acknowledged': True, 'ok': True})
 
-        self.assertRaises(ElasticHttpError, self.conn.modify_alias, {})
-
     def testAliasNonexistentIndex(self):
-        #IndexMissingException
         settings = {
             "actions": [
                 {"add": {"index": "test1", "alias": "alias1"}}
             ]
         }
-
         self.assertRaises(ElasticHttpNotFoundError,
-                          self.conn.modify_alias,
+                          self.conn.update_aliases,
                           settings)
 
     def testListAliases(self):
@@ -261,9 +257,10 @@ class IndexingTestCase(ElasticSearchTestCase):
                 {"add": {"index": "test-index", "alias": "test-alias"}}
             ]
         }
-        self.conn.modify_alias(settings)
+        self.conn.update_aliases(settings)
         result = self.conn.aliases('test-index')
         self.assertEqual(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
+
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):

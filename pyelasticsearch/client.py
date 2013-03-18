@@ -600,11 +600,11 @@ class ElasticSearch(object):
                                  query_params=query_params)
 
     @es_kwargs()
-    def modify_alias(self, settings, query_params=None):
+    def update_aliases(self, settings, query_params=None):
         """
-        Update the settings of an existing alias.
+        Add, remove, or update aliases in bulk.
 
-        :arg settings: a dictionary of settings
+        :arg settings: a dictionary specifying the actions to perform
 
         See `ES's admin-indices-aliases API`_.
 
