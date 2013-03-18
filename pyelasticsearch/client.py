@@ -366,7 +366,9 @@ class ElasticSearch(object):
         .. _`ES's delete API`:
             http://www.elasticsearch.org/guide/reference/api/delete.html
         """
-        # TODO: Raise ValueError if id boils down to a 0-length string.
+        if id is None or id == '':
+            raise ValueError('No ID specified. To delete all documents in '
+                'an index, use delete_all().')
         return self.send_request('DELETE', [index, doc_type, id],
                                  query_params=query_params)
 

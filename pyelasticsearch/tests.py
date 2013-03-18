@@ -115,6 +115,20 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.delete('test-index', 'test-type', 1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'})
 
+    def testDeleteBy0ID(self):
+        self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=0)
+        self.conn.refresh(['test-index'])
+        result = self.conn.delete('test-index', 'test-type', 0)
+        self.assertResultContains(result, {'_type': 'test-type', '_id': '0', 'ok': True, '_index': 'test-index'})
+
+    def testDeleteByIdWithoutId(self):
+        self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
+        self.conn.refresh(['test-index'])
+        self.assertRaises(
+            ValueError, self.conn.delete, 'test-index', 'test-type', '')
+        self.assertRaises(
+            ValueError, self.conn.delete, 'test-index', 'test-type', None)
+
     def testDeleteByDocType(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.conn.refresh(["test-index"])
