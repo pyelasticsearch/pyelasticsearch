@@ -224,7 +224,7 @@ class IndexingTestCase(ElasticSearchTestCase):
                              params={'count': 5},
                              lang='python')
         send_request.assert_called_once_with(
-            'POST', ['some_index', 'some_type', 3],
+            'POST', ['some_index', 'some_type', 3, '_update'],
             body={'script': SCRIPT,
                   'params': {'count': 5},
                   'lang': 'python'},
