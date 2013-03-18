@@ -6,7 +6,7 @@ particularly for most simple use cases. This page lists a couple code changes
 that may be necessary to complete your upgrade.
 
 * ``pyelasticsearch`` requires ``requests`` to be version 1.x. Breaking
-  changes were introduced into ``requests``, so if you're project was
+  changes were introduced into ``requests``, so if your project was
   previously using 0.x, you may need to update your code (most likely change
   ``response.json`` to ``response.json()``)
 
@@ -24,7 +24,7 @@ that may be necessary to complete your upgrade.
     try:
         connection.create_index(index='already_existing_index')
     except pyelasticsearch.ElasticHttpError as ex:
-        if not ex.startsWith('IndexAlreadyExistsException'):
+        if not ex.error.startswith('IndexAlreadyExistsException'):
             raise
 
 * Instead of using ``pyes``'s ``_send_request``, you'll want to use
