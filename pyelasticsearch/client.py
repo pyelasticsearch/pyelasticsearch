@@ -600,6 +600,14 @@ class ElasticSearch(object):
                                  query_params=query_params)
 
     @es_kwargs()
+    def modify_alias(self, settings, query_params=None):
+        return self._send_request('POST', ['_aliases'], body=settings, query_params=query_params)
+
+    @es_kwargs()
+    def aliases(self, index=None, query_params=None):
+        return self._send_request('GET', [self._concat(index), '_aliases'], query_params=query_params)
+
+    @es_kwargs()
     def create_index(self, index, settings=None, query_params=None):
         """
         Create an index with optional settings.

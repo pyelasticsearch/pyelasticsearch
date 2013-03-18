@@ -230,6 +230,42 @@ class IndexingTestCase(ElasticSearchTestCase):
                   'lang': 'python'},
                   query_params={})
 
+    def testAliasIndex(self):
+        self.conn.create_index('test-index')
+        settings = {
+            "actions": [
+                {"add": {"index": "test-index", "alias": "test-alias"}}
+            ]
+        }
+        result = self.conn.modify_alias(settings)
+        self.assertResultContains(result, {'acknowledged': True, 'ok': True})
+
+        self.assertRaises(ElasticHttpError, self.conn.modify_alias, {})
+
+    def testAliasNonexistentIndex(self):
+        #IndexMissingException
+        settings = {
+            "actions": [
+                {"add": {"index": "test1", "alias": "alias1"}}
+            ]
+        }
+
+        self.assertRaises(ElasticHttpNotFoundError,
+                          self.conn.modify_alias,
+                          settings)
+
+    def testListAliases(self):
+        self.conn.create_index('test-index')
+        settings = {
+            "actions": [
+                {"add": {"index": "test-index", "alias": "test-alias"}}
+            ]
+        }
+        self.conn.modify_alias(settings)
+        result = self.conn.aliases('test-index')
+        self.assertEqual(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
+>>>>>>> binarydud/add_aliasing
+
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):
