@@ -617,6 +617,36 @@ class ElasticSearch(object):
                                  query_params=query_params)
 
     @es_kwargs()
+    def modify_alias(self, settings, query_params=None):
+        """
+        Update the settings of an existing alias.
+
+        :arg settings: a dictionary of settings
+
+        See `ES's admin-indices-aliases API`_.
+
+        .. _`ES's admin-indices-aliases API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
+        """
+        return self.send_request('POST', ['_aliases'],
+                                 body=settings, query_params=query_params)
+
+    @es_kwargs()
+    def aliases(self, index=None, query_params=None):
+        """
+        Retrieve a listing of aliases
+
+        :arg index: the name of an index or an iterable of indices
+
+        See `ES's admin-indices-aliases API`_.
+
+        .. _`ES's admin-indices-aliases API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
+        """
+        return self.send_request('GET', [self._concat(index), '_aliases'],
+                                 query_params=query_params)
+
+    @es_kwargs()
     def create_index(self, index, settings=None, query_params=None):
         """
         Create an index with optional settings.
