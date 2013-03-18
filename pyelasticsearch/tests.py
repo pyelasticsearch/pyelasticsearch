@@ -210,7 +210,7 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testErrorHandling(self):
         # Wrong port.
-        conn = ElasticSearch('http://example.com:1009200/')
+        conn = ElasticSearch('http://localhost:1009200/')
         self.assertRaises(ConnectionError, conn.count, '*:*')
 
         # Test invalid JSON.
