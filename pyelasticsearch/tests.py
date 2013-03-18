@@ -250,6 +250,16 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.search('name:joe', index='test-index')
         self.assertResultContains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
 
+    def testSearchStringPaginated(self):
+        with patch.object(self.conn, 'send_request') as send_request:
+            self.conn.search('*:*', index='test-index', es_from=1, size=1)
+
+        send_request.assert_called_once_with(
+            'GET',
+            ['test-index', '', '_search'],
+            '',
+            query_params={'q': '*:*', 'from': 1, 'size': 1})
+
     def testSearchByDSL(self):
         self.conn.index('test-index', 'test-type', {'name': 'AgeJoe Tester', 'age': 25}, id=1)
         self.conn.index('test-index', 'test-type', {'name': 'AgeBill Baloney', 'age': 35}, id=2)
