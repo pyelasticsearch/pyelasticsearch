@@ -2,10 +2,6 @@
 pyelasticsearch
 ===============
 
-.. image:: https://secure.travis-ci.org/rhec/pyelasticsearch.png
-   :alt: Build Status
-   :target: https://secure.travis-ci.org/rhec/pyelasticsearch
-
 pyelasticsearch is a clean, future-proof, high-scale API to elasticsearch. It
 provides features like...
 
