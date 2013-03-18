@@ -461,7 +461,7 @@ class ElasticSearch(object):
             body,
             query_params=query_params)
 
-    @es_kwargs('routing')
+    @es_kwargs('routing', 'size')
     def search(self, query, **kwargs):
         """
         Execute a search query against one or more indices and get back search
@@ -474,6 +474,8 @@ class ElasticSearch(object):
             all.
         :arg doc_type: A document type or iterable thereof to search. Omit to
             search all.
+        :arg size: Limit the number of results to ``size``. Use with ``es_from`` to
+            implement paginated searching.
 
         See `ES's search API`_ for more detail.
 
