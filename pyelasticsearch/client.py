@@ -254,7 +254,7 @@ class ElasticSearch(object):
     ## REST API
 
     @es_kwargs('routing', 'parent', 'timestamp', 'ttl', 'percolate',
-               'consistency', 'replication', 'refresh', 'timeout')
+               'consistency', 'replication', 'refresh', 'timeout', 'fields')
     def index(self, index, doc_type, doc, id=None, force_insert=False,
               query_params=None):
         """
@@ -425,7 +425,7 @@ class ElasticSearch(object):
 
 
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
-               'percolate', 'refresh', 'retry_on_conflict')
+               'percolate', 'refresh', 'retry_on_conflict', 'fields')
     def update(self, index, doc_type, id, script=None, params=None, lang=None,
                query_params=None, doc=None, upsert=None):
         """
