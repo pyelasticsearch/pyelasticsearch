@@ -464,7 +464,7 @@ class DowntimePoolingTests(unittest.TestCase):
 class KwargsForQueryTests(unittest.TestCase):
     """Tests for the ``es_kwargs`` decorator and such"""
 
-    @unittest.skipIf(sys.version_info[0] != 2, "not applicable to python 3")
+    @unittest.skipIf(six.PY3, "not applicable to python 3")
     def test_py2_to_query(self):
         to_query = ElasticSearch._to_query
         self.assertEqual(to_query(long(4)), '4')

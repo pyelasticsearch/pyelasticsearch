@@ -855,7 +855,7 @@ class ElasticSearch(object):
         iso = _iso_datetime(value)
         if iso:
             return iso
-        if isinstance(value, str):
+        if not six.PY3 and isinstance(value, str):
             return unicode(value, errors='replace')  # TODO: Be stricter.
         if isinstance(value, set):
             return list(value)
