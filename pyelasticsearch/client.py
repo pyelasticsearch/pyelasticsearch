@@ -89,7 +89,7 @@ def es_kwargs(*args_to_convert):
             # Make kwargs the map of normal kwargs and query_params the map of
             # kwargs destined for query string params:
             query_params = {}
-            for k in list(iterkeys(kwargs)):  # NOT iterkeys; we mutate kwargs
+            for k in list(iterkeys(kwargs)):  # Make a copy; we mutate kwargs.
                 if k.startswith('es_'):
                     query_params[k[3:]] = kwargs.pop(k)
                 elif k in convertible_args:
