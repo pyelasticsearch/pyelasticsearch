@@ -19,7 +19,7 @@ def find_version(file_path):
 
 setup(
     name="pyelasticsearch",
-    version=find_version("pyelasticsearch/__init__.py"),
+    version=find_version(join("pyelasticsearch", "__init__.py")),
     description="Lightweight python wrapper for elasticsearch.",
     long_description=read('README.rst') + '\n\n' +
                      '\n'.join(read(join('docs', 'source', 'changelog.rst'))
