@@ -32,10 +32,7 @@ class ElasticHttpNotFoundError(ElasticHttpError):
 
 
 class IndexAlreadyExistsError(ElasticHttpError):
-    """
-    Exception raised when an index is attempted to be created, but one with
-    that name already exists.
-    """
+    """Exception raised on an attempt to create an index that already exists"""
 
 
 class InvalidJsonResponseError(Exception):
