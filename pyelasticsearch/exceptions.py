@@ -3,12 +3,12 @@ from requests import Timeout, ConnectionError
 
 class ElasticHttpError(Exception):
     """Exception raised when ES returns a non-OK (>=400) HTTP status code"""
-    # TODO: If helpful in practice, split this into separate subclasses for 4xx
-    # and 5xx errors. On second thought, ES, as of 0.19.9, returns 500s on
-    # trivial things like JSON parse errors (which it does recognize), so it
-    # wouldn't be good to rely on its idea of what's a client error and what's
-    # a server error. We'd have to test the string for what kind of error it is
-    # and choose an exception class accordingly.
+    # We can't just split this into separate subclasses for 4xx and 5xx errors.
+    # ES, as of 0.19.9, returns 500s on trivial things like JSON parse errors
+    # (which it does recognize), so it wouldn't be good to rely on its idea of
+    # what's a client error and what's a server error. We have to test the
+    # string for what kind of error it is and choose an exception class
+    # accordingly.
 
     # This @property technique allows the exception to be pickled (like by
     # Sentry or celery) without having to write our own serialization stuff.
