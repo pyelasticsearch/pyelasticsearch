@@ -681,6 +681,9 @@ class ElasticSearch(object):
         :arg index: The name of the index to create
         :arg settings: A dictionary of settings
 
+        If the index already exists, raise
+        :class:`~pyelasticsearch.exceptions.IndexAlreadyExistsError`.
+
         See `ES's create-index API`_ for more detail.
 
         .. _`ES's create-index API`:
@@ -695,6 +698,9 @@ class ElasticSearch(object):
         Delete an index.
 
         :arg index: An index or iterable thereof to delete
+
+        If the index is not found, raise
+        :class:`~pyelasticsearch.exceptions.ElasticHttpNotFoundError`.
 
         See `ES's delete-index API`_ for more detail.
 
