@@ -398,6 +398,69 @@ class SearchTestCase(ElasticSearchTestCase):
                 {u'hits': {u'hits': [{u'_score': 0.30685282, u'_type': u'test-type', u'_id': u'4', u'_source': {u'sport': u'football', u'name': u'Cam'}, u'_index': u'test-index'}], u'total': 1, u'max_score': 0.30685282}})
 
 
+class WarmerTests(unittest.TestCase):
+    """
+    Tests for the index warmer API, added in ES 0.20.
+    """
+
+    def setUp(self):
+        self.conn = ElasticSearch('http://localhost:9200/')
+        self.conn.create_index('test-warm', settings={
+            'number_of_replicas': 0, 'number_of_shards': 1
+        })
+        self.conn.index('test-warm', 'test-type', {'foo': 1})
+
+    def tearDown(self):
+        try:
+            self.conn.delete_warmer('test-warm')
+        except Exception:
+            pass
+        try:
+            self.conn.delete_index('test-warm')
+        except Exception:
+            pass
+
+    def _make_one(self, name, doc_type='test-type'):
+        result = self.conn.create_warmer('test-warm', doc_type, name,
+            warmer={'query': {'match_all': {}}})
+        self.conn.refresh('test-warm')
+        return result
+
+    def test_create_warmer(self):
+        result = self._make_one('warmer1', doc_type=None)
+        self.assertTrue(result['acknowledged'])
+
+    def test_create_type_warmer(self):
+        result = self._make_one('warmer1')
+        self.assertTrue(result['acknowledged'])
+
+    def test_delete_warmer(self):
+        self._make_one('warmer1')
+        result = self.conn.delete_warmer('test-warm', 'test-type', 'warmer1')
+        self.assertTrue(result['acknowledged'])
+
+    def test_delete_all_warmers(self):
+        self._make_one('warmer1')
+        self._make_one('warmer2')
+        result = self.conn.delete_warmer('test-warm')
+        self.assertTrue(result['acknowledged'])
+
+    def test_get_warmer(self):
+        self._make_one('warmer1')
+        result = self.conn.get_warmer('test-warm', 'test-type', 'warmer1')
+        self.assertTrue('test-warm' in result)
+        self.assertEqual(result['test-warm']['warmers']['warmer1']['source'],
+            {'query': {'match_all': {}}})
+
+    def test_get_warmers(self):
+        self._make_one('warmer1')
+        self._make_one('warmer2')
+        result = self.conn.get_warmer('test-warm')
+        self.assertTrue('test-warm' in result)
+        self.assertEqual(set(result['test-warm']['warmers'].keys()),
+            set(['warmer1', 'warmer2']))
+
+
 class DangerousOperationTests(ElasticSearchTestCase):
     """
     Tests that confirm callers can't do dangerous operations by accident and

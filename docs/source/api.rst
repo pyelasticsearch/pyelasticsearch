@@ -80,6 +80,12 @@ so it'll be hard to miss.
 
     .. automethod:: optimize(index=None[, other kwargs listed below])
 
+    .. automethod:: create_warmer(index, doc_type, name, warmer[, other kwargs listed below])
+
+    .. automethod:: delete_warmer(index, doc_type=None, name=None[, other kwargs listed below])
+
+    .. automethod:: get_warmer(index, doc_type=None, name=None[, other kwargs listed below])
+
     .. automethod:: health(index=None[, other kwargs listed below])
 
     .. automethod:: cluster_state([other kwargs listed below])
