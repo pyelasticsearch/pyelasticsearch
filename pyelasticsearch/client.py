@@ -117,7 +117,7 @@ class ElasticSearch(object):
         :arg revival_delay: Number of seconds for which to avoid a server after
             it times out or is uncontactable
         """
-        if isinstance(urls, basestring):
+        if isinstance(urls, six.string_types):
             urls = [urls]
         urls = [u.rstrip('/') for u in urls]
         self.servers = DowntimePronePool(urls, revival_delay)
@@ -146,7 +146,7 @@ class ElasticSearch(object):
         # TODO: Why strip out _all?
         if items is None:
             return ''
-        if isinstance(items, basestring):
+        if isinstance(items, six.string_types):
             items = [items]
         return ','.join(i for i in items if i != '_all')
 
@@ -154,7 +154,7 @@ class ElasticSearch(object):
     def _to_query(cls, obj):
         """Convert a native-Python object to a query string representation."""
         # Quick and dirty thus far
-        if isinstance(obj, basestring):
+        if isinstance(obj, six.string_types):
             return obj
         if isinstance(obj, bool):
             return 'true' if obj else 'false'
@@ -475,7 +475,7 @@ class ElasticSearch(object):
 
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
-        if isinstance(query, basestring):
+        if isinstance(query, six.string_types):
             query_params['q'] = query
             body = ''
         else:
@@ -866,7 +866,7 @@ class ElasticSearch(object):
         if isinstance(value, (int, float, long, complex, list, tuple, bool)):
             return value
 
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             possible_datetime = DATETIME_REGEX.search(value)
 
             if possible_datetime:
