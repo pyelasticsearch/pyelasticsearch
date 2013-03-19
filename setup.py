@@ -1,16 +1,15 @@
 import codecs
-import os
 import re
+from os.path import join, dirname
 
 from setuptools import setup, find_packages
 
 
-def read(*parts):
-    return codecs.open(os.path.join(os.path.dirname(__file__), *parts)).read()
+def read(filename):
+    return codecs.open(join(dirname(__file__), filename), 'r').read()
 
-
-def find_version(*file_paths):
-    version_file = read(*file_paths)
+def find_version(file_path):
+    version_file = read(file_path)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
                               version_file, re.M)
     if version_match:
@@ -20,10 +19,10 @@ def find_version(*file_paths):
 
 setup(
     name="pyelasticsearch",
-    version=find_version("pyelasticsearch/__init__.py"),
+    version=find_version(join("pyelasticsearch", "__init__.py")),
     description="Lightweight python wrapper for elasticsearch.",
     long_description=read('README.rst') + '\n\n' +
-                     '\n'.join(read('docs', 'source', 'changelog.rst')
+                     '\n'.join(read(join('docs', 'source', 'changelog.rst'))
                                    .splitlines()[1:]),
     author='Robert Eanes',
     author_email='python@robsinbox.com',
@@ -45,10 +44,12 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
     requires=[  # Needed?
+        'six',
         'requests(>=1.0,<2.0)',
         'simplejson(>=2.1.0)'
     ],
     install_requires=[
+        'six',
         'requests>=1.0,<2.0',
         'simplejson>=2.1.0'
     ],
