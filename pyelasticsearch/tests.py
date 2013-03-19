@@ -40,6 +40,10 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'})
 
+    def testIndexingWith0ID(self):
+        result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=0)
+        self.assertResultContains(result, {'_type': 'test-type', '_id': '0', 'ok': True, '_index': 'test-index'})
+
     def testQuotedCharsInID(self):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id="""<>?,./`~!@#$%^&*()_+=[]\{{}|:";'""")
         self.assertResultContains(result, {'_type': 'test-type', '_id': """<>?,./`~!@#$%^&*()_+=[]\{{}|:";'""", 'ok': True, '_index': 'test-index'})
@@ -110,6 +114,20 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.refresh(['test-index'])
         result = self.conn.delete('test-index', 'test-type', 1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', 'ok': True, '_index': 'test-index'})
+
+    def testDeleteBy0ID(self):
+        self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=0)
+        self.conn.refresh(['test-index'])
+        result = self.conn.delete('test-index', 'test-type', 0)
+        self.assertResultContains(result, {'_type': 'test-type', '_id': '0', 'ok': True, '_index': 'test-index'})
+
+    def testDeleteByIdWithoutId(self):
+        self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
+        self.conn.refresh(['test-index'])
+        self.assertRaises(
+            ValueError, self.conn.delete, 'test-index', 'test-type', '')
+        self.assertRaises(
+            ValueError, self.conn.delete, 'test-index', 'test-type', None)
 
     def testDeleteByDocType(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
@@ -266,6 +284,21 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.update_aliases(settings)
         result = self.conn.aliases('test-index')
         self.assertEqual(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
+
+    def test_empty_path_segments(self):
+        """'' segments passed to ``_join_path`` should be omitted."""
+        # Call _join_path like get_mapping might if called with no params:
+        self.assertEqual(self.conn._join_path(['', '', '_mapping']),
+                         '/_mapping')
+
+    def test_0_path_segments(self):
+        """
+        ``0`` segments passed to ``_join_path`` should be included.
+
+        This is so doc IDs that are 0 work.
+        """
+        self.assertEqual(self.conn._join_path([0, '_mapping']),
+                         '/0/_mapping')
 
 
 class SearchTestCase(ElasticSearchTestCase):
