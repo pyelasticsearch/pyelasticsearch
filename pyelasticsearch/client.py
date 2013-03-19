@@ -15,7 +15,8 @@ from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         InvalidJsonResponseError,
-                                        ElasticHttpNotFoundError)
+                                        ElasticHttpNotFoundError,
+                                        ElasticIndexAlreadyExistsError)
 
 DATETIME_REGEX = re.compile(
     r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T'
@@ -234,13 +235,29 @@ class ElasticSearch(object):
         self.logger.debug('response status: %s', resp.status_code)
         prepped_response = self._decode_response(resp)
         if resp.status_code >= 400:
-            error_class = (ElasticHttpNotFoundError if resp.status_code == 404
-                           else ElasticHttpError)
-            raise error_class(
-                resp.status_code,
-                prepped_response.get('error', prepped_response))
+            self._raise_appropriate_error(resp, prepped_response)
         self.logger.debug('got response %s', prepped_response)
         return prepped_response
+
+    def _raise_appropriate_error(self, response, decoded_response):
+        """Raise an appropriate error.
+
+        If the status code of `response` is 404, raise a
+        :class:`pyelasticsearch.exceptions.ElasticHttpNotFoundError`.
+        If the `error` key in `decoded_response` indicates an
+        "IndexAlreadyExistsException", raise a
+        :class:`pyelasticsearch.exceptions.ElasticIndexAlreadyExistsError`.
+        Otherwise, raise a
+        :class:`pyelasticsearch.exceptions.ElasticHttpError`.
+
+        """
+        error_class = ElasticHttpError
+        error_message = decoded_response.get('error', decoded_response)
+        if response.status_code == 404:
+            error_class = ElasticHttpNotFoundError
+        if error_message.startswith('IndexAlreadyExistsException'):
+            error_class = ElasticIndexAlreadyExistsError
+        raise error_class(response.status_code, error_message)
 
     def _encode_json(self, body):
         """Return body encoded as JSON."""

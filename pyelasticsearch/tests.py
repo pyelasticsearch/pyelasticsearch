@@ -167,7 +167,8 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def testCannotCreateExistingIndex(self):
         self.conn.create_index('another-index')
-        self.assertRaises(ElasticHttpError, self.conn.create_index, 'another-index')
+        self.assertRaises(
+            ElasticIndexAlreadyExistsError, self.conn.create_index, 'another-index')
         self.conn.delete_index('another-index')
         self.assertRaises(ElasticHttpError, self.conn.delete_index, 'another-index')
 
