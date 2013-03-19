@@ -6,6 +6,7 @@ from functools import wraps
 from logging import getLogger
 import re
 import six
+from six.moves import xrange
 
 try:
     # PY3
