@@ -49,6 +49,7 @@ setup(
         'simplejson(>=2.1.0)'
     ],
     install_requires=[
+        'six',
         'requests>=1.0,<2.0',
         'simplejson>=2.1.0'
     ],
