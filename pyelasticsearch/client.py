@@ -909,42 +909,6 @@ class ElasticSearch(object):
 
         return value
 
-    def to_python(self, value):
-        """Convert values from ElasticSearch to native Python values."""
-        if isinstance(value, (float, complex, list, tuple, bool) + integer_types):
-            return value
-
-        if isinstance(value, string_types):
-            possible_datetime = DATETIME_REGEX.search(value)
-
-            if possible_datetime:
-                date_values = possible_datetime.groupdict()
-
-                for dk, dv in date_values.items():
-                    date_values[dk] = int(dv)
-
-                return datetime(
-                    date_values['year'], date_values['month'],
-                    date_values['day'], date_values['hour'],
-                    date_values['minute'], date_values['second'])
-
-        try:
-            # This is slightly gross but it's hard to tell otherwise what the
-            # string's original type might have been. Be careful who you trust.
-            converted_value = eval(value)
-
-            # Try to handle most built-in types.
-            if isinstance(
-                    converted_value,
-                    (list, tuple, set, dict, float, complex) + integer_types):
-                return converted_value
-        except Exception:
-            # If it fails (SyntaxError or its ilk) or we don't trust it,
-            # continue on.
-            pass
-
-        return value
-
 
 def _iso_datetime(value):
     """
