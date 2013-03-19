@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import wraps
 from logging import getLogger
 import re
+import six
 
 try:
     # PY3
@@ -157,8 +158,10 @@ class ElasticSearch(object):
             return obj
         if isinstance(obj, bool):
             return 'true' if obj else 'false'
-        if isinstance(obj, (long, int, float)):
+        if isinstance(obj, six.integer_types):
             return str(obj)
+        if isinstance(obj, float):
+            return repr(obj) # str looses precision
         if isinstance(obj, (list, tuple)):
             return ','.join(cls._to_query(o) for o in obj)
         iso = _iso_datetime(obj)

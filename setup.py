@@ -44,6 +44,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
     requires=[  # Needed?
+        'six',
         'requests(>=1.0,<2.0)',
         'simplejson(>=2.1.0)'
     ],
