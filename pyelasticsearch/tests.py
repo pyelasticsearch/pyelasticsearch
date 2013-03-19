@@ -464,11 +464,6 @@ class DowntimePoolingTests(unittest.TestCase):
 class KwargsForQueryTests(unittest.TestCase):
     """Tests for the ``es_kwargs`` decorator and such"""
 
-    @unittest.skipIf(six.PY3, "not applicable to python 3")
-    def test_py2_to_query(self):
-        to_query = ElasticSearch._to_query
-        self.assertEqual(to_query(long(4)), '4')
-
     def test_to_query(self):
         """Test the thing that translates objects to query string text."""
         to_query = ElasticSearch._to_query
@@ -481,6 +476,11 @@ class KwargsForQueryTests(unittest.TestCase):
         self.assertEqual(to_query(date(2000, 1, 2)),
                          '2000-01-02T00:00:00')
         self.assertRaises(TypeError, to_query, object())
+
+        # do not use unittest.skipIf because of python 2.6
+        if not six.PY3:
+            self.assertEqual(to_query(long(4)), '4')
+
 
     def test_es_kwargs(self):
         """
