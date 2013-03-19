@@ -15,7 +15,8 @@ from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         InvalidJsonResponseError,
-                                        ElasticHttpNotFoundError)
+                                        ElasticHttpNotFoundError,
+                                        IndexAlreadyExistsError)
 
 DATETIME_REGEX = re.compile(
     r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T'
@@ -234,13 +235,21 @@ class ElasticSearch(object):
         self.logger.debug('response status: %s', resp.status_code)
         prepped_response = self._decode_response(resp)
         if resp.status_code >= 400:
-            error_class = (ElasticHttpNotFoundError if resp.status_code == 404
-                           else ElasticHttpError)
-            raise error_class(
-                resp.status_code,
-                prepped_response.get('error', prepped_response))
+            self._raise_exception(resp, prepped_response)
         self.logger.debug('got response %s', prepped_response)
         return prepped_response
+
+    def _raise_exception(self, response, decoded_body):
+        """Raise an exception based on an error-indicating response from ES."""
+        error_message = decoded_body.get('error', decoded_body)
+
+        error_class = ElasticHttpError
+        if response.status_code == 404:
+            error_class = ElasticHttpNotFoundError
+        elif error_message.startswith('IndexAlreadyExistsException'):
+            error_class = IndexAlreadyExistsError
+
+        raise error_class(response.status_code, error_message)
 
     def _encode_json(self, body):
         """Return body encoded as JSON."""
