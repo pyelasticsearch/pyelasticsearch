@@ -864,7 +864,7 @@ class ElasticSearch(object):
 
     def to_python(self, value):
         """Convert values from ElasticSearch to native Python values."""
-        if isinstance(value, (int, float, long, complex, list, tuple, bool)):
+        if isinstance(value, (float, complex, list, tuple, bool) + six.integer_types):
             return value
 
         if isinstance(value, six.string_types):
@@ -889,7 +889,7 @@ class ElasticSearch(object):
             # Try to handle most built-in types.
             if isinstance(
                     converted_value,
-                    (list, tuple, set, dict, int, float, long, complex)):
+                    (list, tuple, set, dict, float, complex) + six.integer_types):
                 return converted_value
         except Exception:
             # If it fails (SyntaxError or its ilk) or we don't trust it,
