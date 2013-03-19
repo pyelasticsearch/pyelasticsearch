@@ -236,6 +236,37 @@ class IndexingTestCase(ElasticSearchTestCase):
                   'lang': 'python'},
                   query_params={})
 
+    def testAliasIndex(self):
+        self.conn.create_index('test-index')
+        settings = {
+            "actions": [
+                {"add": {"index": "test-index", "alias": "test-alias"}}
+            ]
+        }
+        result = self.conn.update_aliases(settings)
+        self.assertResultContains(result, {'acknowledged': True, 'ok': True})
+
+    def testAliasNonexistentIndex(self):
+        settings = {
+            "actions": [
+                {"add": {"index": "test1", "alias": "alias1"}}
+            ]
+        }
+        self.assertRaises(ElasticHttpNotFoundError,
+                          self.conn.update_aliases,
+                          settings)
+
+    def testListAliases(self):
+        self.conn.create_index('test-index')
+        settings = {
+            "actions": [
+                {"add": {"index": "test-index", "alias": "test-alias"}}
+            ]
+        }
+        self.conn.update_aliases(settings)
+        result = self.conn.aliases('test-index')
+        self.assertEqual(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
+
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):
