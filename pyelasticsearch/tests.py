@@ -2,9 +2,11 @@
 """
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
+import sys
 from datetime import datetime, date
 from decimal import Decimal
 import unittest
+import six
 
 from mock import patch
 import requests
@@ -16,7 +18,8 @@ from pyelasticsearch.client import es_kwargs
 
 def arbitrary_response():
     response = requests.Response()
-    response._content = '{"some": "json"}'
+    response._content = six.b('{"some": "json"}')
+    response.status_code = 200
     return response
 
 
@@ -235,7 +238,7 @@ class IndexingTestCase(ElasticSearchTestCase):
         # Test invalid JSON.
         self.assertRaises(ValueError, conn._encode_json, object())
         resp = requests.Response()
-        resp._content = '{"busted" "json" "that": ["is] " wrong'
+        resp._content = six.b('{"busted" "json" "that": ["is] " wrong')
         self.assertRaises(InvalidJsonResponseError, conn._decode_response, resp)
 
     def testUpdate(self):
@@ -493,7 +496,7 @@ class DowntimePoolingTests(unittest.TestCase):
             session_get.side_effect = Timeout
 
             # This should kill off both servers:
-            for x in xrange(2):
+            for x in range(2):
                 try:
                     conn.get('test-index', 'test-type', 7)
                 except Timeout:
@@ -530,7 +533,6 @@ class KwargsForQueryTests(unittest.TestCase):
         """Test the thing that translates objects to query string text."""
         to_query = ElasticSearch._to_query
         self.assertEqual(to_query(4), '4')
-        self.assertEqual(to_query(4L), '4')
         self.assertEqual(to_query(4.5), '4.5')
         self.assertEqual(to_query(True), 'true')
         self.assertEqual(to_query(('4', 'hi', 'thomas')), '4,hi,thomas')
@@ -539,6 +541,11 @@ class KwargsForQueryTests(unittest.TestCase):
         self.assertEqual(to_query(date(2000, 1, 2)),
                          '2000-01-02T00:00:00')
         self.assertRaises(TypeError, to_query, object())
+
+        # do not use unittest.skipIf because of python 2.6
+        if not six.PY3:
+            self.assertEqual(to_query(long(4)), '4')
+
 
     def test_es_kwargs(self):
         """
@@ -563,7 +570,7 @@ class KwargsForQueryTests(unittest.TestCase):
         def valid_responder(*args, **kwargs):
             """Return an arbitrary successful Response."""
             response = requests.Response()
-            response._content = '{"some": "json"}'
+            response._content = six.b('{"some": "json"}')
             response.status_code = 200
             return response
 

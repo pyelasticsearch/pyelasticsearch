@@ -5,7 +5,15 @@ from datetime import datetime
 from functools import wraps
 from logging import getLogger
 import re
-from urllib import urlencode, quote_plus
+from six import iterkeys, string_types, integer_types, iteritems, PY3
+from six.moves import xrange
+
+try:
+    # PY3
+    from urllib.parse import urlencode, quote_plus
+except ImportError:
+    # PY2
+    from urllib import urlencode, quote_plus
 
 import requests
 import simplejson as json  # for use_decimal
@@ -82,7 +90,7 @@ def es_kwargs(*args_to_convert):
             # Make kwargs the map of normal kwargs and query_params the map of
             # kwargs destined for query string params:
             query_params = {}
-            for k, v in kwargs.items():  # NOT iteritems; we mutate kwargs
+            for k in list(iterkeys(kwargs)):  # Make a copy; we mutate kwargs.
                 if k.startswith('es_'):
                     query_params[k[3:]] = kwargs.pop(k)
                 elif k in convertible_args:
@@ -111,7 +119,7 @@ class ElasticSearch(object):
         :arg revival_delay: Number of seconds for which to avoid a server after
             it times out or is uncontactable
         """
-        if isinstance(urls, basestring):
+        if isinstance(urls, string_types):
             urls = [urls]
         urls = [u.rstrip('/') for u in urls]
         self.servers = DowntimePronePool(urls, revival_delay)
@@ -140,7 +148,7 @@ class ElasticSearch(object):
         # TODO: Why strip out _all?
         if items is None:
             return ''
-        if isinstance(items, basestring):
+        if isinstance(items, string_types):
             items = [items]
         return ','.join(i for i in items if i != '_all')
 
@@ -148,12 +156,14 @@ class ElasticSearch(object):
     def _to_query(cls, obj):
         """Convert a native-Python object to a query string representation."""
         # Quick and dirty thus far
-        if isinstance(obj, basestring):
+        if isinstance(obj, string_types):
             return obj
         if isinstance(obj, bool):
             return 'true' if obj else 'false'
-        if isinstance(obj, (long, int, float)):
+        if isinstance(obj, integer_types):
             return str(obj)
+        if isinstance(obj, float):
+            return repr(obj)  # str loses precision.
         if isinstance(obj, (list, tuple)):
             return ','.join(cls._to_query(o) for o in obj)
         iso = _iso_datetime(obj)
@@ -200,7 +210,7 @@ class ElasticSearch(object):
         if query_params:
             path = '?'.join(
                 [path, urlencode(dict((k, self._to_query(v)) for k, v in
-                                      query_params.iteritems()))])
+                                      iteritems(query_params)))])
 
         request_body = self._encode_json(body) if encode_body else body
         req_method = getattr(self.session, method.lower())
@@ -483,7 +493,7 @@ class ElasticSearch(object):
 
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
-        if isinstance(query, basestring):
+        if isinstance(query, string_types):
             query_params['q'] = query
             body = ''
         else:
@@ -892,7 +902,7 @@ class ElasticSearch(object):
         iso = _iso_datetime(value)
         if iso:
             return iso
-        if isinstance(value, str):
+        if not PY3 and isinstance(value, str):
             return unicode(value, errors='replace')  # TODO: Be stricter.
         if isinstance(value, set):
             return list(value)
@@ -901,10 +911,10 @@ class ElasticSearch(object):
 
     def to_python(self, value):
         """Convert values from ElasticSearch to native Python values."""
-        if isinstance(value, (int, float, long, complex, list, tuple, bool)):
+        if isinstance(value, (float, complex, list, tuple, bool) + integer_types):
             return value
 
-        if isinstance(value, basestring):
+        if isinstance(value, string_types):
             possible_datetime = DATETIME_REGEX.search(value)
 
             if possible_datetime:
@@ -926,7 +936,7 @@ class ElasticSearch(object):
             # Try to handle most built-in types.
             if isinstance(
                     converted_value,
-                    (list, tuple, set, dict, int, float, long, complex)):
+                    (list, tuple, set, dict, float, complex) + integer_types):
                 return converted_value
         except Exception:
             # If it fails (SyntaxError or its ilk) or we don't trust it,
