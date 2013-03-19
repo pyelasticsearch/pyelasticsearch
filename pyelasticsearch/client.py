@@ -232,28 +232,20 @@ class ElasticSearch(object):
         self.logger.debug('response status: %s', resp.status_code)
         prepped_response = self._decode_response(resp)
         if resp.status_code >= 400:
-            self._raise_appropriate_error(resp, prepped_response)
+            self._raise_exception(resp, prepped_response)
         self.logger.debug('got response %s', prepped_response)
         return prepped_response
 
-    def _raise_appropriate_error(self, response, decoded_response):
-        """Raise an appropriate error.
+    def _raise_exception(self, response, decoded_body):
+        """Raise an exception based on an error-indicating response from ES."""
+        error_message = decoded_body.get('error', decoded_body)
 
-        If the status code of `response` is 404, raise a
-        :class:`pyelasticsearch.exceptions.ElasticHttpNotFoundError`.
-        If the `error` key in `decoded_response` indicates an
-        "IndexAlreadyExistsException", raise a
-        :class:`pyelasticsearch.exceptions.IndexAlreadyExistsError`.
-        Otherwise, raise a
-        :class:`pyelasticsearch.exceptions.ElasticHttpError`.
-
-        """
         error_class = ElasticHttpError
-        error_message = decoded_response.get('error', decoded_response)
         if response.status_code == 404:
             error_class = ElasticHttpNotFoundError
-        if error_message.startswith('IndexAlreadyExistsException'):
+        elif error_message.startswith('IndexAlreadyExistsException'):
             error_class = IndexAlreadyExistsError
+
         raise error_class(response.status_code, error_message)
 
     def _encode_json(self, body):
