@@ -31,11 +31,10 @@ class ElasticHttpNotFoundError(ElasticHttpError):
     """Exception raised when a request to ES returns a 404"""
 
 
-class ElasticIndexAlreadyExistsError(ElasticHttpError):
+class IndexAlreadyExistsError(ElasticHttpError):
     """
     Exception raised when an index is attempted to be created, but one with
     that name already exists.
-
     """
 
 

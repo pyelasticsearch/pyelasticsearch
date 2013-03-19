@@ -5,12 +5,12 @@ from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         InvalidJsonResponseError,
                                         ElasticHttpNotFoundError,
-                                        ElasticIndexAlreadyExistsError)
+                                        IndexAlreadyExistsError)
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'InvalidJsonResponseError',
            'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError',
-           'ElasticIndexAlreadyExistsError']
+           'IndexAlreadyExistsError']
 __version__ = '0.3'
 __version_info__ = tuple(__version__.split('.'))
 

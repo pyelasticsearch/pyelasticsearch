@@ -23,7 +23,7 @@ that may be necessary to complete your upgrade.
 
     try:
         connection.create_index(index='already_existing_index')
-    except pyelasticsearch.ElasticIndexAlreadyExistsError as ex:
+    except pyelasticsearch.IndexAlreadyExistsError as ex:
         print 'Index already exists, moving on...'
 
 * Instead of using ``pyes``'s ``_send_request``, you'll want to use

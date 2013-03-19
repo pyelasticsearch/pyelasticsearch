@@ -16,7 +16,7 @@ from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         InvalidJsonResponseError,
                                         ElasticHttpNotFoundError,
-                                        ElasticIndexAlreadyExistsError)
+                                        IndexAlreadyExistsError)
 
 DATETIME_REGEX = re.compile(
     r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T'
@@ -243,7 +243,7 @@ class ElasticSearch(object):
         :class:`pyelasticsearch.exceptions.ElasticHttpNotFoundError`.
         If the `error` key in `decoded_response` indicates an
         "IndexAlreadyExistsException", raise a
-        :class:`pyelasticsearch.exceptions.ElasticIndexAlreadyExistsError`.
+        :class:`pyelasticsearch.exceptions.IndexAlreadyExistsError`.
         Otherwise, raise a
         :class:`pyelasticsearch.exceptions.ElasticHttpError`.
 
@@ -253,7 +253,7 @@ class ElasticSearch(object):
         if response.status_code == 404:
             error_class = ElasticHttpNotFoundError
         if error_message.startswith('IndexAlreadyExistsException'):
-            error_class = ElasticIndexAlreadyExistsError
+            error_class = IndexAlreadyExistsError
         raise error_class(response.status_code, error_message)
 
     def _encode_json(self, body):
