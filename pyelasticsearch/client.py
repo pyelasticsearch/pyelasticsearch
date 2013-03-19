@@ -161,6 +161,15 @@ class ElasticSearch(object):
         raise TypeError("_to_query() doesn't know how to represent %r in an ES"
                         " query string." % obj)
 
+    def _join_path(self, path_components):
+        """Smush together the (string) path components, ignoring empty ones."""
+        path = '/'.join(quote_plus(str(p), '') for p in path_components if
+                        len(str(p)))
+
+        if not path.startswith('/'):
+            path = '/' + path
+        return path
+
     def send_request(self,
                      method,
                      path_components,
@@ -186,22 +195,13 @@ class ElasticSearch(object):
             ``None``
         :arg encode_body: Whether to encode the body of the request as JSON
         """
-        def join_path(path_components):
-            """Smush together the path components, ignoring empty ones."""
-            path = '/'.join(quote_plus(str(p), '') for p in path_components)
-
-            if not path.startswith('/'):
-                path = '/' + path
-            return path
-
-        path = join_path(path_components)
+        path = self._join_path(path_components)
         if query_params:
             path = '?'.join(
                 [path, urlencode(dict((k, self._to_query(v)) for k, v in
                                       query_params.iteritems()))])
 
-        kwargs = ({'data': self._encode_json(body) if encode_body else body}
-                   if body else {})
+        request_body = self._encode_json(body) if encode_body else body
         req_method = getattr(self.session, method.lower())
 
         # We do our own retrying rather than using urllib3's; we want to retry
@@ -212,10 +212,13 @@ class ElasticSearch(object):
             url = server_url + path
             self.logger.debug(
                 "Making a request equivalent to this: curl -X%s '%s' -d '%s'" %
-                (method, url, kwargs.get('data', {})))
+                (method, url, request_body))
 
             try:
-                resp = req_method(url, timeout=self.timeout, **kwargs)
+                resp = req_method(
+                    url,
+                    timeout=self.timeout,
+                    **({'data': request_body} if body else {}))
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
                 self.logger.info('%s marked as dead for %s seconds.',
@@ -359,16 +362,19 @@ class ElasticSearch(object):
 
         :arg index: The name of the index from which to delete
         :arg doc_type: The type of the document to delete
-        :arg id: The ID of the document to delete
+        :arg id: The (string or int) ID of the document to delete
 
         See `ES's delete API`_ for more detail.
 
         .. _`ES's delete API`:
             http://www.elasticsearch.org/guide/reference/api/delete.html
         """
+        # id should never be None, and it's not particular dangerous
+        # (equivalent to deleting a doc with ID "None", but it's almost
+        # certainly not what the caller meant:
         if id is None or id == '':
             raise ValueError('No ID specified. To delete all documents in '
-                'an index, use delete_all().')
+                             'an index, use delete_all().')
         return self.send_request('DELETE', [index, doc_type, id],
                                  query_params=query_params)
 
