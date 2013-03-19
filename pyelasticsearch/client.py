@@ -5,7 +5,13 @@ from datetime import datetime
 from functools import wraps
 from logging import getLogger
 import re
-from urllib import urlencode, quote_plus
+
+try:
+    # PY3
+    from urllib.parse import urlencode, quote_plus
+except ImportError:
+    # PY2
+    from urllib import urlencode, quote_plus
 
 import requests
 import simplejson as json  # for use_decimal

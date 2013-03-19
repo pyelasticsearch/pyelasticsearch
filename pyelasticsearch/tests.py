@@ -2,6 +2,7 @@
 """
 Unit tests for pyelasticsearch.  These require an elasticsearch server running on the default port (localhost:9200).
 """
+import sys
 from datetime import datetime, date
 from decimal import Decimal
 import unittest
@@ -461,11 +462,15 @@ class DowntimePoolingTests(unittest.TestCase):
 class KwargsForQueryTests(unittest.TestCase):
     """Tests for the ``es_kwargs`` decorator and such"""
 
+    @unittest.skipIf(sys.version_info[0] != 2, "not applicable to python 3")
+    def test_py2_to_query(self):
+        to_query = ElasticSearch._to_query
+        self.assertEqual(to_query(long(4)), '4')
+
     def test_to_query(self):
         """Test the thing that translates objects to query string text."""
         to_query = ElasticSearch._to_query
         self.assertEqual(to_query(4), '4')
-        self.assertEqual(to_query(4L), '4')
         self.assertEqual(to_query(4.5), '4.5')
         self.assertEqual(to_query(True), 'true')
         self.assertEqual(to_query(('4', 'hi', 'thomas')), '4,hi,thomas')
