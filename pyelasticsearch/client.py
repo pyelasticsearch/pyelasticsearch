@@ -208,7 +208,7 @@ class ElasticSearch(object):
         if query_params:
             path = '?'.join(
                 [path, urlencode(dict((k, self._to_query(v)) for k, v in
-                                      query_params.iteritems()))])
+                                      six.iteritems(query_params)))])
 
         kwargs = ({'data': self._encode_json(body) if encode_body else body}
                    if body else {})
