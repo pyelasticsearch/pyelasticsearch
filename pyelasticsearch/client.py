@@ -795,6 +795,65 @@ class ElasticSearch(object):
         return self.send_request('PUT', ['_settings'], body=settings,
                                  query_params=query_params)
 
+    @es_kwargs()
+    def create_template(self, name, settings, query_params=None):
+        """
+        Create an index template.
+
+        :arg name: The name of the template.
+        :arg settings: A dictionary of settings.
+
+        See `ES's index-template API`_ for more detail.
+
+        .. _`ES's index-template API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-templates.html
+        """
+        return self.send_request('PUT', ['_template', name], settings,
+            query_params=query_params)
+
+    @es_kwargs()
+    def delete_template(self, name, query_params=None):
+        """
+        Delete an index template.
+
+        :arg name: The name of the template.
+
+        See `ES's index-template API`_ for more detail.
+
+        .. _`ES's index-template API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-templates.html
+        """
+        return self.send_request('DELETE', ['_template', name],
+            query_params=query_params)
+
+    @es_kwargs()
+    def get_template(self, name, query_params=None):
+        """
+        Get the settings of an index template.
+
+        :arg name: The name of the template.
+
+        See `ES's index-template API`_ for more detail.
+
+        .. _`ES's index-template API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-templates.html
+        """
+        return self.send_request('GET', ['_template', name],
+            query_params=query_params)
+
+    def list_templates(self):
+        """
+        Get a dictionary with all index template settings.
+
+        See `ES's index-template API`_ for more detail.
+
+        .. _`ES's index-template API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-templates.html
+        """
+        res = self.cluster_state(filter_routing_table=True,
+            filter_nodes=True, filter_blocks=True)
+        return res['metadata']['templates']
+
     @es_kwargs('refresh')
     def flush(self, index=None, query_params=None):
         """

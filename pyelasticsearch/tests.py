@@ -30,7 +30,7 @@ class ElasticSearchTestCase(unittest.TestCase):
     def tearDown(self):
         try:
             self.conn.delete_index('test-index')
-        except Exception:
+        except ElasticHttpNotFoundError:
             pass
 
     def assertResultContains(self, result, expected):
@@ -437,6 +437,64 @@ class DangerousOperationTests(ElasticSearchTestCase):
             self.conn.update_all_settings({'joe': 'bob'})
         send_request.assert_called_once_with(
             'PUT', ['_settings'], body={'joe': 'bob'})
+
+
+class TemplateTests(unittest.TestCase):
+
+    def setUp(self):
+        self.conn = ElasticSearch('http://localhost:9200/')
+        self.added_templates = set()
+
+    def tearDown(self):
+        try:
+            self.conn.delete_index('test-index-1')
+        except ElasticHttpNotFoundError:
+            pass
+        # clean up extra templates
+        for t in self.added_templates:
+            try:
+                self.conn.delete_template(t)
+            except ElasticHttpNotFoundError:
+                pass
+
+    def test_create_template(self):
+        self.conn.create_template('test-template', {
+            'template': 'test-index-*',
+            'settings': {
+                'number_of_shards': 3,
+                'number_of_replicas': 0,
+            },
+        })
+        self.added_templates.add('test-template')
+        # make sure an index matching the pattern gets the shard setting
+        self.conn.create_index('test-index-1')
+        self.assertEqual(
+            self.conn.status('test-index-1')['_shards']['total'], 3)
+
+    def test_delete_template(self):
+        self.conn.create_template('test-template', {
+            'template': 'test-index-*',
+        })
+        self.added_templates.add('test-template')
+        self.conn.delete_template('test-template')
+        self.assertFalse(self.conn.get_template('test-template'))
+
+    def test_get_template(self):
+        self.conn.create_template('test-template', {
+            'template': 'test-index-*',
+        })
+        self.added_templates.add('test-template')
+        result = self.conn.get_template('test-template')
+        self.assertEqual(result['test-template']['template'], 'test-index-*')
+
+    def test_list_templates(self):
+        self.conn.create_template('t1', {'template': 'test-index-1'})
+        self.conn.create_template('t2', {'template': 'test-index-2'})
+        self.conn.create_template('t3', {'template': 'test-index-3'})
+        self.added_templates.update(set(['t1', 't2', 't3']))
+        result = self.conn.list_templates()
+        for name in ('t1', 't2', 't3'):
+            self.assertTrue(name in result)
 
 
 class DowntimePoolingTests(unittest.TestCase):
