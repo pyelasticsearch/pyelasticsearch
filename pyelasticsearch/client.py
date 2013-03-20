@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 from datetime import datetime
+from operator import itemgetter
 from functools import wraps
 from logging import getLogger
 import re
@@ -440,6 +441,45 @@ class ElasticSearch(object):
         return self.send_request('GET', [index, doc_type, id],
                                  query_params=query_params)
 
+    @es_kwargs()
+    def multi_get(self, ids, index=None, doc_type=None, fields=None, query_params=None):
+        """
+        Get multiple typed JSON documents from ES.
+
+        :arg ids: An iterable, each element of which can be either an a dict or
+            an id (int or sting). Ids are taken to be document IDs. Dicts are
+            passed through the Multi Get API essentially verbatim, except that
+            any missing ``_type``, ``_index``, or ``fields`` keys are filled in
+            from the defaults given in the ``index``, ``doc_type``, and
+            ``fields`` args.
+        :arg index: optional index name from which to retrieve
+        :arg doc_type: optional type of the document to get
+        :arg fields: optionally only return the defined fields
+
+        See `ES's Multi Get API`_ for more detail.
+
+        .. _`ES's Multi Get API`:
+            http://www.elasticsearch.org/guide/reference/api/multi-get.html
+        """
+        doc_template = dict(
+            filter(
+                itemgetter(1),
+                [("_index", index), ("_type", doc_type), ("fields", fields)]
+            )
+        )
+
+        docs = []
+        req = {"docs": docs}
+
+        for id_ in ids:
+            doc = doc_template.copy()
+            if isinstance(id_, dict):
+                doc.update(id_)
+            else:
+                doc["_id"] = id_
+            docs.append(doc)
+
+        return self.send_request('GET', ["_mget"], req, query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
                'percolate', 'refresh', 'retry_on_conflict', 'fields')
