@@ -1,6 +1,16 @@
 Changelog
 =========
 
+v0.5 (unreleased)
+-----------------
+
+* Add ``multi_get`` support.
+* Remove the internal, undocumented ``from_python`` method. django-haystack
+  users will need to upgrade to a newer version that avoids using it.
+* Refactor JSON encoding machinery. Now it's clearer how to customize it: just
+  plug your custom JSON encoder class into ``ElasticSearch.json_encoder``.
+
+
 v0.4 (2013-03-19)
 -----------------
 
