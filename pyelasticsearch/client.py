@@ -457,10 +457,11 @@ class ElasticSearch(object):
         Get multiple typed JSON documents from ES.
 
         :arg ids: An iterable, each element of which can be either an a dict or
-        an id (int or sting). Ids are taken to be document IDs. Dicts are passed
-        through the Multi Get API essentially verbatim, except that any missing
-        ``_type``, ``_index``, or ``fields`` keys are filled in from the
-        defaults given in the ``index``, ``doc_type``, and ``fields`` args.
+            an id (int or sting). Ids are taken to be document IDs. Dicts are
+            passed through the Multi Get API essentially verbatim, except that
+            any missing ``_type``, ``_index``, or ``fields`` keys are filled in
+            from the defaults given in the ``index``, ``doc_type``, and
+            ``fields`` args.
         :arg index: optional index name from which to retrieve
         :arg doc_type: optional type of the document to get
         :arg fields: optionally only return the defined fields
