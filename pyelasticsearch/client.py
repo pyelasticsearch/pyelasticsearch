@@ -451,7 +451,8 @@ class ElasticSearch(object):
         return self.send_request('GET', [index, doc_type, id],
                                  query_params=query_params)
 
-    def multi_get(self, ids, index=None, doc_type=None, fields=None):
+    @es_kwargs()
+    def multi_get(self, ids, index=None, doc_type=None, fields=None, query_params=None):
         """
         Get multiple typed JSON documents from ES.
 
@@ -487,7 +488,7 @@ class ElasticSearch(object):
                 doc["_id"] = id_
             docs.append(doc)
 
-        return self.send_request('GET', ["_mget"], req)
+        return self.send_request('GET', ["_mget"], req, query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
                'percolate', 'refresh', 'retry_on_conflict', 'fields')
