@@ -672,16 +672,20 @@ class JsonTests(ElasticSearchTestCase):
 
     def test_encoding(self):
         """Test encoding a zillion other types."""
-        self.assertEqual(self.conn.from_python('abc'), u'abc')
-        self.assertEqual(self.conn.from_python(u'☃'), u'☃')
-        self.assertEqual(self.conn.from_python(123), 123)
-        self.assertEqual(self.conn.from_python(12.2), 12.2)
-        self.assertEqual(self.conn.from_python(True), True)
-        self.assertEqual(self.conn.from_python(False), False)
-        self.assertEqual(self.conn.from_python(date(2011, 12, 30)), '2011-12-30T00:00:00')
-        self.assertEqual(self.conn.from_python(datetime(2011, 12, 30, 11, 59, 32)), '2011-12-30T11:59:32')
-        self.assertEqual(self.conn.from_python([1, 2, 3]), [1, 2, 3])
-        self.assertEqual(self.conn.from_python({'a': 1, 'b': 3, 'c': 2}), {'a': 1, 'b': 3, 'c': 2})
+        self.assertEqual(self.conn._encode_json('abc'), u'"abc"')
+        self.assertEqual(self.conn._encode_json(u'☃'), r'"\u2603"')
+        self.assertEqual(self.conn._encode_json(123), '123')
+        self.assertEqual(self.conn._encode_json(12.25), '12.25')
+        self.assertEqual(self.conn._encode_json(True), 'true')
+        self.assertEqual(self.conn._encode_json(False), 'false')
+        self.assertEqual(self.conn._encode_json(
+            date(2011, 12, 30)),
+            '"2011-12-30T00:00:00"')
+        self.assertEqual(self.conn._encode_json(
+            datetime(2011, 12, 30, 11, 59, 32)),
+            '"2011-12-30T11:59:32"')
+        self.assertEqual(self.conn._encode_json([1, 2, 3]), '[1, 2, 3]')
+        self.assertEqual(self.conn._encode_json({'a': 1}), '{"a": 1}')
 
 
 if __name__ == '__main__':
