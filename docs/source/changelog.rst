@@ -132,4 +132,4 @@ Other changes:
 v0.1 (2012-08-30)
 -----------------
 
-Initial release based on the work of Robert Eanes and other the other authors.
+Initial release based on the work of Robert Eanes and other authors
