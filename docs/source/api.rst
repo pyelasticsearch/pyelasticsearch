@@ -64,6 +64,8 @@ so it'll be hard to miss.
 
     .. automethod:: more_like_this(index, doc_type, id, fields, body=''[, other kwargs listed below])
 
+    .. automethod:: multi_get(ids, index=None, doc_type=None, fields=None[, other kwargs listed below])
+
     .. automethod:: open_index(index)
 
     .. automethod:: optimize(index=None[, other kwargs listed below])

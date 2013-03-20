@@ -315,6 +315,18 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.get('test-index', 'test-type', 1)
         self.assertResultContains(result, {'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'})
 
+    def testMultiGetSimple(self):
+        result = self.conn.multi_get([1], index='test-index', doc_type='test-type')
+        self.assertResultContains(result, {'docs': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index', "_version": 1, "exists": True}]})
+
+    def testMultiGetMix(self):
+        result = self.conn.multi_get([{'_type': 'test-type', '_id': 1}], index='test-index')
+        self.assertResultContains(result, {'docs': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index', "_version": 1, "exists": True}]})
+
+    def testMultiGetCustom(self):
+        result = self.conn.multi_get([{'_type': 'test-type', '_id': 1, 'fields': ['name'], '_index': 'test-index'}])
+        self.assertResultContains(result, {'docs': [{'_type': 'test-type', '_id': '1', 'fields': {'name': 'Joe Tester'}, '_index': 'test-index', "_version": 1, "exists": True}]})
+
     def testGetCountBySearch(self):
         result = self.conn.count('name:joe', index='test-index')
         self.assertResultContains(result, {'count': 1})
