@@ -1,7 +1,7 @@
 Changelog
 =========
 
-v0.4 (unreleased)
+v0.4 (2013-03-19)
 -----------------
 
 * Support Python 3.
@@ -10,19 +10,18 @@ v0.4 (unreleased)
   * ``get_settings``
   * ``update_aliases`` and ``aliases``
   * ``update`` (existed but didn't work before)
-* Fix the ``update`` method, which never worked.
-* Support the ``size`` param of the ``search`` method. (You can change
-  ``es_size`` to ``size`` in your code.)
+* Support the ``size`` param of the ``search`` method. (You can now change
+  ``es_size`` to ``size`` in your code if you like.)
 * Support the ``fields`` param on ``index`` and ``update`` methods, new since
   ES 0.20.
-* Maintain precision of floats when passed to ES.
+* Maintain better precision of floats when passed to ES.
 * Change endpoint of bulk indexing so it works on ES < 0.18.
 * Support documents whose ID is 0.
 * URL-escape path components, so doc IDs containing funny chars work.
 * Add a dedicated ``IndexAlreadyExistsError`` exception for when you try to
-  create an index that already exists. This allows you to trap this situation
+  create an index that already exists. This helps you trap this situation
   unambiguously.
-* Add docs on upgrading from pyes.
+* Add docs about upgrading from pyes.
 * Remove the undocumented and unused ``to_python`` method.
 
 

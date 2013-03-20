@@ -1,20 +1,19 @@
 Migrating From ``pyes``
 =======================
 
-Moving your project from ``pyes`` to ``pyelasticsearch`` is an easy process,
-particularly for most simple use cases. This page lists a couple code changes
-that may be necessary to complete your upgrade.
+Moving your project from ``pyes`` to ``pyelasticsearch`` is easy, especially
+for simple use cases. Here are some code changes that will aid your porting.
 
-* ``pyelasticsearch`` requires ``requests`` to be version 1.x. Breaking
-  changes were introduced into ``requests``, so if your project was
-  previously using 0.x, you may need to update your code (most likely change
-  ``response.json`` to ``response.json()``)
+* ``pyelasticsearch`` requires ``requests`` 1.x. Breaking changes were
+  introduced in ``requests`` 1.0, so if your project was using a previous
+  version, you may need to update your code. Most likely, you just need to
+  change ``response.json`` to ``response.json()``.
 
-* Instantiating the client should be as simple as changing the invocation::
+* Instantiating the client should be as simple as changing the invocation... ::
 
     pyes.ES(host, **kwargs)
 
-  to::
+  ...to... ::
 
     pyelasticsearch.ElasticSearch(host, **kwargs)
 
@@ -26,43 +25,44 @@ that may be necessary to complete your upgrade.
     except pyelasticsearch.IndexAlreadyExistsError as ex:
         print 'Index already exists, moving on...'
 
-* Instead of using ``pyes``'s ``_send_request``, you'll want to use
-  :py:meth:`pyelasticsearch.ElasticSearch.send_request`. This also requires the
-  path to be passed as an iterable instead of a string. For example::
+* Instead of using ``pyes``'s ``_send_request``, use
+  :py:meth:`~pyelasticsearch.ElasticSearch.send_request`. This also requires the
+  path to be passed as an iterable instead of a string. For example... ::
 
     es._send_request('POST', 'my_index/my_doc_type', body)
 
-  would become::
+  ...becomes... ::
 
     connection.send_request('POST', ['my_index', 'my_doc_type'], body)
 
-* If using the ``indices`` keyword argument in ``pyes``, the
-  ``pyelasticsearch`` analog is the ``index`` keyword argument.
+* The ``indices`` keyword argument in ``pyes`` turns to ``index`` in
+  ``pyelasticsearch``, whether the method takes multiple indices or not.
 
-* If using the ``doc_types`` keyword argument in ``pyes``, the
-  ``pyelasticsearch`` analog is the ``doc_type`` keyword argument.
+* The ``doc_types`` keyword argument in ``pyes`` turns to ``doc_type`` in
+  ``pyelasticsearch``.
 
-* :py:meth:`pyelasticsearch.ElasticSearch.get` will raise a
-  :class:`pyelasticsearch.exceptions.ElasticHttpNotFoundError` exception if
-  no results are found.
+* :py:meth:`~pyelasticsearch.ElasticSearch.get` will raise
+  :class:`~pyelasticsearch.exceptions.ElasticHttpNotFoundError` if
+  the requested documents are not found.
 
 * ``pyes`` expects arguments to ``index`` to be in a
-  different order than :py:meth:`pyelasticsearch.ElasticSearch.index`. The
+  different order than our :py:meth:`~pyelasticsearch.ElasticSearch.index`. The
   document to be indexed needs to be moved from the first positional argument
   to the third.
 
-* :py:meth:`pyelasticsearch.ElasticSearch.send_request` will raise an error if
-  no JSON content can be parsed from the response. In the event that you expect
-  the response to not contain any JSON content, you will need to catch the
-  exception and inspect the status code. For example::
+* :py:meth:`~pyelasticsearch.ElasticSearch.send_request` will raise an error if
+  the response can't be converted to JSON. If you expect that a response will
+  not be JSON, catch the exception and inspect the status code. For example...
+  ::
 
+    connection = ElasticSearch(host)
     try:
-        # Check for the existence of the "pycon" index
+        # Check for the existence of the "pycon" index:
         connection.send_request('HEAD', ['pycon'])
-    except Exception as ex:
-        if ex.response.status_code == 200:
+    except InvalidJsonResponseError as exc:
+        if exc.response.status_code == 200:
             print 'The index exists!'
 
 * If using ``search_raw`` from ``pyes``, you can use
-  :py:meth:`pyelasticsearch.ElasticSearch.search` and, if necessary, rename
+  :py:meth:`~pyelasticsearch.ElasticSearch.search` and, if necessary, rename
   the keyword arguments.
