@@ -6,10 +6,12 @@ v0.4 (2013-03-19)
 
 * Support Python 3.
 * Support more APIs:
+
   * ``cluster_state``
   * ``get_settings``
   * ``update_aliases`` and ``aliases``
   * ``update`` (existed but didn't work before)
+
 * Support the ``size`` param of the ``search`` method. (You can now change
   ``es_size`` to ``size`` in your code if you like.)
 * Support the ``fields`` param on ``index`` and ``update`` methods, new since
