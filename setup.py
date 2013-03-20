@@ -8,6 +8,7 @@ from setuptools import setup, find_packages
 def read(filename):
     return codecs.open(join(dirname(__file__), filename), 'r').read()
 
+
 def find_version(file_path):
     version_file = read(file_path)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
