@@ -64,6 +64,6 @@ setup(
         'six'
     ],
     tests_require=['mock', 'nose>=1.2.1'],
-    test_suite='pyelasticsearch.tests',
+    test_suite='nose.collector',
     url='http://github.com/rhec/pyelasticsearch'
 )
