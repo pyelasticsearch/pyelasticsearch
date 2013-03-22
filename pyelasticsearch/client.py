@@ -412,17 +412,28 @@ class ElasticSearch(object):
         """
         Delete typed JSON documents from a specific index based on query.
 
-        :arg index: The name of the index from which to delete
-        :arg doc_type: The type of document to delete
-        :arg query: A dict of query DSL selecting the documents to delete
+        :arg index: An index or iterable thereof from which to delete
+        :arg doc_type: The type of document or iterable thereof to delete
+        :arg query: A dictionary that will convert to ES's query DSL or a
+            string that will serve as a textual query to be passed as the ``q``
+            query string parameter. (Passing the ``q`` kwarg yourself is
+            deprecated.)
 
         See `ES's delete-by-query API`_ for more detail.
 
         .. _`ES's delete-by-query API`:
             http://www.elasticsearch.org/guide/reference/api/delete-by-query.html
         """
-        return self.send_request('DELETE', [index, doc_type, '_query'], query,
-                                 query_params=query_params)
+        if isinstance(query, string_types) and 'q' not in query_params:
+            query_params['q'] = query
+            body = ''
+        else:
+            body = query
+        return self.send_request(
+            'DELETE',
+            [self._concat(index), self._concat(doc_type), '_query'],
+            body,
+            query_params=query_params)
 
     @es_kwargs('realtime', 'fields', 'routing', 'preference', 'refresh')
     def get(self, index, doc_type, id, query_params=None):

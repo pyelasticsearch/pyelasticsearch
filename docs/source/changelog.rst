@@ -4,6 +4,9 @@ Changelog
 v0.5 (unreleased)
 -----------------
 
+* Support multiple indices and doctypes in ``delete_by_query()``. Accept both
+  string and JSON queries in the ``query`` arg, just as ``search()`` does.
+  Passing the ``q`` arg explicitly is now deprecated.
 * Add ``multi_get`` support.
 * Remove the internal, undocumented ``from_python`` method. django-haystack
   users will need to upgrade to a newer version that avoids using it.
