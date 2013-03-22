@@ -9,6 +9,8 @@ v0.5 (unreleased)
   users will need to upgrade to a newer version that avoids using it.
 * Refactor JSON encoding machinery. Now it's clearer how to customize it: just
   plug your custom JSON encoder class into ``ElasticSearch.json_encoder``.
+* Don't crash under ``python -OO``.
+* Switch to the nose testrunner.
 
 
 v0.4 (2013-03-19)
