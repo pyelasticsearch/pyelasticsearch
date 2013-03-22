@@ -9,6 +9,7 @@ import unittest
 import six
 
 from mock import patch
+from nose import SkipTest
 import requests
 
 # Test that __all__ is sufficient:
@@ -622,6 +623,9 @@ class KwargsForQueryTests(unittest.TestCase):
         It's neat.
         """
 
+        if some_method.__doc__ is None:
+            raise SkipTest("This test doesn't work under python -OO.")
+
         # Make sure it adds (only) the undocumented args and preserves anything
         # that comes after the args block:
         self.assertEqual(
@@ -648,6 +652,9 @@ class KwargsForQueryTests(unittest.TestCase):
 
         :arg degook: Whether to remove the gook
         """
+
+        if some_method.__doc__ is None:
+            raise SkipTest("This test doesn't work under python -OO.")
 
         self.assertEqual(
             some_method.__doc__,

@@ -41,27 +41,27 @@ def _add_es_kwarg_docs(params, method):
         return '\n        :arg %s: See the ES docs.' % p
 
     doc = method.__doc__
+    if doc is not None:  # It's none under python -OO.
+        # Handle the case where there are no :arg declarations to key off:
+        if '\n        :arg' not in doc:
+            first_param, params = params[0], params[1:]
+            doc = doc.replace('\n        (Insert es_kwargs here.)',
+                              docs_for_kwarg(first_param))
 
-    # Handle the case where there are no :arg declarations to key off:
-    if '\n        :arg' not in doc:
-        first_param, params = params[0], params[1:]
-        doc = doc.replace('\n        (Insert es_kwargs here.)',
-                          docs_for_kwarg(first_param))
+        for p in params:
+            if ('\n        :arg %s: ' % p) not in doc:
+                # Find the last documented arg so we can put our generated docs
+                # after it. No need to explicitly compile this; the regex cache
+                # should serve.
+                insertion_point = re.search(
+                    r'        :arg (.*?)(?=\n+        (?:$|[^: ]))',
+                    doc,
+                    re.MULTILINE | re.DOTALL).end()
 
-    for p in params:
-        if ('\n        :arg %s: ' % p) not in doc:
-            # Find the last documented arg so we can put our generated docs
-            # after it. No need to explicitly compile this; the regex cache
-            # should serve.
-            insertion_point = re.search(
-                r'        :arg (.*?)(?=\n+        (?:$|[^: ]))',
-                doc,
-                re.MULTILINE | re.DOTALL).end()
-
-            doc = ''.join([doc[:insertion_point],
-                           docs_for_kwarg(p),
-                           doc[insertion_point:]])
-    method.__doc__ = doc
+                doc = ''.join([doc[:insertion_point],
+                               docs_for_kwarg(p),
+                               doc[insertion_point:]])
+        method.__doc__ = doc
 
 
 def es_kwargs(*args_to_convert):

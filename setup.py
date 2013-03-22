@@ -49,14 +49,14 @@ setup(
     requires=[  # Needed?
         'six',
         'requests(>=1.0,<2.0)',
-        'simplejson(>=2.1.0)'
+        'simplejson(>=2.1.0)',
     ],
     install_requires=[
-        'six',
         'requests>=1.0,<2.0',
-        'simplejson>=2.1.0'
+        'simplejson>=2.1.0',
+        'six'
     ],
-    tests_require=['mock'],
+    tests_require=['mock', 'nose>=1.2.1'],
     test_suite='pyelasticsearch.tests',
     url='http://github.com/rhec/pyelasticsearch'
 )
