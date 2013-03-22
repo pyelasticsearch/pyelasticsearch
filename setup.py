@@ -2,6 +2,13 @@ import codecs
 import re
 from os.path import join, dirname
 
+# Prevent spurious errors during `python setup.py test`, a la
+# http://www.eby-sarna.com/pipermail/peak/2010-May/003357.html:
+try:
+    import multiprocessing
+except ImportError:
+    pass
+
 from setuptools import setup, find_packages
 
 
