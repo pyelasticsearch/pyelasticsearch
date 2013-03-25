@@ -173,12 +173,9 @@ class ElasticSearch(object):
                         " query string." % obj)
 
     def _join_path(self, path_components):
-        """
-        Smush together the (string) path components.
-        Ignores empty strings and None.
-        """
+        """Smush together the path components, omitting '' and None ones."""
         path = '/'.join(quote_plus(str(p), '') for p in path_components if
-                        p is not None and len(str(p)))
+                        p is not None and p != '')
 
         if not path.startswith('/'):
             path = '/' + path
