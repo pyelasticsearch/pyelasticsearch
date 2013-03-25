@@ -2,7 +2,7 @@ Changelog
 =========
 
 v0.4.1 (2013-03-25)
------------------
+-------------------
 
 * Fix a bug introduced in 0.4 wherein "None" was accidentally sent to ES when
   an ID wasn't passed to ``index()``.
