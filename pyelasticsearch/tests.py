@@ -51,11 +51,17 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id="""<>?,./`~!@#$%^&*()_+=[]\{{}|:";'""")
         self.assertResultContains(result, {'_type': 'test-type', '_id': """<>?,./`~!@#$%^&*()_+=[]\{{}|:";'""", 'ok': True, '_index': 'test-index'})
 
-    def testIndexingWithoutID(self):
-        result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'})
-        self.assertResultContains(result, {'_type': 'test-type', 'ok': True, '_index': 'test-index'})
+    def test_indexing_without_id(self):
+        result = self.conn.index(
+            'test-index', 'test-type', {'name': 'Joe Tester'})
+        self.assertResultContains(result,
+            {'_type': 'test-type', 'ok': True, '_index': 'test-index'})
         # should have an id of some value assigned.
         self.assertTrue('_id' in result and result['_id'])
+        # should not generate the same id twice
+        result2 = self.conn.index(
+            'test-index', 'test-type', {'name': 'Barny Tester'})
+        self.assertNotEqual(result['_id'], result2['_id'])
 
     def testExplicitIndexCreate(self):
         result = self.conn.create_index('test-index')
