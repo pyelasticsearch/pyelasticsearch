@@ -34,7 +34,7 @@ so it'll be hard to miss.
 
     .. automethod:: cluster_state([other kwargs listed below])
 
-    .. automethod:: count(query, index, doc_type[, other kwargs listed below])
+    .. automethod:: count(query[, other kwargs listed below])
 
     .. automethod:: create_index(index, settings=None)
 
