@@ -2,7 +2,6 @@ import sys
 import unittest
 
 from mock import patch
-from nose import SkipTest
 from nose.tools import eq_, ok_, assert_raises, assert_not_equal
 import requests
 import six
