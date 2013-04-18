@@ -22,13 +22,13 @@ def find_version(file_path):
                               version_file, re.M)
     if version_match:
         return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
+    raise RuntimeError('Unable to find version string.')
 
 
 setup(
-    name="pyelasticsearch",
-    version=find_version(join("pyelasticsearch", "__init__.py")),
-    description="Lightweight python wrapper for elasticsearch.",
+    name='pyelasticsearch',
+    version=find_version(join('pyelasticsearch', '__init__.py')),
+    description='Lightweight python wrapper for elasticsearch.',
     long_description=read('README.rst') + '\n\n' +
                      '\n'.join(read(join('docs', 'source', 'changelog.rst'))
                                    .splitlines()[1:]),

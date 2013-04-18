@@ -159,7 +159,7 @@ class ElasticSearch(object):
         if iso:
             return iso
         raise TypeError("_to_query() doesn't know how to represent %r in an ES"
-                        " query string." % obj)
+                        ' query string.' % obj)
 
     def _join_path(self, path_components):
         """Smush together the path components, omitting '' and None ones."""
