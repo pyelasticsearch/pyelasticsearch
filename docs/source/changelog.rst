@@ -7,7 +7,8 @@ v0.5 (unreleased)
 * Support multiple indices and doctypes in ``delete_by_query()``. Accept both
   string and JSON queries in the ``query`` arg, just as ``search()`` does.
   Passing the ``q`` arg explicitly is now deprecated.
-* Add ``multi_get`` support.
+* Add ``multi_get``.
+* Add ``percolate``. Thanks, Adam Georgiou and Joseph Rose!
 * Remove the internal, undocumented ``from_python`` method. django-haystack
   users will need to upgrade to a newer version that avoids using it.
 * Refactor JSON encoding machinery. Now it's clearer how to customize it: just
@@ -17,7 +18,7 @@ v0.5 (unreleased)
 
 
 v0.4.1 (2013-03-25)
------------------
+-------------------
 
 * Fix a bug introduced in 0.4 wherein "None" was accidentally sent to ES when
   an ID wasn't passed to ``index()``.
