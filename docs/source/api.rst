@@ -70,6 +70,8 @@ so it'll be hard to miss.
 
     .. automethod:: optimize(index=None[, other kwargs listed below])
 
+    .. automethod:: percolate(index, doc_type, doc[, other kwargs listed below])
+
     .. automethod:: put_mapping(index, doc_type, mapping[, other kwargs listed below])
 
     .. automethod:: refresh(index=None)
