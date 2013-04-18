@@ -943,31 +943,24 @@ class ElasticSearch(object):
     @es_kwargs()
     def percolate(self, index, doc_type, doc, query_params=None):
         """
-        Run a JSON document through the percolator and return the 
-        matched queries
+        Run a JSON document through the registered percolator queries, and
+        return which ones match.
 
-        :arg index: The name of the index to which to the document belongs
-        :arg doc_type: The type of the document
+        :arg index: The name of the index to which the document pretends to
+            belong
+        :arg doc_type: The type the document should be treated as if it has
         :arg doc: A Python mapping object, convertible to JSON, representing
             the document
 
-        (Insert es_kwargs here.)
-
-        See `ES's percolate API`_ for more detail.
+        Use :meth:`index()` to register percolators. See `ES's percolate API`_
+        for more detail.
 
         .. _`ES's percolate API`:
             http://www.elasticsearch.org/guide/reference/api/percolate/
         """
         return self.send_request('GET',
-                                 [index, doc_type, "_percolate"], 
+                                 [index, doc_type, '_percolate'], 
                                  doc, query_params=query_params)
-
-    def percolator(self, percolator_type, query, **kwargs):
-        """
-        Indexes the given query in the '_percolator' index.
-        """
-        return self.index('_percolator', percolator_type, query, **kwargs)
-
 
 
 class JsonEncoder(json.JSONEncoder):
