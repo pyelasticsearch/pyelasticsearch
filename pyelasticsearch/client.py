@@ -163,7 +163,7 @@ class ElasticSearch(object):
 
     def _join_path(self, path_components):
         """Smush together the path components, omitting '' and None ones."""
-        path = '/'.join(quote_plus(str(p.encode('utf-8')), '') for p in path_components if
+        path = '/'.join(quote_plus(str(p).encode('utf-8'), '') for p in path_components if
                         p is not None and p != '')
 
         if not path.startswith('/'):
