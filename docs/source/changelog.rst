@@ -13,6 +13,8 @@ v0.5 (unreleased)
 * Refactor JSON encoding machinery. Now it's clearer how to customize it: just
   plug your custom JSON encoder class into ``ElasticSearch.json_encoder``.
 * Don't crash under ``python -OO``.
+* Support non-ASCII URL path components (like Unicode document IDs) and query
+  string param values.
 * Switch to the nose testrunner.
 
 

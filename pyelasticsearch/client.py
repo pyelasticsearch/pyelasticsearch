@@ -6,7 +6,8 @@ from operator import itemgetter
 from functools import wraps
 from logging import getLogger
 import re
-from six import iterkeys, string_types, integer_types, iteritems, PY3
+from six import (iterkeys, binary_type, text_type, string_types, integer_types,
+                 iteritems, PY3)
 from six.moves import xrange
 
 try:
@@ -143,7 +144,10 @@ class ElasticSearch(object):
 
     @classmethod
     def _to_query(cls, obj):
-        """Convert a native-Python object to a query-string representation."""
+        """
+        Convert a native-Python object to a unicode or bytestring
+        representation suitable for a query string.
+        """
         # Quick and dirty thus far
         if isinstance(obj, string_types):
             return obj
@@ -161,9 +165,22 @@ class ElasticSearch(object):
         raise TypeError("_to_query() doesn't know how to represent %r in an ES"
                         " query string." % obj)
 
+    def _utf8(self, thing):
+        """Convert any arbitrary ``thing`` to a utf-8 bytestring."""
+        if isinstance(thing, binary_type):
+            return thing
+        if not isinstance(thing, text_type):
+            thing = text_type(thing)
+        return thing.encode('utf-8')
+
     def _join_path(self, path_components):
-        """Smush together the path components, omitting '' and None ones."""
-        path = '/'.join(quote_plus(str(p).encode('utf-8'), '') for p in path_components if
+        """
+        Smush together the path components, omitting '' and None ones.
+
+        Unicodes get encoded to strings via utf-8. Incoming strings are assumed
+        to be utf-8-encoded already.
+        """
+        path = '/'.join(quote_plus(self._utf8(p), '') for p in path_components if
                         p is not None and p != '')
 
         if not path.startswith('/'):
@@ -198,8 +215,9 @@ class ElasticSearch(object):
         path = self._join_path(path_components)
         if query_params:
             path = '?'.join(
-                [path, urlencode(dict((k, self._to_query(v).encode('utf-8')) for k, v in
-                                      iteritems(query_params)))])
+                [path,
+                 urlencode(dict((k, self._utf8(self._to_query(v))) for k, v in
+                                iteritems(query_params)))])
 
         request_body = self._encode_json(body) if encode_body else body
         req_method = getattr(self.session, method.lower())
