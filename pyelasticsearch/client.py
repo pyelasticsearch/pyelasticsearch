@@ -336,8 +336,8 @@ class ElasticSearch(object):
         :arg docs: An iterable of Python mapping objects, convertible to JSON,
             representing documents to index
         :arg id_field: The field of each document that holds its ID
-        :arg parent_field: The field of each document that holds its parent id, if 
-            any. Removed from document before indexing. 
+        :arg parent_field: The field of each document that holds its parent ID,
+            if any. Removed from document before indexing. 
 
         See `ES's bulk API`_ for more detail.
 
@@ -352,10 +352,10 @@ class ElasticSearch(object):
         for doc in docs:
             action = {'index': {'_index': index, '_type': doc_type}}
 
-            if doc.get(id_field):
+            if doc.get(id_field) is not None:
                 action['index']['_id'] = doc[id_field]
 
-            if doc.get(parent_field):
+            if doc.get(parent_field) is not None:
                 action['index']['_parent'] = doc.pop(parent_field)
 
             body_bits.append(self._encode_json(action))
