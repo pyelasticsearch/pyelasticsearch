@@ -1,3 +1,4 @@
+# coding=utf-8
 import sys
 import unittest
 
@@ -26,6 +27,20 @@ class IndexingTestCase(ElasticSearchTestCase):
     def test_indexing_with_0_id(self):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=0)
         self.assert_result_contains(result, {'_type': 'test-type', '_id': '0', 'ok': True, '_index': 'test-index'})
+
+    def test_indexing_with_unicode(self):
+        """Test unicode field values and path components."""
+        unicode_name = u'Jöe Téster'
+        unicode_id = u'smöö'
+        result = self.conn.index('test-index', 'test-type', {'name': unicode_name}, id=unicode_id)
+        self.assert_result_contains(result, {'_type': 'test-type', '_id': unicode_id, 'ok': True, '_index': 'test-index'})
+
+        # Make sure it comes back out intact:
+        result = self.conn.get('test-index', 'test-type', unicode_id)
+        eq_(result['_source']['name'], unicode_name)
+
+        # TODO: Test the proper encoding of query param values. Examining them
+        # in the debugger shows they're right.
 
     def test_quoted_chars_in_id(self):
         result = self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id="""<>?,./`~!@#$%^&*()_+=[]\{{}|:";'""")
