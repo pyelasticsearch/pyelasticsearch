@@ -28,7 +28,7 @@ so it'll be hard to miss.
 
     .. automethod:: aliases(index=None[, other kwargs listed below])
 
-    .. automethod:: bulk_index(index, doc_type, docs, id_field='id'[, other kwargs listed below])
+    .. automethod:: bulk_index(index, doc_type, docs, id_field='id', parent_field='_parent'[, other kwargs listed below])
 
     .. automethod:: close_index(index)
 
