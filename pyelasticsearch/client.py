@@ -327,7 +327,7 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   query_params=None):
+                   parent_field='_parent_id', query_params=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -336,6 +336,8 @@ class ElasticSearch(object):
         :arg docs: An iterable of Python mapping objects, convertible to JSON,
             representing documents to index
         :arg id_field: The field of each document that holds its ID
+        :arg parent_field: The field of each document that holds its parent if 
+            any. Removed from document, before indexing. 
 
         See `ES's bulk API`_ for more detail.
 
@@ -352,6 +354,9 @@ class ElasticSearch(object):
 
             if doc.get(id_field):
                 action['index']['_id'] = doc[id_field]
+
+            if doc.get(parent_field):
+                action['index']['_parent'] = doc.pop(parent_field)
 
             body_bits.append(self._encode_json(action))
             body_bits.append(self._encode_json(doc))
