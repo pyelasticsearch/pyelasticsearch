@@ -9,6 +9,8 @@ v0.5 (unreleased)
   Passing the ``q`` arg explicitly is now deprecated.
 * Add ``multi_get``.
 * Add ``percolate``. Thanks, Adam Georgiou and Joseph Rose!
+* Add ability to specify parent document in ``bulk_index()``. Thanks, Gavin
+  Carothers!
 * Remove the internal, undocumented ``from_python`` method. django-haystack
   users will need to upgrade to a newer version that avoids using it.
 * Refactor JSON encoding machinery. Now it's clearer how to customize it: just
