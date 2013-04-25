@@ -17,7 +17,7 @@ class KwargsForQueryTests(unittest.TestCase):
 
     def test_to_query(self):
         """Test the thing that translates objects to query string text."""
-        to_query = ElasticSearch._to_query
+        to_query = ElasticSearch([])._to_query
         eq_(to_query(4), '4')
         eq_(to_query(4.5), '4.5')
         eq_(to_query(True), 'true')

@@ -142,8 +142,7 @@ class ElasticSearch(object):
             items = [items]
         return ','.join(i for i in items if i != '_all')
 
-    @classmethod
-    def _to_query(cls, obj):
+    def _to_query(self, obj):
         """
         Convert a native-Python object to a unicode or bytestring
         representation suitable for a query string.
@@ -158,7 +157,7 @@ class ElasticSearch(object):
         if isinstance(obj, float):
             return repr(obj)  # str loses precision.
         if isinstance(obj, (list, tuple)):
-            return ','.join(cls._to_query(o) for o in obj)
+            return ','.join(self._to_query(o) for o in obj)
         iso = _iso_datetime(obj)
         if iso:
             return iso
