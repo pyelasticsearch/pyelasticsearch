@@ -10,7 +10,7 @@ v0.6 (unreleased)
   probably brings it more in line with your expectations. But double check,
   since it now overwrites existing docs in situations where it didn't before.
 
-* ``bulk_create()`` now overwrites any existing doc of the same ID and doctype.
+* ``bulk_index()`` now overwrites any existing doc of the same ID and doctype.
   Before, it did nothing at all if a document already existed, probably much to
   your surprise. (We removed the ``'op_type': 'create'`` pair, whose intentions
   were always mysterious.) (Gavin Carothers)
