@@ -10,10 +10,15 @@ v0.6 (unreleased)
   probably brings it more in line with your expectations. But double check,
   since it now overwrites existing docs in situations where it didn't before.
 
+  Also, we made a backward-incompatible spelling change to a little-used
+  ``index()`` kwarg.
+
 * ``bulk_index()`` now overwrites any existing doc of the same ID and doctype.
   Before, it did nothing at all if a document already existed, probably much to
   your surprise. (We removed the ``'op_type': 'create'`` pair, whose intentions
   were always mysterious.) (Gavin Carothers)
+* Rename the ``force_insert`` kwarg of ``index()`` to ``only_if_absent``. The
+  old name implied the opposite of what it actually did. (Gavin Carothers)
 
 
 v0.5 (2013-04-20)
