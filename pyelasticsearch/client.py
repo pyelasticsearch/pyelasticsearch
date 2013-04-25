@@ -285,7 +285,7 @@ class ElasticSearch(object):
 
     @es_kwargs('routing', 'parent', 'timestamp', 'ttl', 'percolate',
                'consistency', 'replication', 'refresh', 'timeout', 'fields')
-    def index(self, index, doc_type, doc, id=None, force_insert=False,
+    def index(self, index, doc_type, doc, id=None, put_if_absent=False,
               query_params=None):
         """
         Put a typed JSON document into a specific index to make it searchable.
@@ -295,7 +295,7 @@ class ElasticSearch(object):
         :arg doc: A Python mapping object, convertible to JSON, representing
             the document
         :arg id: The ID to give the document. Leave blank to make one up.
-        :arg force_insert: If ``True`` and a document of the given ID already
+        :arg put_if_absent: If ``True`` and a document of the given ID already
             exists, fail rather than updating it.
         :arg routing: A value hashed to determine which shard this indexing
             request is routed to
@@ -334,7 +334,7 @@ class ElasticSearch(object):
 
         # TODO: Support version along with associated "preference" and
         # "version_type" params.
-        if force_insert:
+        if put_if_absent:
             query_params['op_type'] = 'create'
 
         return self.send_request('POST' if id is None else 'PUT',
