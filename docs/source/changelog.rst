@@ -1,6 +1,21 @@
 Changelog
 =========
 
+v0.6 (unreleased)
+-----------------
+
+.. warning::
+
+  Note the change in behavior of ``bulk_index()`` in this release. This change
+  probably brings it more in line with your expectations. But double check,
+  since it now overwrites existing docs in situations where it didn't before.
+
+* ``bulk_create()`` now overwrites any existing doc of the same ID and doctype.
+  Before, it did nothing at all if a document already existed, probably much to
+  your surprise. (We removed the ``'op_type': 'create'`` pair, whose intentions
+  were always mysterious.) (Gavin Carothers)
+
+
 v0.5 (2013-04-20)
 -----------------
 
