@@ -60,7 +60,7 @@ so it'll be hard to miss.
 
     .. automethod:: health(index=None[, other kwargs listed below])
 
-    .. automethod:: index(index, doc_type, doc, id=None, force_insert=False[, other kwargs listed below])
+    .. automethod:: index(index, doc_type, doc, id=None, overwrite_existing=True[, other kwargs listed below])
 
     .. automethod:: more_like_this(index, doc_type, id, fields, body=''[, other kwargs listed below])
 

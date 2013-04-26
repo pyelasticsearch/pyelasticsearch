@@ -17,8 +17,8 @@ v0.6 (unreleased)
   Before, it did nothing at all if a document already existed, probably much to
   your surprise. (We removed the ``'op_type': 'create'`` pair, whose intentions
   were always mysterious.) (Gavin Carothers)
-* Rename the ``force_insert`` kwarg of ``index()`` to ``only_if_absent``. The
-  old name implied the opposite of what it actually did. (Gavin Carothers)
+* Rename the ``force_insert`` kwarg of ``index()`` to ``overwrite_existing``.
+  The old name implied the opposite of what it actually did. (Gavin Carothers)
 
 
 v0.5 (2013-04-20)
