@@ -76,6 +76,8 @@ so it'll be hard to miss.
 
     .. automethod:: refresh(index=None)
 
+    .. automethod:: scroll([, other kwargs listed below])
+
     .. automethod:: search(query[, other kwargs listed below])
 
     .. automethod:: send_request

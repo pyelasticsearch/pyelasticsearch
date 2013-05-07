@@ -565,7 +565,7 @@ class ElasticSearch(object):
             body,
             query_params=query_params)
 
-    @es_kwargs('routing', 'size')
+    @es_kwargs('routing', 'size', 'scroll', 'search_type')
     def search(self, query, **kwargs):
         """
         Execute a search query against one or more indices and get back search
@@ -579,7 +579,14 @@ class ElasticSearch(object):
         :arg doc_type: A document type or iterable thereof to search. Omit to
             search all.
         :arg size: Limit the number of results to ``size``. Use with ``es_from`` to
-            implement paginated searching.
+            implement paginated searching or with ``scroll`` to implement scrolling.
+        :arg scroll: The scroll parameter is a time value parameter
+            (for example: scroll=5m), indicating for how long the
+            nodes that participate in the search will maintain
+            relevant resources in order to continue and support
+            it. This is very similar in its idea to opening a cursor
+            against a database.
+        :arg search_type: This is the type of search request to execute.
 
         See `ES's search API`_ for more detail.
 
@@ -587,6 +594,32 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/search/
         """
         return self._search_or_count('_search', query, **kwargs)
+
+    @es_kwargs('scroll', 'scroll_id')
+    def scroll(self, query_params=None):
+        """
+        Execute a single scroll request.
+
+        :arg scroll_id: A scroll_id is returned from the first search
+            request (and from continuous) scroll requests. The
+            scroll_id should be used when scrolling (along with the
+            scroll parameter, to stop the scroll from expiring).
+        :arg scroll: The scroll parameter is a time value parameter
+            (for example: scroll=5m), indicating for how long the
+            nodes that participate in the search will maintain
+            relevant resources in order to continue and support
+            it. This is very similar in its idea to opening a cursor
+            against a database.
+
+        See `ES's scroll API`_ for more detail.
+
+        .. _`ES's scroll API`:
+            http://www.elasticsearch.org/guide/reference/api/search/scroll/
+        """
+        return self.send_request(
+            'GET',
+            ['_search', 'scroll'],
+            query_params=query_params)
 
     @es_kwargs('df', 'analyzer', 'default_operator', 'source', 'routing')
     def count(self, query, **kwargs):

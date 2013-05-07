@@ -395,6 +395,28 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.search(query, index=['test-index'], doc_type=['test-type'])
         ok_(result.get('hits').get('hits').__len__() > 0, str(result))
 
+    def test_scan_and_scroll(self):
+        for id in range(2, 100):
+            self.conn.index('test-index', 'test-type', {'name': 'Joe%s Tester' % id}, id=id)
+        self.conn.refresh(['test-index'])
+        result = self.conn.search(index=["test-index"],
+                                  query=dict(query=dict(match_all={}), fields="*"),
+                                  search_type="scan",
+                                  scroll="5m",
+                                  size=2)
+        numhits = 0
+        numrequests = 0
+        while 1:
+            result = self.conn.scroll(scroll_id=result['_scroll_id'], scroll="1m")
+            hits = result['hits']['hits']
+
+            numhits += len(hits)
+            numrequests += 1
+            if not hits:
+                break
+
+        eq_((numhits, numrequests), (99, 11))
+
     def test_mlt(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Test'}, id=3)
         self.conn.refresh(['test-index'])
