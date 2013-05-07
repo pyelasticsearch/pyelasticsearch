@@ -8,3 +8,4 @@ MANIFEST
 *.egg
 .idea
 .*.swp
+__pycache__/
