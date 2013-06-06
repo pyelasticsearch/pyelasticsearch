@@ -344,7 +344,7 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   version_type=None, parent_field='_parent', query_params=None):
+                   version_field='_version', parent_field='_parent', query_params=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -375,8 +375,11 @@ class ElasticSearch(object):
             if doc.get(id_field) is not None:
                 action['index']['_id'] = doc[id_field]
 
-            if version_type:
-                action['index']['_version_type'] = version_type
+            if doc.get(version_field) is not None:
+                action['index'].update({
+                    '_version_type': 'external',
+                    '_version': doc.pop(version_field),
+                })
 
             if doc.get(parent_field) is not None:
                 action['index']['_parent'] = doc.pop(parent_field)
