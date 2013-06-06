@@ -4,12 +4,14 @@ from pyelasticsearch.client import ElasticSearch
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         InvalidJsonResponseError,
-                                        ElasticHttpNotFoundError)
+                                        ElasticHttpNotFoundError,
+                                        IndexAlreadyExistsError)
 
 __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'InvalidJsonResponseError',
-           'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError']
-__version__ = '0.3'
+           'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError',
+           'IndexAlreadyExistsError']
+__version__ = '0.5'
 __version_info__ = tuple(__version__.split('.'))
 
 get_version = lambda: __version_info__

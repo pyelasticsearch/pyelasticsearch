@@ -116,6 +116,7 @@ Contents
 
    features
    api
+   migrate
    changelog
    dev
 

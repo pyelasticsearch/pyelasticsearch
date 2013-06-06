@@ -2,10 +2,20 @@
 from __future__ import absolute_import
 
 from datetime import datetime
+from operator import itemgetter
 from functools import wraps
 from logging import getLogger
 import re
-from urllib import urlencode, quote_plus
+from six import (iterkeys, binary_type, text_type, string_types, integer_types,
+                 iteritems, PY3)
+from six.moves import xrange
+
+try:
+    # PY3
+    from urllib.parse import urlencode, quote_plus
+except ImportError:
+    # PY2
+    from urllib import urlencode, quote_plus
 
 import requests
 import simplejson as json  # for use_decimal
@@ -15,11 +25,8 @@ from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         InvalidJsonResponseError,
-                                        ElasticHttpNotFoundError)
-
-DATETIME_REGEX = re.compile(
-    r'^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})T'
-    r'(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(\.\d+)?$')
+                                        ElasticHttpNotFoundError,
+                                        IndexAlreadyExistsError)
 
 
 def _add_es_kwarg_docs(params, method):
@@ -35,27 +42,27 @@ def _add_es_kwarg_docs(params, method):
         return '\n        :arg %s: See the ES docs.' % p
 
     doc = method.__doc__
+    if doc is not None:  # It's none under python -OO.
+        # Handle the case where there are no :arg declarations to key off:
+        if '\n        :arg' not in doc:
+            first_param, params = params[0], params[1:]
+            doc = doc.replace('\n        (Insert es_kwargs here.)',
+                              docs_for_kwarg(first_param))
 
-    # Handle the case where there are no :arg declarations to key off:
-    if '\n        :arg' not in doc:
-        first_param, params = params[0], params[1:]
-        doc = doc.replace('\n        (Insert es_kwargs here.)',
-                          docs_for_kwarg(first_param))
+        for p in params:
+            if ('\n        :arg %s: ' % p) not in doc:
+                # Find the last documented arg so we can put our generated docs
+                # after it. No need to explicitly compile this; the regex cache
+                # should serve.
+                insertion_point = re.search(
+                    r'        :arg (.*?)(?=\n+        (?:$|[^: ]))',
+                    doc,
+                    re.MULTILINE | re.DOTALL).end()
 
-    for p in params:
-        if ('\n        :arg %s: ' % p) not in doc:
-            # Find the last documented arg so we can put our generated docs
-            # after it. No need to explicitly compile this; the regex cache
-            # should serve.
-            insertion_point = re.search(
-                r'        :arg (.*?)(?=\n+        (?:$|[^: ]))',
-                doc,
-                re.MULTILINE | re.DOTALL).end()
-
-            doc = ''.join([doc[:insertion_point],
-                           docs_for_kwarg(p),
-                           doc[insertion_point:]])
-    method.__doc__ = doc
+                doc = ''.join([doc[:insertion_point],
+                               docs_for_kwarg(p),
+                               doc[insertion_point:]])
+        method.__doc__ = doc
 
 
 def es_kwargs(*args_to_convert):
@@ -81,7 +88,7 @@ def es_kwargs(*args_to_convert):
             # Make kwargs the map of normal kwargs and query_params the map of
             # kwargs destined for query string params:
             query_params = {}
-            for k, v in kwargs.items():  # NOT iteritems; we mutate kwargs
+            for k in list(iterkeys(kwargs)):  # Make a copy; we mutate kwargs.
                 if k.startswith('es_'):
                     query_params[k[3:]] = kwargs.pop(k)
                 elif k in convertible_args:
@@ -110,23 +117,15 @@ class ElasticSearch(object):
         :arg revival_delay: Number of seconds for which to avoid a server after
             it times out or is uncontactable
         """
-        if isinstance(urls, basestring):
+        if isinstance(urls, string_types):
             urls = [urls]
         urls = [u.rstrip('/') for u in urls]
         self.servers = DowntimePronePool(urls, revival_delay)
         self.revival_delay = revival_delay
-
         self.timeout = timeout
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
         self.session = requests.session()
-
-        json_converter = self.from_python
-
-        class JsonEncoder(json.JSONEncoder):
-            def default(self, value):
-                """Convert more Python data types to ES-understandable JSON."""
-                return json_converter(value)
         self.json_encoder = JsonEncoder
 
     def _concat(self, items):
@@ -139,27 +138,53 @@ class ElasticSearch(object):
         # TODO: Why strip out _all?
         if items is None:
             return ''
-        if isinstance(items, basestring):
+        if isinstance(items, string_types):
             items = [items]
         return ','.join(i for i in items if i != '_all')
 
-    @classmethod
-    def _to_query(cls, obj):
-        """Convert a native-Python object to a query string representation."""
+    def _to_query(self, obj):
+        """
+        Convert a native-Python object to a unicode or bytestring
+        representation suitable for a query string.
+        """
         # Quick and dirty thus far
-        if isinstance(obj, basestring):
+        if isinstance(obj, string_types):
             return obj
         if isinstance(obj, bool):
             return 'true' if obj else 'false'
-        if isinstance(obj, (long, int, float)):
+        if isinstance(obj, integer_types):
             return str(obj)
+        if isinstance(obj, float):
+            return repr(obj)  # str loses precision.
         if isinstance(obj, (list, tuple)):
-            return ','.join(cls._to_query(o) for o in obj)
+            return ','.join(self._to_query(o) for o in obj)
         iso = _iso_datetime(obj)
         if iso:
             return iso
         raise TypeError("_to_query() doesn't know how to represent %r in an ES"
-                        " query string." % obj)
+                        ' query string.' % obj)
+
+    def _utf8(self, thing):
+        """Convert any arbitrary ``thing`` to a utf-8 bytestring."""
+        if isinstance(thing, binary_type):
+            return thing
+        if not isinstance(thing, text_type):
+            thing = text_type(thing)
+        return thing.encode('utf-8')
+
+    def _join_path(self, path_components):
+        """
+        Smush together the path components, omitting '' and None ones.
+
+        Unicodes get encoded to strings via utf-8. Incoming strings are assumed
+        to be utf-8-encoded already.
+        """
+        path = '/'.join(quote_plus(self._utf8(p), '') for p in path_components if
+                        p is not None and p != '')
+
+        if not path.startswith('/'):
+            path = '/' + path
+        return path
 
     def send_request(self,
                      method,
@@ -186,22 +211,14 @@ class ElasticSearch(object):
             ``None``
         :arg encode_body: Whether to encode the body of the request as JSON
         """
-        def join_path(path_components):
-            """Smush together the path components, ignoring empty ones."""
-            path = '/'.join(quote_plus(str(p), '') for p in path_components if p)
-
-            if not path.startswith('/'):
-                path = '/' + path
-            return path
-
-        path = join_path(path_components)
+        path = self._join_path(path_components)
         if query_params:
             path = '?'.join(
-                [path, urlencode(dict((k, self._to_query(v)) for k, v in
-                                      query_params.iteritems()))])
+                [path,
+                 urlencode(dict((k, self._utf8(self._to_query(v))) for k, v in
+                                iteritems(query_params)))])
 
-        kwargs = ({'data': self._encode_json(body) if encode_body else body}
-                   if body else {})
+        request_body = self._encode_json(body) if encode_body else body
         req_method = getattr(self.session, method.lower())
 
         # We do our own retrying rather than using urllib3's; we want to retry
@@ -211,11 +228,14 @@ class ElasticSearch(object):
             server_url, was_dead = self.servers.get()
             url = server_url + path
             self.logger.debug(
-                "Making a request equivalent to this: curl -X%s '%s' -d '%s'" %
-                (method, url, kwargs.get('data', {})))
+                "Making a request equivalent to this: curl -X%s '%s' -d '%s'",
+                method, url, request_body)
 
             try:
-                resp = req_method(url, timeout=self.timeout, **kwargs)
+                resp = req_method(
+                    url,
+                    timeout=self.timeout,
+                    **({'data': request_body} if body else {}))
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
                 self.logger.info('%s marked as dead for %s seconds.',
@@ -231,17 +251,27 @@ class ElasticSearch(object):
         self.logger.debug('response status: %s', resp.status_code)
         prepped_response = self._decode_response(resp)
         if resp.status_code >= 400:
-            error_class = (ElasticHttpNotFoundError if resp.status_code == 404
-                           else ElasticHttpError)
-            raise error_class(
-                resp.status_code,
-                prepped_response.get('error', prepped_response))
+            self._raise_exception(resp, prepped_response)
         self.logger.debug('got response %s', prepped_response)
         return prepped_response
 
-    def _encode_json(self, body):
-        """Return body encoded as JSON."""
-        return json.dumps(body, cls=self.json_encoder, use_decimal=True)
+    def _raise_exception(self, response, decoded_body):
+        """Raise an exception based on an error-indicating response from ES."""
+        error_message = decoded_body.get('error', decoded_body)
+
+        error_class = ElasticHttpError
+        if response.status_code == 404:
+            error_class = ElasticHttpNotFoundError
+        elif error_message.startswith('IndexAlreadyExistsException'):
+            error_class = IndexAlreadyExistsError
+
+        raise error_class(response.status_code, error_message)
+
+    def _encode_json(self, value):
+        """
+        Convert a Python value to a form suitable for ElasticSearch's JSON DSL.
+        """
+        return json.dumps(value, cls=self.json_encoder, use_decimal=True)
 
     def _decode_response(self, response):
         """Return a native-Python representation of a response's JSON blob."""
@@ -254,8 +284,8 @@ class ElasticSearch(object):
     ## REST API
 
     @es_kwargs('routing', 'parent', 'timestamp', 'ttl', 'percolate',
-               'consistency', 'replication', 'refresh', 'timeout')
-    def index(self, index, doc_type, doc, id=None, force_insert=False,
+               'consistency', 'replication', 'refresh', 'timeout', 'fields')
+    def index(self, index, doc_type, doc, id=None, overwrite_existing=True,
               query_params=None):
         """
         Put a typed JSON document into a specific index to make it searchable.
@@ -265,8 +295,8 @@ class ElasticSearch(object):
         :arg doc: A Python mapping object, convertible to JSON, representing
             the document
         :arg id: The ID to give the document. Leave blank to make one up.
-        :arg force_insert: If ``True`` and a document of the given ID already
-            exists, fail rather than updating it.
+        :arg overwrite_existing: Whether we should overwrite existing documents
+            of the same ID and doctype
         :arg routing: A value hashed to determine which shard this indexing
             request is routed to
         :arg parent: The ID of a parent document, which leads this document to
@@ -304,7 +334,7 @@ class ElasticSearch(object):
 
         # TODO: Support version along with associated "preference" and
         # "version_type" params.
-        if force_insert:
+        if not overwrite_existing:
             query_params['op_type'] = 'create'
 
         return self.send_request('POST' if id is None else 'PUT',
@@ -314,7 +344,7 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   version_type=None, query_params=None):
+                   version_type=None, parent_field='_parent', query_params=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -326,6 +356,8 @@ class ElasticSearch(object):
         :arg version_type: The type of versioning to use. You can specify
             'external' or 'internal' and provide a 'version' attribute in
             each document for optimistic concurrency control.
+        :arg parent_field: The field of each document that holds its parent ID,
+            if any. Removed from document before indexing. 
 
         See `ES's bulk API`_ for more detail.
 
@@ -340,17 +372,20 @@ class ElasticSearch(object):
         for doc in docs:
             action = {'index': {'_index': index, '_type': doc_type}}
 
-            if doc.get(id_field):
+            if doc.get(id_field) is not None:
                 action['index']['_id'] = doc[id_field]
+
             if version_type:
                 action['index']['_version_type'] = version_type
+
+            if doc.get(parent_field) is not None:
+                action['index']['_parent'] = doc.pop(parent_field)
 
             body_bits.append(self._encode_json(action))
             body_bits.append(self._encode_json(doc))
 
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
-        query_params['op_type'] = 'create'  # TODO: Why?
         return self.send_request('POST',
                                  ['_bulk'],
                                  body,
@@ -364,14 +399,19 @@ class ElasticSearch(object):
 
         :arg index: The name of the index from which to delete
         :arg doc_type: The type of the document to delete
-        :arg id: The ID of the document to delete
+        :arg id: The (string or int) ID of the document to delete
 
         See `ES's delete API`_ for more detail.
 
         .. _`ES's delete API`:
             http://www.elasticsearch.org/guide/reference/api/delete.html
         """
-        # TODO: Raise ValueError if id boils down to a 0-length string.
+        # id should never be None, and it's not particular dangerous
+        # (equivalent to deleting a doc with ID "None", but it's almost
+        # certainly not what the caller meant:
+        if id is None or id == '':
+            raise ValueError('No ID specified. To delete all documents in '
+                             'an index, use delete_all().')
         return self.send_request('DELETE', [index, doc_type, id],
                                  query_params=query_params)
 
@@ -399,17 +439,28 @@ class ElasticSearch(object):
         """
         Delete typed JSON documents from a specific index based on query.
 
-        :arg index: The name of the index from which to delete
-        :arg doc_type: The type of document to delete
-        :arg query: A dict of query DSL selecting the documents to delete
+        :arg index: An index or iterable thereof from which to delete
+        :arg doc_type: The type of document or iterable thereof to delete
+        :arg query: A dictionary that will convert to ES's query DSL or a
+            string that will serve as a textual query to be passed as the ``q``
+            query string parameter. (Passing the ``q`` kwarg yourself is
+            deprecated.)
 
         See `ES's delete-by-query API`_ for more detail.
 
         .. _`ES's delete-by-query API`:
             http://www.elasticsearch.org/guide/reference/api/delete-by-query.html
         """
-        return self.send_request('DELETE', [index, doc_type, '_query'], query,
-                                 query_params=query_params)
+        if isinstance(query, string_types) and 'q' not in query_params:
+            query_params['q'] = query
+            body = ''
+        else:
+            body = query
+        return self.send_request(
+            'DELETE',
+            [self._concat(index), self._concat(doc_type), '_query'],
+            body,
+            query_params=query_params)
 
     @es_kwargs('realtime', 'fields', 'routing', 'preference', 'refresh')
     def get(self, index, doc_type, id, query_params=None):
@@ -428,13 +479,51 @@ class ElasticSearch(object):
         return self.send_request('GET', [index, doc_type, id],
                                  query_params=query_params)
 
+    @es_kwargs()
+    def multi_get(self, ids, index=None, doc_type=None, fields=None,
+                  query_params=None):
+        """
+        Get multiple typed JSON documents from ES.
+
+        :arg ids: An iterable, each element of which can be either an a dict or
+            an id (int or string). IDs are taken to be document IDs. Dicts are
+            passed through the Multi Get API essentially verbatim, except that
+            any missing ``_type``, ``_index``, or ``fields`` keys are filled in
+            from the defaults given in the ``index``, ``doc_type``, and
+            ``fields`` args.
+        :arg index: Default index name from which to retrieve
+        :arg doc_type: Default type of document to get
+        :arg fields: Default fields to return
+
+        See `ES's Multi Get API`_ for more detail.
+
+        .. _`ES's Multi Get API`:
+            http://www.elasticsearch.org/guide/reference/api/multi-get.html
+        """
+        doc_template = dict(
+            filter(
+                itemgetter(1),
+                [('_index', index), ('_type', doc_type), ('fields', fields)]))
+
+        docs = []
+        for id in ids:
+            doc = doc_template.copy()
+            if isinstance(id, dict):
+                doc.update(id)
+            else:
+                doc['_id'] = id
+            docs.append(doc)
+
+        return self.send_request(
+            'GET', ['_mget'], {'docs': docs}, query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
-               'percolate', 'refresh', 'retry_on_conflict')
-    def update(self, index, doc_type, id, script, params=None, lang=None,
-               query_params=None):
+               'percolate', 'refresh', 'retry_on_conflict', 'fields')
+    def update(self, index, doc_type, id, script=None, params=None, lang=None,
+               query_params=None, doc=None, upsert=None):
         """
-        Update a document by means of a script.
+        Update an existing document. Raise ``TypeError`` if ``script``, ``doc``
+        and ``upsert`` are all unspecified.
 
         :arg index: The name of the index containing the document
         :arg doc_type: The type of the document
@@ -443,18 +532,34 @@ class ElasticSearch(object):
         :arg params: A dict of the params to be put in scope of the script
         :arg lang: The language of the script. Omit to use the default,
             specified by ``script.default_lang``.
+        :arg doc: A partial document to be merged into the existing document
+        :arg upsert: The content for the new document created if the document
+            does not exist
         """
-        body = {'script': script}
+        if script is None and doc is None and upsert is None:
+            raise TypeError('At least one of the script, doc, or upsert '
+                            'kwargs must be provided.')
+
+        body = {}
+        if script:
+            body['script'] = script
+        if lang and script:
+            body['lang'] = lang
+        if doc:
+            body['doc'] = doc
+        if upsert:
+            body['upsert'] = upsert
         if params:
             body['params'] = params
-        if lang:
-            body['lang'] = lang
-        return self.send_request('POST', [index, doc_type, id], body=body,
-                                 query_params=query_params)
+        return self.send_request(
+            'POST',
+            [index, doc_type, id, '_update'],
+            body=body,
+            query_params=query_params)
 
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
-        if isinstance(query, basestring):
+        if isinstance(query, string_types):
             query_params['q'] = query
             body = ''
         else:
@@ -466,7 +571,7 @@ class ElasticSearch(object):
             body,
             query_params=query_params)
 
-    @es_kwargs('routing')
+    @es_kwargs('routing', 'size')
     def search(self, query, **kwargs):
         """
         Execute a search query against one or more indices and get back search
@@ -479,6 +584,8 @@ class ElasticSearch(object):
             all.
         :arg doc_type: A document type or iterable thereof to search. Omit to
             search all.
+        :arg size: Limit the number of results to ``size``. Use with ``es_from`` to
+            implement paginated searching.
 
         See `ES's search API`_ for more detail.
 
@@ -603,12 +710,45 @@ class ElasticSearch(object):
                                  query_params=query_params)
 
     @es_kwargs()
+    def update_aliases(self, settings, query_params=None):
+        """
+        Add, remove, or update aliases in bulk.
+
+        :arg settings: a dictionary specifying the actions to perform
+
+        See `ES's admin-indices-aliases API`_.
+
+        .. _`ES's admin-indices-aliases API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
+        """
+        return self.send_request('POST', ['_aliases'],
+                                 body=settings, query_params=query_params)
+
+    @es_kwargs()
+    def aliases(self, index=None, query_params=None):
+        """
+        Retrieve a listing of aliases
+
+        :arg index: the name of an index or an iterable of indices
+
+        See `ES's admin-indices-aliases API`_.
+
+        .. _`ES's admin-indices-aliases API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
+        """
+        return self.send_request('GET', [self._concat(index), '_aliases'],
+                                 query_params=query_params)
+
+    @es_kwargs()
     def create_index(self, index, settings=None, query_params=None):
         """
         Create an index with optional settings.
 
         :arg index: The name of the index to create
         :arg settings: A dictionary of settings
+
+        If the index already exists, raise
+        :class:`~pyelasticsearch.exceptions.IndexAlreadyExistsError`.
 
         See `ES's create-index API`_ for more detail.
 
@@ -624,6 +764,9 @@ class ElasticSearch(object):
         Delete an index.
 
         :arg index: An index or iterable thereof to delete
+
+        If the index is not found, raise
+        :class:`~pyelasticsearch.exceptions.ElasticHttpNotFoundError`.
 
         See `ES's delete-index API`_ for more detail.
 
@@ -668,6 +811,22 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
         """
         return self.send_request('POST', [index, '_open'],
+                                 query_params=query_params)
+
+    @es_kwargs()
+    def get_settings(self, index, query_params=None):
+        """
+        Get the settings of one or more indexes.
+
+        :arg index: An index or iterable of indexes
+
+        See `ES's get-settings API`_ for more detail.
+
+        .. _`ES's get-settings API`:
+            http://www.elasticsearch.org/guide/reference/api/admin-indices-get-settings.html
+        """
+        return self.send_request('GET',
+                                 [self._concat(index), '_settings'],
                                  query_params=query_params)
 
     @es_kwargs()
@@ -808,55 +967,40 @@ class ElasticSearch(object):
         return self.send_request(
             'GET', ['_cluster', 'state'], query_params=query_params)
 
-    def from_python(self, value):
+    @es_kwargs()
+    def percolate(self, index, doc_type, doc, query_params=None):
         """
-        Convert Python values to a form suitable for ElasticSearch's JSON.
+        Run a JSON document through the registered percolator queries, and
+        return which ones match.
+
+        :arg index: The name of the index to which the document pretends to
+            belong
+        :arg doc_type: The type the document should be treated as if it has
+        :arg doc: A Python mapping object, convertible to JSON, representing
+            the document
+
+        Use :meth:`index()` to register percolators. See `ES's percolate API`_
+        for more detail.
+
+        .. _`ES's percolate API`:
+            http://www.elasticsearch.org/guide/reference/api/percolate/
         """
+        return self.send_request('GET',
+                                 [index, doc_type, '_percolate'], 
+                                 doc, query_params=query_params)
+
+
+class JsonEncoder(json.JSONEncoder):
+    def default(self, value):
+        """Convert more Python data types to ES-understandable JSON."""
         iso = _iso_datetime(value)
         if iso:
             return iso
-        if isinstance(value, str):
+        if not PY3 and isinstance(value, str):
             return unicode(value, errors='replace')  # TODO: Be stricter.
         if isinstance(value, set):
             return list(value)
-
-        return value
-
-    def to_python(self, value):
-        """Convert values from ElasticSearch to native Python values."""
-        if isinstance(value, (int, float, long, complex, list, tuple, bool)):
-            return value
-
-        if isinstance(value, basestring):
-            possible_datetime = DATETIME_REGEX.search(value)
-
-            if possible_datetime:
-                date_values = possible_datetime.groupdict()
-
-                for dk, dv in date_values.items():
-                    date_values[dk] = int(dv)
-
-                return datetime(
-                    date_values['year'], date_values['month'],
-                    date_values['day'], date_values['hour'],
-                    date_values['minute'], date_values['second'])
-
-        try:
-            # This is slightly gross but it's hard to tell otherwise what the
-            # string's original type might have been. Be careful who you trust.
-            converted_value = eval(value)
-
-            # Try to handle most built-in types.
-            if isinstance(
-                    converted_value,
-                    (list, tuple, set, dict, int, float, long, complex)):
-                return converted_value
-        except Exception:
-            # If it fails (SyntaxError or its ilk) or we don't trust it,
-            # continue on.
-            pass
-
-        return value
+        return super(JsonEncoder, self).default(value)
 
 
 def _iso_datetime(value):

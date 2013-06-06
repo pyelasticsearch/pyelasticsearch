@@ -1,34 +1,41 @@
 import codecs
-import os
 import re
+from os.path import join, dirname
+
+# Prevent spurious errors during `python setup.py test`, a la
+# http://www.eby-sarna.com/pipermail/peak/2010-May/003357.html:
+try:
+    import multiprocessing
+except ImportError:
+    pass
 
 from setuptools import setup, find_packages
 
 
-def read(*parts):
-    return codecs.open(os.path.join(os.path.dirname(__file__), *parts)).read()
+def read(filename):
+    return codecs.open(join(dirname(__file__), filename), 'r').read()
 
 
-def find_version(*file_paths):
-    version_file = read(*file_paths)
+def find_version(file_path):
+    version_file = read(file_path)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
                               version_file, re.M)
     if version_match:
         return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
+    raise RuntimeError('Unable to find version string.')
 
 
 setup(
-    name="pyelasticsearch",
-    version=find_version("pyelasticsearch/__init__.py"),
-    description="Lightweight python wrapper for elasticsearch.",
+    name='pyelasticsearch',
+    version=find_version(join('pyelasticsearch', '__init__.py')),
+    description='Flexible, high-scale API to elasticsearch',
     long_description=read('README.rst') + '\n\n' +
-                     '\n'.join(read('docs', 'source', 'changelog.rst')
+                     '\n'.join(read(join('docs', 'source', 'changelog.rst'))
                                    .splitlines()[1:]),
     author='Robert Eanes',
     author_email='python@robsinbox.com',
-    maintainer='Jannis Leidel',
-    maintainer_email='jannis@leidel.info',
+    maintainer='Erik Rose',
+    maintainer_email='erik@mozilla.com',
     license='BSD',
     packages=find_packages(),
     include_package_data=True,
@@ -42,17 +49,21 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
     requires=[  # Needed?
+        'six',
         'requests(>=1.0,<2.0)',
-        'simplejson(>=2.1.0)'
+        'simplejson(>=2.1.0)',
     ],
     install_requires=[
         'requests>=1.0,<2.0',
-        'simplejson>=2.1.0'
+        'simplejson>=2.1.0',
+        'six'
     ],
-    tests_require=['mock'],
-    test_suite='pyelasticsearch.tests',
+    tests_require=['mock', 'nose>=1.2.1'],
+    test_suite='nose.collector',
     url='http://github.com/rhec/pyelasticsearch'
 )

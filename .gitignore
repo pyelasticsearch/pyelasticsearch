@@ -6,3 +6,5 @@ dist
 MANIFEST
 .tox
 *.egg
+.idea
+.*.swp
