@@ -44,7 +44,7 @@ def _add_es_kwarg_docs(params, method):
     doc = method.__doc__
     if doc is not None:  # It's none under python -OO.
         # Handle the case where there are no :arg declarations to key off:
-        if '\n        :arg' not in doc:
+        if '\n        :arg' not in doc and params:
             first_param, params = params[0], params[1:]
             doc = doc.replace('\n        (Insert es_kwargs here.)',
                               docs_for_kwarg(first_param))
@@ -982,6 +982,13 @@ class ElasticSearch(object):
         return self.send_request('GET',
                                  [index, doc_type, '_percolate'], 
                                  doc, query_params=query_params)
+
+    @es_kwargs()
+    def info(self, query_params=None):
+        """
+        Get Elasticsearch information.
+        """
+        return self.send_request('GET', [])
 
 
 class JsonEncoder(json.JSONEncoder):

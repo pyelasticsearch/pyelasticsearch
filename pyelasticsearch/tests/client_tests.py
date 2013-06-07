@@ -329,6 +329,10 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.percolate('test-index','test-type', document)
         self.assert_result_contains(result, {'matches': [], 'ok': True})
 
+    def test_info(self):
+        result = self.conn.info()
+        ok_('version' in result)
+
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):
