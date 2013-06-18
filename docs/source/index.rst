@@ -16,7 +16,7 @@ A Taste of the API
 ------------------
 
 Make a pooling, balancing, all-singing, all-dancing connection object::
-
+  >>> from pyelasticsearch import ElasticSearch
   >>> es = ElasticSearch('http://localhost:9200/')
 
 Index some documents::
