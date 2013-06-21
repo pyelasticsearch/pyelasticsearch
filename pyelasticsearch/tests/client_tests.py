@@ -357,6 +357,19 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.multi_get([{'_type': 'test-type', '_id': 1, 'fields': ['name'], '_index': 'test-index'}])
         self.assert_result_contains(result, {'docs': [{'_type': 'test-type', '_id': '1', 'fields': {'name': 'Joe Tester'}, '_index': 'test-index', "_version": 1, "exists": True}]})
 
+    def test_multi_search(self):
+        self.conn.index('another-test-index', 'test-type', {'name': 'Jane Tester'}, id=3)
+        self.conn.refresh(['another-test-index'])
+
+        indexes = ['test-index', 'another-test-index']
+
+        queries = [
+            {'query' : {'match_all' : {}}, 'from' : 0, 'size' : 1},
+            {'query' : {'match_all' : {}}, 'from' : 0, 'size' : 1}
+        ]
+        result = self.conn.multi_search(queries, indexes)
+        ok_(result.get('responses').__len__(), 2)
+
     def test_get_count_by_search(self):
         result = self.conn.count('name:joe', index='test-index')
         self.assert_result_contains(result, {'count': 1})
