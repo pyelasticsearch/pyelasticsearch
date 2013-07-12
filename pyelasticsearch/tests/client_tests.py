@@ -183,7 +183,7 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def test_get_mapping(self):
         result = self.conn.create_index('test-index')
-        mapping = {'test-type': {'properties': {'name': {'type': 'string', 'store': 'yes'}}}}
+        mapping = {'test-type': {'properties': {'name': {'type': 'string', 'store': True}}}}
         self.conn.put_mapping('test-index', 'test-type', mapping)
 
         result = self.conn.get_mapping(index=['test-index'], doc_type=['test-type'])
