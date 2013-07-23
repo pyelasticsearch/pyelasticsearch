@@ -11,7 +11,7 @@ __author__ = 'Robert Eanes'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'InvalidJsonResponseError',
            'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError',
            'IndexAlreadyExistsError']
-__version__ = '0.5'
+__version__ = '0.6'
 __version_info__ = tuple(__version__.split('.'))
 
 get_version = lambda: __version_info__

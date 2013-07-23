@@ -1,7 +1,7 @@
 Changelog
 =========
 
-v0.6 (unreleased)
+v0.6 (2013-07-23)
 -----------------
 
 .. warning::
