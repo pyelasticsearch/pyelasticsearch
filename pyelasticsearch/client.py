@@ -191,7 +191,8 @@ class ElasticSearch(object):
                      path_components,
                      body='',
                      query_params=None,
-                     encode_body=True):
+                     encode_body=True,
+                     request_params={}):
         """
         Send an HTTP request to ES, and return the JSON-decoded response.
 
@@ -210,6 +211,7 @@ class ElasticSearch(object):
         :arg query_params: A map of querystring param names to values or
             ``None``
         :arg encode_body: Whether to encode the body of the request as JSON
+        :arg request_params: Additional keyword arguments to the requests request method (such as authentication data)
         """
         path = self._join_path(path_components)
         if query_params:
@@ -235,7 +237,8 @@ class ElasticSearch(object):
                 resp = req_method(
                     url,
                     timeout=self.timeout,
-                    **({'data': request_body} if body else {}))
+                    **({'data': request_body} if body else {}),
+                    **request_params)
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
                 self.logger.info('%s marked as dead for %s seconds.',
@@ -286,7 +289,7 @@ class ElasticSearch(object):
     @es_kwargs('routing', 'parent', 'timestamp', 'ttl', 'percolate',
                'consistency', 'replication', 'refresh', 'timeout', 'fields')
     def index(self, index, doc_type, doc, id=None, overwrite_existing=True,
-              query_params=None):
+              query_params=None, request_params={}):
         """
         Put a typed JSON document into a specific index to make it searchable.
 
@@ -297,6 +300,8 @@ class ElasticSearch(object):
         :arg id: The ID to give the document. Leave blank to make one up.
         :arg overwrite_existing: Whether we should overwrite existing documents
             of the same ID and doctype
+        :arg request_params: Additional keyword arguments to the requests request method
+            (such as authentication data)
         :arg routing: A value hashed to determine which shard this indexing
             request is routed to
         :arg parent: The ID of a parent document, which leads this document to
@@ -340,11 +345,12 @@ class ElasticSearch(object):
         return self.send_request('POST' if id is None else 'PUT',
                                  [index, doc_type, id],
                                  doc,
-                                 query_params)
+                                 query_params,
+                                 request_params)
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   parent_field='_parent', query_params=None):
+                   parent_field='_parent', query_params=None, request_params={}):
         """
         Index a list of documents as efficiently as possible.
 
@@ -384,10 +390,11 @@ class ElasticSearch(object):
                                  ['_bulk'],
                                  body,
                                  encode_body=False,
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
-    def delete(self, index, doc_type, id, query_params=None):
+    def delete(self, index, doc_type, id, query_params=None, request_params={}):
         """
         Delete a typed JSON document from a specific index based on its ID.
 
@@ -407,10 +414,10 @@ class ElasticSearch(object):
             raise ValueError('No ID specified. To delete all documents in '
                              'an index, use delete_all().')
         return self.send_request('DELETE', [index, doc_type, id],
-                                 query_params=query_params)
+                                 query_params=query_params, request_params=request_params)
 
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
-    def delete_all(self, index, doc_type, query_params=None):
+    def delete_all(self, index, doc_type, query_params=None, request_params={}):
         """
         Delete all documents of the given doctype from an index.
 
@@ -425,11 +432,11 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/delete.html
         """
         return self.send_request('DELETE', [index, doc_type],
-                                 query_params=query_params)
+                                 query_params=query_params, request_params=request_params)
 
     @es_kwargs('q', 'df', 'analyzer', 'default_operator', 'source' 'routing',
                'replication', 'consistency')
-    def delete_by_query(self, index, doc_type, query, query_params=None):
+    def delete_by_query(self, index, doc_type, query, query_params=None, request_params={}):
         """
         Delete typed JSON documents from a specific index based on query.
 
@@ -454,10 +461,11 @@ class ElasticSearch(object):
             'DELETE',
             [self._concat(index), self._concat(doc_type), '_query'],
             body,
-            query_params=query_params)
+            query_params=query_params,
+            request_params=request_params)
 
     @es_kwargs('realtime', 'fields', 'routing', 'preference', 'refresh')
-    def get(self, index, doc_type, id, query_params=None):
+    def get(self, index, doc_type, id, query_params=None, request_params={}):
         """
         Get a typed JSON document from an index by ID.
 
@@ -471,11 +479,11 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/get.html
         """
         return self.send_request('GET', [index, doc_type, id],
-                                 query_params=query_params)
+                                 query_params=query_params, request_params=request_params)
 
     @es_kwargs()
     def multi_get(self, ids, index=None, doc_type=None, fields=None,
-                  query_params=None):
+                  query_params=None, request_params={}):
         """
         Get multiple typed JSON documents from ES.
 
@@ -509,12 +517,12 @@ class ElasticSearch(object):
             docs.append(doc)
 
         return self.send_request(
-            'GET', ['_mget'], {'docs': docs}, query_params=query_params)
+            'GET', ['_mget'], {'docs': docs}, query_params=query_params, request_params=request_params)
 
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
                'percolate', 'refresh', 'retry_on_conflict', 'fields')
     def update(self, index, doc_type, id, script=None, params=None, lang=None,
-               query_params=None, doc=None, upsert=None):
+               query_params=None, doc=None, upsert=None, request_params={}):
         """
         Update an existing document. Raise ``TypeError`` if ``script``, ``doc``
         and ``upsert`` are all unspecified.
@@ -549,10 +557,11 @@ class ElasticSearch(object):
             'POST',
             [index, doc_type, id, '_update'],
             body=body,
-            query_params=query_params)
+            query_params=query_params,
+            request_params=request_params)
 
     def _search_or_count(self, kind, query, index=None, doc_type=None,
-                         query_params=None):
+                         query_params=None, request_params={}):
         if isinstance(query, string_types):
             query_params['q'] = query
             body = ''
@@ -563,7 +572,8 @@ class ElasticSearch(object):
             'GET',
             [self._concat(index), self._concat(doc_type), kind],
             body,
-            query_params=query_params)
+            query_params=query_params,
+            request_params=request_params)
 
     @es_kwargs('routing', 'size')
     def search(self, query, **kwargs):
@@ -609,7 +619,7 @@ class ElasticSearch(object):
         return self._search_or_count('_count', query, **kwargs)
 
     @es_kwargs()
-    def get_mapping(self, index=None, doc_type=None, query_params=None):
+    def get_mapping(self, index=None, doc_type=None, query_params=None, request_params={}):
         """
         Fetch the mapping definition for a specific index and type.
 
@@ -628,10 +638,11 @@ class ElasticSearch(object):
         return self.send_request(
             'GET',
             [self._concat(index), self._concat(doc_type), '_mapping'],
-            query_params=query_params)
+            query_params=query_params,
+            request_params=request_params)
 
     @es_kwargs('ignore_conflicts')
-    def put_mapping(self, index, doc_type, mapping, query_params=None):
+    def put_mapping(self, index, doc_type, mapping, query_params=None, request_params={}):
         """
         Register specific mapping definition for a specific type against one or
         more indices.
@@ -654,7 +665,8 @@ class ElasticSearch(object):
             'PUT',
             [self._concat(index), doc_type, '_mapping'],
             mapping,
-            query_params=query_params)
+            query_params=query_params,
+            request_params=request_params)
 
     @es_kwargs('search_type', 'search_indices', 'search_types',
                'search_scroll', 'search_size', 'search_from',
@@ -662,7 +674,7 @@ class ElasticSearch(object):
                'max_query_terms', 'stop_words', 'min_doc_freq', 'max_doc_freq',
                'min_word_len', 'max_word_len', 'boost_terms', 'boost',
                'analyzer')
-    def more_like_this(self, index, doc_type, id, mlt_fields, body='', query_params=None):
+    def more_like_this(self, index, doc_type, id, mlt_fields, body='', query_params=None, request_params={}):
         """
         Execute a "more like this" search query against one or more fields and
         get back search hits.
@@ -684,12 +696,13 @@ class ElasticSearch(object):
         return self.send_request('GET',
                                  [index, doc_type, id, '_mlt'],
                                  body=body,
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     ## Index Admin API
 
     @es_kwargs('recovery', 'snapshot')
-    def status(self, index=None, query_params=None):
+    def status(self, index=None, query_params=None, request_params={}):
         """
         Retrieve the status of one or more indices
 
@@ -701,10 +714,11 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-status.html
         """
         return self.send_request('GET', [self._concat(index), '_status'],
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs()
-    def update_aliases(self, settings, query_params=None):
+    def update_aliases(self, settings, query_params=None, request_params={}):
         """
         Add, remove, or update aliases in bulk.
 
@@ -716,10 +730,10 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
         """
         return self.send_request('POST', ['_aliases'],
-                                 body=settings, query_params=query_params)
+                                 body=settings, query_params=query_params, request_params=request_params)
 
     @es_kwargs()
-    def aliases(self, index=None, query_params=None):
+    def aliases(self, index=None, query_params=None, request_params={}):
         """
         Retrieve a listing of aliases
 
@@ -731,10 +745,10 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
         """
         return self.send_request('GET', [self._concat(index), '_aliases'],
-                                 query_params=query_params)
+                                 query_params=query_params, request_params=request_params)
 
     @es_kwargs()
-    def create_index(self, index, settings=None, query_params=None):
+    def create_index(self, index, settings=None, query_params=None, request_params={}):
         """
         Create an index with optional settings.
 
@@ -750,10 +764,10 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-create-index.html
         """
         return self.send_request('PUT', [index], body=settings,
-                                 query_params=query_params)
+                                 query_params=query_params, request_params=request_params)
 
     @es_kwargs()
-    def delete_index(self, index, query_params=None):
+    def delete_index(self, index, query_params=None, request_params={}):
         """
         Delete an index.
 
@@ -771,14 +785,14 @@ class ElasticSearch(object):
             raise ValueError('No indexes specified. To delete all indexes, use'
                              ' delete_all_indexes().')
         return self.send_request('DELETE', [self._concat(index)],
-                                 query_params=query_params)
+                                 query_params=query_params, request_params=request_params)
 
     def delete_all_indexes(self, **kwargs):
         """Delete all indexes."""
         return self.delete_index('_all', **kwargs)
 
     @es_kwargs()
-    def close_index(self, index, query_params=None):
+    def close_index(self, index, query_params=None, request_params={}):
         """
         Close an index.
 
@@ -790,10 +804,11 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
         """
         return self.send_request('POST', [index, '_close'],
-                                 query_params=query_params)
+                                 query_params=query_params, 
+                                 request_params=request_params)
 
     @es_kwargs()
-    def open_index(self, index, query_params=None):
+    def open_index(self, index, query_params=None, request_params={}):
         """
         Open an index.
 
@@ -805,10 +820,11 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
         """
         return self.send_request('POST', [index, '_open'],
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs()
-    def get_settings(self, index, query_params=None):
+    def get_settings(self, index, query_params=None, request_params={}):
         """
         Get the settings of one or more indexes.
 
@@ -821,10 +837,11 @@ class ElasticSearch(object):
         """
         return self.send_request('GET',
                                  [self._concat(index), '_settings'],
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs()
-    def update_settings(self, index, settings, query_params=None):
+    def update_settings(self, index, settings, query_params=None, request_params={}):
         """
         Change the settings of one or more indexes.
 
@@ -844,10 +861,11 @@ class ElasticSearch(object):
         return self.send_request('PUT',
                                 [self._concat(index), '_settings'],
                                 body=settings,
-                                query_params=query_params)
+                                query_params=query_params,
+                                request_params=request_params)
 
     @es_kwargs()
-    def update_all_settings(self, settings, query_params=None):
+    def update_all_settings(self, settings, query_params=None, request_params={}):
         """
         Update the settings of all indexes.
 
@@ -859,10 +877,10 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-update-settings.html
         """
         return self.send_request('PUT', ['_settings'], body=settings,
-                                 query_params=query_params)
+                                 query_params=query_params, request_params=request_params)
 
     @es_kwargs('refresh')
-    def flush(self, index=None, query_params=None):
+    def flush(self, index=None, query_params=None, request_params={}):
         """
         Flush one or more indices (clear memory).
 
@@ -875,10 +893,11 @@ class ElasticSearch(object):
         """
         return self.send_request('POST',
                                  [self._concat(index), '_flush'],
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs()
-    def refresh(self, index=None, query_params=None):
+    def refresh(self, index=None, query_params=None, request_params={}):
         """
         Refresh one or more indices.
 
@@ -890,10 +909,11 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-refresh.html
         """
         return self.send_request('POST', [self._concat(index), '_refresh'],
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs()
-    def gateway_snapshot(self, index=None, query_params=None):
+    def gateway_snapshot(self, index=None, query_params=None, request_params={}):
         """
         Gateway snapshot one or more indices.
 
@@ -907,11 +927,12 @@ class ElasticSearch(object):
         return self.send_request(
             'POST',
             [self._concat(index), '_gateway', 'snapshot'],
-            query_params=query_params)
+            query_params=query_params,
+            request_params=request_params)
 
     @es_kwargs('max_num_segments', 'only_expunge_deletes', 'refresh', 'flush',
                'wait_for_merge')
-    def optimize(self, index=None, query_params=None):
+    def optimize(self, index=None, query_params=None, request_params={}):
         """
         Optimize one or more indices.
 
@@ -924,11 +945,12 @@ class ElasticSearch(object):
         """
         return self.send_request('POST',
                                  [self._concat(index), '_optimize'],
-                                 query_params=query_params)
+                                 query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs('level', 'wait_for_status', 'wait_for_relocating_shards',
                'wait_for_nodes', 'timeout')
-    def health(self, index=None, query_params=None):
+    def health(self, index=None, query_params=None, request_params={}):
         """
         Report on the health of the cluster or certain indices.
 
@@ -942,11 +964,11 @@ class ElasticSearch(object):
         return self.send_request(
             'GET',
             ['_cluster', 'health', self._concat(index)],
-            query_params=query_params)
+            query_params=query_params, request_params=request_params)
 
     @es_kwargs('filter_nodes', 'filter_routing_table', 'filter_metadata',
                'filter_blocks', 'filter_indices')
-    def cluster_state(self, query_params=None):
+    def cluster_state(self, query_params=None, request_params={}):
         """
         The cluster state API allows to get comprehensive state
         information of the whole cluster.
@@ -959,10 +981,10 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-cluster-state.html
         """
         return self.send_request(
-            'GET', ['_cluster', 'state'], query_params=query_params)
+            'GET', ['_cluster', 'state'], query_params=query_params, request_params=request_params)
 
     @es_kwargs()
-    def percolate(self, index, doc_type, doc, query_params=None):
+    def percolate(self, index, doc_type, doc, query_params=None, request_params={}):
         """
         Run a JSON document through the registered percolator queries, and
         return which ones match.
@@ -981,14 +1003,15 @@ class ElasticSearch(object):
         """
         return self.send_request('GET',
                                  [index, doc_type, '_percolate'], 
-                                 doc, query_params=query_params)
+                                 doc, query_params=query_params,
+                                 request_params=request_params)
 
     @es_kwargs()
-    def info(self, query_params=None):
+    def info(self, query_params=None, request_params={}):
         """
         Get Elasticsearch information.
         """
-        return self.send_request('GET', [])
+        return self.send_request('GET', [], request_params=request_params)
 
 
 class JsonEncoder(json.JSONEncoder):
