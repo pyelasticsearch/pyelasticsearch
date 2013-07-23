@@ -223,9 +223,9 @@ class ElasticSearch(object):
         request_body = self._encode_json(body) if encode_body else body
         req_method = getattr(self.session, method.lower())
 
-		if body:
-			request_params['data'] = request_body
-		
+        if body:
+           request_params['data'] = request_body
+
         # We do our own retrying rather than using urllib3's; we want to retry
         # a different node in the cluster if possible, not the same one again
         # (which may be down).
