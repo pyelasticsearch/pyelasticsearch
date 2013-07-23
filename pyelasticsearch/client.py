@@ -983,13 +983,6 @@ class ElasticSearch(object):
                                  [index, doc_type, '_percolate'], 
                                  doc, query_params=query_params)
 
-    @es_kwargs()
-    def info(self, query_params=None):
-        """
-        Get Elasticsearch information.
-        """
-        return self.send_request('GET', [])
-
 
 class JsonEncoder(json.JSONEncoder):
     def default(self, value):
