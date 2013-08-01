@@ -262,7 +262,7 @@ class ElasticSearch(object):
         error_class = ElasticHttpError
         if response.status_code == 404:
             error_class = ElasticHttpNotFoundError
-        elif error_message.startswith('IndexAlreadyExistsException'):
+        elif isinstance(error_message, string_types) and error_message.startswith('IndexAlreadyExistsException'):
             error_class = IndexAlreadyExistsError
 
         raise error_class(response.status_code, error_message)
@@ -354,7 +354,7 @@ class ElasticSearch(object):
             representing documents to index
         :arg id_field: The field of each document that holds its ID
         :arg parent_field: The field of each document that holds its parent ID,
-            if any. Removed from document before indexing. 
+            if any. Removed from document before indexing.
 
         See `ES's bulk API`_ for more detail.
 
@@ -980,7 +980,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/percolate/
         """
         return self.send_request('GET',
-                                 [index, doc_type, '_percolate'], 
+                                 [index, doc_type, '_percolate'],
                                  doc, query_params=query_params)
 
 
