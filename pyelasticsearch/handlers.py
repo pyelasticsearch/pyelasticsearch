@@ -68,7 +68,6 @@ class ThriftHandler(object):
         # transport.close()
 
     def request(self, method, uri, parameters=None, headers=None, body=None):
-        print uri
         res = pyesTtypes.RestRequest(pyesTtypes.Method._NAMES_TO_VALUES[method.upper()], uri, parameters, {}, body)
         response = self.client.execute(res)
         return json.loads(response.body), response.status
