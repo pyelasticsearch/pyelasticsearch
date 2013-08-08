@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from pyelasticsearch.client import ElasticSearch
+from pyelasticsearch.utils import obj_to_query, obj_to_utf8
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         InvalidJsonResponseError,
@@ -8,7 +9,7 @@ from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         IndexAlreadyExistsError)
 
 __author__ = 'Robert Eanes'
-__all__ = ['ElasticSearch', 'ElasticHttpError', 'InvalidJsonResponseError',
+__all__ = ['ElasticSearch', 'obj_to_query', 'obj_to_utf8', 'ElasticHttpError', 'InvalidJsonResponseError',
            'Timeout', 'ConnectionError', 'ElasticHttpNotFoundError',
            'IndexAlreadyExistsError']
 __version__ = '0.6'

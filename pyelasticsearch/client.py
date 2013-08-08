@@ -1,33 +1,21 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from datetime import datetime
+import re
 from operator import itemgetter
 from functools import wraps
 from logging import getLogger
-import re
-from six import (iterkeys, binary_type, text_type, string_types, integer_types,
-                 iteritems, PY3)
+from six import (iterkeys, string_types, PY3)
 from six.moves import xrange
-
-try:
-    # PY3
-    from urllib.parse import urlencode, quote_plus
-except ImportError:
-    # PY2
-    from urllib import urlencode, quote_plus
-
-import requests
 import simplejson as json  # for use_decimal
-from simplejson import JSONDecodeError
 
 from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
-                                        InvalidJsonResponseError,
                                         ElasticHttpNotFoundError,
                                         IndexAlreadyExistsError)
-
+from pyelasticsearch.handlers import RequestsHandler
+from pyelasticsearch.utils import (iso_datetime, concat, join_path)
 
 def _add_es_kwarg_docs(params, method):
     """
@@ -97,15 +85,6 @@ def es_kwargs(*args_to_convert):
         return decorate
     return decorator
 
-class RequestHandler(object):
-    def __init__(self, es):
-        self.es = es
-        self.session = requests.session()
-
-    def do(self, method, uri, parameters=None, headers=None, body=None, **kwargs):
-        req_method = getattr(self.session, method.lower())
-        extra = dict(kwargs, **({'data': body} if body else {}))
-        resp = req_method(uri, **extra)
 
 class ElasticSearch(object):
     """
@@ -134,66 +113,8 @@ class ElasticSearch(object):
         self.timeout = timeout
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
-        self.request_handler = RequestHandler(self)
+        self.request_handler = RequestsHandler(self, timeout=self.timeout)
         self.json_encoder = JsonEncoder
-
-    def _concat(self, items):
-        """
-        Return a comma-delimited concatenation of the elements of ``items``,
-        with any occurrences of "_all" omitted.
-
-        If ``items`` is a string, promote it to a 1-item list.
-        """
-        # TODO: Why strip out _all?
-        if items is None:
-            return ''
-        if isinstance(items, string_types):
-            items = [items]
-        return ','.join(i for i in items if i != '_all')
-
-    def _to_query(self, obj):
-        """
-        Convert a native-Python object to a unicode or bytestring
-        representation suitable for a query string.
-        """
-        # Quick and dirty thus far
-        if isinstance(obj, string_types):
-            return obj
-        if isinstance(obj, bool):
-            return 'true' if obj else 'false'
-        if isinstance(obj, integer_types):
-            return str(obj)
-        if isinstance(obj, float):
-            return repr(obj)  # str loses precision.
-        if isinstance(obj, (list, tuple)):
-            return ','.join(self._to_query(o) for o in obj)
-        iso = _iso_datetime(obj)
-        if iso:
-            return iso
-        raise TypeError("_to_query() doesn't know how to represent %r in an ES"
-                        ' query string.' % obj)
-
-    def _utf8(self, thing):
-        """Convert any arbitrary ``thing`` to a utf-8 bytestring."""
-        if isinstance(thing, binary_type):
-            return thing
-        if not isinstance(thing, text_type):
-            thing = text_type(thing)
-        return thing.encode('utf-8')
-
-    def _join_path(self, path_components):
-        """
-        Smush together the path components, omitting '' and None ones.
-
-        Unicodes get encoded to strings via utf-8. Incoming strings are assumed
-        to be utf-8-encoded already.
-        """
-        path = '/'.join(quote_plus(self._utf8(p), '') for p in path_components if
-                        p is not None and p != '')
-
-        if not path.startswith('/'):
-            path = '/' + path
-        return path
 
     def send_request(self,
                      method,
@@ -220,13 +141,7 @@ class ElasticSearch(object):
             ``None``
         :arg encode_body: Whether to encode the body of the request as JSON
         """
-        path = self._join_path(path_components)
-        if query_params:
-            path = '?'.join(
-                [path,
-                 urlencode(dict((k, self._utf8(self._to_query(v))) for k, v in
-                                iteritems(query_params)))])
-
+        path = join_path(path_components)
         request_body = self._encode_json(body) if encode_body else body
 
         # We do our own retrying rather than using urllib3's; we want to retry
@@ -242,9 +157,9 @@ class ElasticSearch(object):
                 method, url, request_body)
 
             try:
-                resp = handler.do(method,
+                prepped_response, status = handler.do(method,
                     url,
-                    timeout=self.timeout,
+                    parameters=query_params,
                     body=(request_body if body else None))
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
@@ -258,39 +173,30 @@ class ElasticSearch(object):
                     self.servers.mark_live(server_url)
                 break
 
-        self.logger.debug('response status: %s', resp.status_code)
-        prepped_response = self._decode_response(resp)
-        if resp.status_code >= 400:
-            self._raise_exception(resp, prepped_response)
+        self.logger.debug('response status: %s', status)
+        if status >= 400:
+            self._raise_exception(status, prepped_response)
         self.logger.debug('got response %s', prepped_response)
         return prepped_response
 
-    def _raise_exception(self, response, decoded_body):
+    def _raise_exception(self, status, decoded_body):
         """Raise an exception based on an error-indicating response from ES."""
         error_message = decoded_body.get('error', decoded_body)
 
         error_class = ElasticHttpError
-        if response.status_code == 404:
+        if status == 404:
             error_class = ElasticHttpNotFoundError
         elif (error_message.startswith('IndexAlreadyExistsException') or
               'nested: IndexAlreadyExistsException' in error_message):
             error_class = IndexAlreadyExistsError
 
-        raise error_class(response.status_code, error_message)
+        raise error_class(status, error_message)
 
     def _encode_json(self, value):
         """
         Convert a Python value to a form suitable for ElasticSearch's JSON DSL.
         """
         return json.dumps(value, cls=self.json_encoder, use_decimal=True)
-
-    def _decode_response(self, response):
-        """Return a native-Python representation of a response's JSON blob."""
-        try:
-            json_response = response.json()
-        except JSONDecodeError:
-            raise InvalidJsonResponseError(response)
-        return json_response
 
     ## REST API
 
@@ -463,7 +369,7 @@ class ElasticSearch(object):
             body = query
         return self.send_request(
             'DELETE',
-            [self._concat(index), self._concat(doc_type), '_query'],
+            [concat(index), concat(doc_type), '_query'],
             body,
             query_params=query_params)
 
@@ -572,7 +478,7 @@ class ElasticSearch(object):
 
         return self.send_request(
             'GET',
-            [self._concat(index), self._concat(doc_type), kind],
+            [concat(index), concat(doc_type), kind],
             body,
             query_params=query_params)
 
@@ -638,7 +544,7 @@ class ElasticSearch(object):
         # None, per the ES doc page.
         return self.send_request(
             'GET',
-            [self._concat(index), self._concat(doc_type), '_mapping'],
+            [concat(index), concat(doc_type), '_mapping'],
             query_params=query_params)
 
     @es_kwargs('ignore_conflicts')
@@ -663,7 +569,7 @@ class ElasticSearch(object):
         # "_all" to update all mappings.
         return self.send_request(
             'PUT',
-            [self._concat(index), doc_type, '_mapping'],
+            [concat(index), doc_type, '_mapping'],
             mapping,
             query_params=query_params)
 
@@ -691,7 +597,7 @@ class ElasticSearch(object):
         .. _`ES's more-like-this API`:
             http://www.elasticsearch.org/guide/reference/api/more-like-this.html
         """
-        query_params['mlt_fields'] = self._concat(mlt_fields)
+        query_params['mlt_fields'] = concat(mlt_fields)
         return self.send_request('GET',
                                  [index, doc_type, id, '_mlt'],
                                  body=body,
@@ -711,7 +617,7 @@ class ElasticSearch(object):
         .. _`ES's index-status API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-status.html
         """
-        return self.send_request('GET', [self._concat(index), '_status'],
+        return self.send_request('GET', [concat(index), '_status'],
                                  query_params=query_params)
 
     @es_kwargs()
@@ -741,7 +647,7 @@ class ElasticSearch(object):
         .. _`ES's admin-indices-aliases API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
         """
-        return self.send_request('GET', [self._concat(index), '_aliases'],
+        return self.send_request('GET', [concat(index), '_aliases'],
                                  query_params=query_params)
 
     @es_kwargs()
@@ -781,7 +687,7 @@ class ElasticSearch(object):
         if not index:
             raise ValueError('No indexes specified. To delete all indexes, use'
                              ' delete_all_indexes().')
-        return self.send_request('DELETE', [self._concat(index)],
+        return self.send_request('DELETE', [concat(index)],
                                  query_params=query_params)
 
     def delete_all_indexes(self, **kwargs):
@@ -831,7 +737,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-get-settings.html
         """
         return self.send_request('GET',
-                                 [self._concat(index), '_settings'],
+                                 [concat(index), '_settings'],
                                  query_params=query_params)
 
     @es_kwargs()
@@ -853,7 +759,7 @@ class ElasticSearch(object):
         # If we implement the "update cluster settings" API, call that
         # update_cluster_settings().
         return self.send_request('PUT',
-                                [self._concat(index), '_settings'],
+                                [concat(index), '_settings'],
                                 body=settings,
                                 query_params=query_params)
 
@@ -885,7 +791,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-flush.html
         """
         return self.send_request('POST',
-                                 [self._concat(index), '_flush'],
+                                 [concat(index), '_flush'],
                                  query_params=query_params)
 
     @es_kwargs()
@@ -900,7 +806,7 @@ class ElasticSearch(object):
         .. _`ES's refresh API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-refresh.html
         """
-        return self.send_request('POST', [self._concat(index), '_refresh'],
+        return self.send_request('POST', [concat(index), '_refresh'],
                                  query_params=query_params)
 
     @es_kwargs()
@@ -917,7 +823,7 @@ class ElasticSearch(object):
         """
         return self.send_request(
             'POST',
-            [self._concat(index), '_gateway', 'snapshot'],
+            [concat(index), '_gateway', 'snapshot'],
             query_params=query_params)
 
     @es_kwargs('max_num_segments', 'only_expunge_deletes', 'refresh', 'flush',
@@ -934,7 +840,7 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-optimize.html
         """
         return self.send_request('POST',
-                                 [self._concat(index), '_optimize'],
+                                 [concat(index), '_optimize'],
                                  query_params=query_params)
 
     @es_kwargs('level', 'wait_for_status', 'wait_for_relocating_shards',
@@ -952,7 +858,7 @@ class ElasticSearch(object):
         """
         return self.send_request(
             'GET',
-            ['_cluster', 'health', self._concat(index)],
+            ['_cluster', 'health', concat(index)],
             query_params=query_params)
 
     @es_kwargs('filter_nodes', 'filter_routing_table', 'filter_metadata',
@@ -998,7 +904,7 @@ class ElasticSearch(object):
 class JsonEncoder(json.JSONEncoder):
     def default(self, value):
         """Convert more Python data types to ES-understandable JSON."""
-        iso = _iso_datetime(value)
+        iso = iso_datetime(value)
         if iso:
             return iso
         if not PY3 and isinstance(value, str):
@@ -1007,15 +913,3 @@ class JsonEncoder(json.JSONEncoder):
             return list(value)
         return super(JsonEncoder, self).default(value)
 
-
-def _iso_datetime(value):
-    """
-    If value appears to be something datetime-like, return it in ISO format.
-
-    Otherwise, return None.
-    """
-    if hasattr(value, 'strftime'):
-        if hasattr(value, 'hour'):
-            return value.isoformat()
-        else:
-            return '%sT00:00:00' % value.isoformat()
