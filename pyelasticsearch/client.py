@@ -97,6 +97,15 @@ def es_kwargs(*args_to_convert):
         return decorate
     return decorator
 
+class RequestHandler(object):
+    def __init__(self, es):
+        self.es = es
+        self.session = requests.session()
+
+    def do(self, method, uri, parameters=None, headers=None, body=None, **kwargs):
+        req_method = getattr(self.session, method.lower())
+        extra = dict(kwargs, **({'data': body} if body else {}))
+        resp = req_method(uri, **extra)
 
 class ElasticSearch(object):
     """
@@ -125,7 +134,7 @@ class ElasticSearch(object):
         self.timeout = timeout
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
-        self.session = requests.session()
+        self.request_handler = RequestHandler(self)
         self.json_encoder = JsonEncoder
 
     def _concat(self, items):
@@ -219,11 +228,12 @@ class ElasticSearch(object):
                                 iteritems(query_params)))])
 
         request_body = self._encode_json(body) if encode_body else body
-        req_method = getattr(self.session, method.lower())
 
         # We do our own retrying rather than using urllib3's; we want to retry
         # a different node in the cluster if possible, not the same one again
         # (which may be down).
+        handler = self.request_handler
+
         for attempt in xrange(self.max_retries + 1):
             server_url, was_dead = self.servers.get()
             url = server_url + path
@@ -232,10 +242,10 @@ class ElasticSearch(object):
                 method, url, request_body)
 
             try:
-                resp = req_method(
+                resp = handler.do(method,
                     url,
                     timeout=self.timeout,
-                    **({'data': request_body} if body else {}))
+                    body=(request_body if body else None))
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
                 self.logger.info('%s marked as dead for %s seconds.',
