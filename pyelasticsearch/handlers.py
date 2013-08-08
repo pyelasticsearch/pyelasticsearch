@@ -44,7 +44,6 @@ class RequestsHandler(object):
         extra = {'data': body} if body else {}
         if parameters:
             uri = '%s?%s'%(
-                self.base,
                 uri,
                 urlencode(dict((k, obj_to_utf8(obj_to_query(v))) for k, v in
                                 iteritems(parameters)))
