@@ -14,7 +14,7 @@ from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         ElasticHttpNotFoundError,
                                         IndexAlreadyExistsError)
-from pyelasticsearch.handlers import RequestsHandler
+from pyelasticsearch.handlers import handler_from_url
 from pyelasticsearch.utils import (iso_datetime, concat, join_path)
 
 def _add_es_kwarg_docs(params, method):
@@ -108,12 +108,12 @@ class ElasticSearch(object):
         if isinstance(urls, string_types):
             urls = [urls]
         urls = [u.rstrip('/') for u in urls]
-        self.servers = DowntimePronePool(urls, revival_delay)
+        handlers = [handler_from_url(u, timeout=timeout) for u in urls]
+        self.servers = DowntimePronePool(handlers, revival_delay)
         self.revival_delay = revival_delay
         self.timeout = timeout
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
-        self.request_handler = RequestsHandler(self, timeout=self.timeout)
         self.json_encoder = JsonEncoder
 
     def send_request(self,
@@ -147,30 +147,27 @@ class ElasticSearch(object):
         # We do our own retrying rather than using urllib3's; we want to retry
         # a different node in the cluster if possible, not the same one again
         # (which may be down).
-        handler = self.request_handler
-
         for attempt in xrange(self.max_retries + 1):
-            server_url, was_dead = self.servers.get()
-            url = server_url + path
+            server, was_dead = self.servers.get()
             self.logger.debug(
                 "Making a request equivalent to this: curl -X%s '%s' -d '%s'",
-                method, url, request_body)
+                method, path, request_body)
 
             try:
-                prepped_response, status = handler.do(method,
-                    url,
+                prepped_response, status = server.do(method,
+                    path,
                     parameters=query_params,
                     body=(request_body if body else None))
             except (ConnectionError, Timeout):
-                self.servers.mark_dead(server_url)
+                self.servers.mark_dead(server)
                 self.logger.info('%s marked as dead for %s seconds.',
-                                 server_url,
+                                 server,
                                  self.revival_delay)
                 if attempt >= self.max_retries:
                     raise
             else:
                 if was_dead:
-                    self.servers.mark_live(server_url)
+                    self.servers.mark_live(server)
                 break
 
         self.logger.debug('response status: %s', status)
