@@ -154,7 +154,7 @@ class ElasticSearch(object):
                 method, path, request_body)
 
             try:
-                prepped_response, status = server.do(method,
+                prepped_response, status = server.request(method,
                     path,
                     parameters=query_params,
                     body=(request_body if body else None))

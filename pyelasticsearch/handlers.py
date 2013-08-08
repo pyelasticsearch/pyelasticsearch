@@ -30,7 +30,7 @@ class RequestsHandler(object):
             raise InvalidJsonResponseError(response)
         return json_response
 
-    def do(self, method, uri, parameters=None, headers=None, body=None):
+    def request(self, method, uri, parameters=None, headers=None, body=None):
         req_method = getattr(self.session, method.lower())
         extra = {'data': body} if body else {}
         if parameters:
