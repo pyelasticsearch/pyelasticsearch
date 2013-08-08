@@ -9,6 +9,7 @@ import six
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
+from pyelasticsearch.utils import join_path
 from pyelasticsearch.tests import ElasticSearchTestCase
 
 
@@ -234,12 +235,13 @@ class IndexingTestCase(ElasticSearchTestCase):
     def test_error_handling(self):
         # Wrong port.
         conn = ElasticSearch('http://localhost:1009200/')
+        server, _ = conn.servers.get()
         assert_raises(ConnectionError, conn.count, '*:*')
 
         # Test invalid JSON.
         resp = requests.Response()
         resp._content = six.b('{"busted" "json" "that": ["is] " wrong')
-        assert_raises(InvalidJsonResponseError, conn._decode_response, resp)
+        assert_raises(InvalidJsonResponseError, server._decode_response, resp)
 
     def test_update(self):
         """Smoke-test the ``update()`` API."""
@@ -290,18 +292,18 @@ class IndexingTestCase(ElasticSearchTestCase):
         eq_(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
 
     def test_empty_path_segments(self):
-        """'' segments passed to ``_join_path`` should be omitted."""
+        """'' segments passed to ``join_path`` should be omitted."""
         # Call _join_path like get_mapping might if called with no params:
-        eq_(self.conn._join_path(['', '', '_mapping']),
+        eq_(join_path(['', '', '_mapping']),
                          '/_mapping')
 
     def test_0_path_segments(self):
         """
-        ``0`` segments passed to ``_join_path`` should be included.
+        ``0`` segments passed to ``join_path`` should be included.
 
         This is so doc IDs that are 0 work.
         """
-        eq_(self.conn._join_path([0, '_mapping']),
+        eq_(join_path([0, '_mapping']),
                          '/0/_mapping')
 
     def test_percolate(self):
