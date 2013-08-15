@@ -326,8 +326,10 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         # Percolate a document that shouldn't match any queries
         document = { 'doc': {'name': 'blah'} }
-        result = self.conn.percolate('test-index','test-type', document)
+        result = self.conn.percolate('test-index', 'test-type', document)
         self.assert_result_contains(result, {'matches': [], 'ok': True})
+
+        self.conn.delete_index('_percolator')
 
 
 class SearchTestCase(ElasticSearchTestCase):
