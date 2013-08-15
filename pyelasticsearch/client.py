@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from datetime import datetime
 from operator import itemgetter
 from functools import wraps
 from logging import getLogger
@@ -355,7 +354,7 @@ class ElasticSearch(object):
             representing documents to index
         :arg id_field: The field of each document that holds its ID
         :arg parent_field: The field of each document that holds its parent ID,
-            if any. Removed from document before indexing. 
+            if any. Removed from document before indexing.
 
         See `ES's bulk API`_ for more detail.
 
@@ -981,8 +980,25 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/percolate/
         """
         return self.send_request('GET',
-                                 [index, doc_type, '_percolate'], 
+                                 [index, doc_type, '_percolate'],
                                  doc, query_params=query_params)
+
+    def suggest(self, index, query, query_params=None):
+        """
+        Performs a completion suggester query.
+
+        :arg index: The name of the index in which to search
+        :arg query: A dictionary that will convert to ES's query DSL for the
+            completion suggester API
+
+        See `ES's completion suggester API`_ for more detail.
+
+        .. _`ES's completion suggester API`:
+            http://www.elasticsearch.org/guide/reference/api/search/completion-suggest/
+        """
+        return self.send_request('GET',
+                                 [index, '_suggest'],
+                                 query, query_params=query_params)
 
 
 class JsonEncoder(json.JSONEncoder):

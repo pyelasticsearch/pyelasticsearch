@@ -1,7 +1,4 @@
 # coding=utf-8
-import sys
-import unittest
-
 from mock import patch
 from nose.tools import eq_, ok_, assert_raises, assert_not_equal
 import requests
@@ -321,12 +318,12 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         # Percolate a document that should match query ID 1:
         document = {'doc': {'name': 'Joe'}}
-        result = self.conn.percolate('test-index','test-type', document)
+        result = self.conn.percolate('test-index', 'test-type', document)
         self.assert_result_contains(result, {'matches': ['id_1'], 'ok': True})
 
         # Percolate a document that shouldn't match any queries
-        document = { 'doc': {'name': 'blah'} }
-        result = self.conn.percolate('test-index','test-type', document)
+        document = {'doc': {'name': 'blah'}}
+        result = self.conn.percolate('test-index', 'test-type', document)
         self.assert_result_contains(result, {'matches': [], 'ok': True})
 
 
@@ -433,6 +430,44 @@ class SearchTestCase(ElasticSearchTestCase):
         result = self.conn.more_like_this('test-index', 'test-type', 3, ['sport'], min_term_freq=1, min_doc_freq=1)
         self.assert_result_contains(result,
                 {u'hits': {u'hits': [{u'_score': 0.30685282, u'_type': u'test-type', u'_id': u'4', u'_source': {u'sport': u'football', u'name': u'Cam'}, u'_index': u'test-index'}], u'total': 1, u'max_score': 0.30685282}})
+
+
+class SuggesterTestCase(ElasticSearchTestCase):
+    def setUp(self):
+        super(SuggesterTestCase, self).setUp()
+        self.conn.create_index('test-index')
+        self.conn.put_mapping('test-index', 'test-type', {
+            'test-type': {
+                'properties': {
+                    'name': {'type': 'string'},
+                    'suggest': {'type': 'completion',
+                                'payloads': True}
+                }
+            }
+        })
+        self.conn.index('test-index', 'test-type', {
+            'name': 'Nevermind',
+            'suggest': {
+                'input': ['Nevermind', 'Nirvana'],
+                'output': 'Nirvana - Nevermind',
+                'payload': {'artistId': 2321},
+                'weight': 34,
+            }
+        }, id=1)
+        self.conn.refresh(['test-index'])
+
+    def test_suggest(self):
+        result = self.conn.suggest('test-index', {
+            'song-suggest': {
+                'text': 'n',
+                'completion': {'field': 'suggest'}
+            }
+        })
+        self.assert_result_contains(
+            result,
+            {u'song-suggest': [{u'text': u'n', u'length': 4, u'options': [
+                {u'text': u'Nirvana - Nevermind', u'score': 34.0,
+                 u'payload': {u'artistId': 2321}}], u'offset': 0}]})
 
 
 class DangerousOperationTests(ElasticSearchTestCase):
