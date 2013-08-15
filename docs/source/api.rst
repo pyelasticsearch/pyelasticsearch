@@ -82,6 +82,8 @@ so it'll be hard to miss.
 
     .. automethod:: status(index=None[, other kwargs listed below])
 
+    .. automethod:: suggest(index, query[, other kwargs listed below])
+
     .. automethod:: update(index, doc_type, id, script[, other kwargs listed below])
 
     .. automethod:: update_aliases(settings[, other kwargs listed below])
