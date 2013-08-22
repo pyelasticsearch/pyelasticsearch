@@ -369,7 +369,7 @@ class ElasticSearch(object):
             raise ValueError('No documents provided for bulk indexing!')
 
         for doc in docs:
-            doc_type = doc.get(type_field) or doc_type
+            doc_type = doc.pop(type_field, None) or doc_type
             action = {'index': {'_index': index, '_type': doc_type}}
 
             if doc.get(id_field) is not None:
