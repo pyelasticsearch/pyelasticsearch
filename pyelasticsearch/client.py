@@ -345,7 +345,8 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   parent_field='_parent', query_params=None):
+                   parent_field='_parent', query_params=None,
+                   type_field=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -368,6 +369,7 @@ class ElasticSearch(object):
             raise ValueError('No documents provided for bulk indexing!')
 
         for doc in docs:
+            doc_type = doc.get(type_field) or doc_type
             action = {'index': {'_index': index, '_type': doc_type}}
 
             if doc.get(id_field) is not None:

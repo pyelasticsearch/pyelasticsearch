@@ -220,13 +220,16 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         docs = [
             {'name': 'Joe Tester'},
-            {'name': 'Bill Baloney', 'id': 303},
+            {'name': 'Bill Baloney', 'id': 303, '_type': 'another-type'},
         ]
-        result = self.conn.bulk_index('test-index', 'test-type', docs)
+        result = self.conn.bulk_index('test-index', 'test-type', docs,
+                                      type_field='_type')
         eq_(len(result['items']), 2)
         eq_(result['items'][0]['create']['ok'], True)
+        eq_(result['items'][0]['create']['_type'], 'test-type')
         eq_(result['items'][1]['index']['ok'], True)
         eq_(result['items'][1]['index']['_id'], '303')
+        eq_(result['items'][1]['index']['_type'], 'another-type')
         self.conn.refresh()
         eq_(self.conn.count('*:*',
                                          index=['test-index'])['count'], 2)
