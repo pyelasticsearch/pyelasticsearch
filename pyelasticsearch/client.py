@@ -356,7 +356,9 @@ class ElasticSearch(object):
             representing documents to index
         :arg id_field: The field of each document that holds its ID
         :arg parent_field: The field of each document that holds its parent ID,
-            if any. Removed from document before indexing. 
+            if any. Removed from document before indexing.
+        :arg type_field: The field of each document that holds its doc type.
+            Overrides doc_type argument, if field is present in document
 
         See `ES's bulk API`_ for more detail.
 
