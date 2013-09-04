@@ -566,7 +566,7 @@ class ElasticSearch(object):
             body,
             query_params=query_params)
 
-    @es_kwargs('routing', 'size')
+    @es_kwargs('routing', 'size', 'ignore_indices')
     def search(self, query, **kwargs):
         """
         Execute a search query against one or more indices and get back search
@@ -581,6 +581,9 @@ class ElasticSearch(object):
             search all.
         :arg size: Limit the number of results to ``size``. Use with ``es_from`` to
             implement paginated searching.
+        :arg ignore_indices: Ensures that indices that do not exists will be ignored. By default
+            when ths is not set requests will fail. Also note, if none of the given indices exist
+            the request will also fail.
 
         See `ES's search API`_ for more detail.
 
