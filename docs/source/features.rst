@@ -63,7 +63,7 @@ Ints, longs, and floats
     Converted to strings via ``str()``
 
 Lists and tuples
-    Joined with commas, e.g. ``['one-index', two-index']`` becomes
+    Joined with commas, e.g. ``['one-index', 'two-index']`` becomes
     ``one-index,two-index``
 
 Datetimes and dates
