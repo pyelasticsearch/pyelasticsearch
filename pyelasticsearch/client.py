@@ -515,7 +515,7 @@ class ElasticSearch(object):
     @es_kwargs('routing', 'parent', 'timeout', 'replication', 'consistency',
                'percolate', 'refresh', 'retry_on_conflict', 'fields')
     def update(self, index, doc_type, id, script=None, params=None, lang=None,
-               query_params=None, doc=None, upsert=None):
+               query_params=None, doc=None, upsert=None, doc_as_upsert=None):
         """
         Update an existing document. Raise ``TypeError`` if ``script``, ``doc``
         and ``upsert`` are all unspecified.
@@ -530,6 +530,8 @@ class ElasticSearch(object):
         :arg doc: A partial document to be merged into the existing document
         :arg upsert: The content for the new document created if the document
             does not exist
+        :arg doc_as_upsert: The provided document will be inserted if the 
+            document does not already exist
         """
         if script is None and doc is None and upsert is None:
             raise TypeError('At least one of the script, doc, or upsert '
@@ -546,6 +548,8 @@ class ElasticSearch(object):
             body['upsert'] = upsert
         if params:
             body['params'] = params
+        if doc_as_upsert:
+            body['doc_as_upsert'] = doc_as_upsert
         return self.send_request(
             'POST',
             [index, doc_type, id, '_update'],
