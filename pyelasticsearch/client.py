@@ -555,7 +555,7 @@ class ElasticSearch(object):
     @es_kwargs('consistency', 'refresh')
     def bulk_update(self, index, doc_type, docs, id_field='id',
                    parent_field='_parent', retry_on_conflict=None,
-                   query_params=None):
+                   query_params=None, upsert=False):
         """
         Update a list of documents as efficiently as possible.
 
@@ -591,8 +591,13 @@ class ElasticSearch(object):
             if retry_on_conflict is not None:
                 action['update']['_retry_on_conflict'] = retry_on_conflict
 
+            payload = {'doc': doc}
+            
+            if upsert:
+                payload['doc_as_upsert'] = True
+            
             body_bits.append(self._encode_json(action))
-            body_bits.append(self._encode_json(doc))
+            body_bits.append(self._encode_json(payload))
 
         # Need the trailing newline.
         body = '\n'.join(body_bits) + '\n'
