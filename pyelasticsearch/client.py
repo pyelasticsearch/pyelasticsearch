@@ -552,6 +552,56 @@ class ElasticSearch(object):
             body=body,
             query_params=query_params)
 
+    @es_kwargs('consistency', 'refresh')
+    def bulk_update(self, index, doc_type, docs, id_field='id',
+                   parent_field='_parent', retry_on_conflict=None,
+                   query_params=None):
+        """
+        Update a list of documents as efficiently as possible.
+
+        :arg index: The name of the index where the document is stored
+        :arg doc_type: The type of the document
+        :arg docs: An iterable of Python mapping objects, convertible to JSON,
+            representing documents to update
+        :arg id_field: The field of each document that holds its ID
+        :arg parent_field: The field of each document that holds its parent ID,
+            if any. Removed from document before indexing.
+        :arg retry_on_conflict: Used to spsecify how many times an update
+            should be retried in the case of a version conflict.
+
+        See `ES's bulk API`_ for more detail.
+
+        .. _`ES's bulk API`:
+            http://www.elasticsearch.org/guide/reference/api/bulk.html
+        """
+        body_bits = []
+
+        if not docs:
+            raise ValueError('No documents provided for bulk updating!')
+
+        for doc in docs:
+            action = {'update': {'_index': index, '_type': doc_type}}
+
+            if doc.get(id_field) is not None:
+                action['update']['_id'] = doc[id_field]
+
+            if doc.get(parent_field) is not None:
+                action['update']['_parent'] = doc.pop(parent_field)
+
+            if retry_on_conflict is not None:
+                action['update']['_retry_on_conflict'] = retry_on_conflict
+
+            body_bits.append(self._encode_json(action))
+            body_bits.append(self._encode_json(doc))
+
+        # Need the trailing newline.
+        body = '\n'.join(body_bits) + '\n'
+        return self.send_request('POST',
+                                 ['_bulk'],
+                                 body,
+                                 encode_body=False,
+                                 query_params=query_params)
+
     def _search_or_count(self, kind, query, index=None, doc_type=None,
                          query_params=None):
         if isinstance(query, string_types):
