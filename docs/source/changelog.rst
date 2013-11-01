@@ -1,6 +1,16 @@
 Changelog
 =========
 
+v0.6.1 (2013-11-01)
+-------------------
+
+* Update package requirements to allow requests 2.0, which is in fact
+  compatible. (Natim)
+* Properly raise ``IndexAlreadyExistsException`` even if the error is reported
+  by a node other than the one to which the client is directly connected.
+  (Jannis Leidel)
+
+
 v0.6 (2013-07-23)
 -----------------
 
