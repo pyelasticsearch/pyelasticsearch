@@ -373,6 +373,27 @@ class SearchTestCase(ElasticSearchTestCase):
             '',
             query_params={'q': '*:*', 'from': 1, 'size': 1})
 
+    def test_timeout(self):
+        '''
+        Tests that the timeout gets properly passed to ElasticSearch
+        and that ElasticSearch gets a chance to give its 'best-effort' answer
+        '''
+        with patch.object(self.conn, 'timeout', 1):
+            query = {
+                'query': {
+                    'custom_score': {
+                        'query': {
+                            'match': {
+                                'name': 'joe'
+                            }
+                        },
+                        'script': 'Thread.sleep(1100); return _score;'
+                    }
+                }
+            }
+            result = self.conn.search(query, index='test-index', doc_type='test-type')
+            self.assert_result_contains(result, {'hits': {'hits': [{'_score': 0.19178301, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': 0.19178301}})
+
     def test_search_by_dsl(self):
         self.conn.index('test-index', 'test-type', {'name': 'AgeJoe Tester', 'age': 25}, id=1)
         self.conn.index('test-index', 'test-type', {'name': 'AgeBill Baloney', 'age': 35}, id=2)

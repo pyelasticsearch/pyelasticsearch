@@ -190,7 +190,7 @@ class ElasticSearch(object):
                      method,
                      path_components,
                      body='',
-                     query_params=None,
+                     query_params={},
                      encode_body=True):
         """
         Send an HTTP request to ES, and return the JSON-decoded response.
@@ -212,11 +212,12 @@ class ElasticSearch(object):
         :arg encode_body: Whether to encode the body of the request as JSON
         """
         path = self._join_path(path_components)
-        if query_params:
-            path = '?'.join(
-                [path,
-                 urlencode(dict((k, self._utf8(self._to_query(v))) for k, v in
-                                iteritems(query_params)))])
+        # ElasticSearch expects the timeout in ms
+        query_params['timeout'] = int(self.timeout * 1000)
+        path = '?'.join(
+            [path,
+             urlencode(dict((k, self._utf8(self._to_query(v))) for k, v in
+                            iteritems(query_params)))])
 
         request_body = self._encode_json(body) if encode_body else body
         req_method = getattr(self.session, method.lower())
@@ -234,7 +235,8 @@ class ElasticSearch(object):
             try:
                 resp = req_method(
                     url,
-                    timeout=self.timeout,
+                    # double the timeout: ES knows how to timeout by itself
+                    timeout=2*self.timeout,
                     **({'data': request_body} if body else {}))
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
