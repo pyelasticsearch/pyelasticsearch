@@ -345,7 +345,7 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   parent_field='_parent', query_params=None):
+                   parent_field='_parent', routing_field='_routing', query_params=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -375,6 +375,9 @@ class ElasticSearch(object):
 
             if doc.get(parent_field) is not None:
                 action['index']['_parent'] = doc.pop(parent_field)
+
+            if doc.get(routing_field) is not None:
+                action['index']['_routing'] = doc.pop(routing_field)
 
             body_bits.append(self._encode_json(action))
             body_bits.append(self._encode_json(doc))
