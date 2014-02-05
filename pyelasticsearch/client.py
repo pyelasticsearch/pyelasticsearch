@@ -345,7 +345,8 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   parent_field='_parent', query_params=None):
+                   parent_field='_parent', query_params=None,
+                   type_field=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -355,7 +356,9 @@ class ElasticSearch(object):
             representing documents to index
         :arg id_field: The field of each document that holds its ID
         :arg parent_field: The field of each document that holds its parent ID,
-            if any. Removed from document before indexing. 
+            if any. Removed from document before indexing.
+        :arg type_field: The field of each document that holds its doc type.
+            Overrides doc_type argument, if field is present in document
 
         See `ES's bulk API`_ for more detail.
 
@@ -368,6 +371,7 @@ class ElasticSearch(object):
             raise ValueError('No documents provided for bulk indexing!')
 
         for doc in docs:
+            doc_type = doc.pop(type_field, None) or doc_type
             action = {'index': {'_index': index, '_type': doc_type}}
 
             if doc.get(id_field) is not None:
