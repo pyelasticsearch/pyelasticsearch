@@ -972,7 +972,7 @@ class ElasticSearch(object):
             belong
         :arg doc_type: The type the document should be treated as if it has
         :arg doc: A Python mapping object, convertible to JSON, representing
-            the document
+            the document or a string representing the ID of an existing document
 
         Use :meth:`index()` to register percolators. See `ES's percolate API`_
         for more detail.
@@ -980,9 +980,14 @@ class ElasticSearch(object):
         .. _`ES's percolate API`:
             http://www.elasticsearch.org/guide/reference/api/percolate/
         """
-        return self.send_request('GET',
-                                 [index, doc_type, '_percolate'], 
-                                 doc, query_params=query_params)
+        path_components = [index, doc_type, '_percolate']
+
+        if isinstance(doc, basestring):
+            # Treat the doc as an existing ID
+            path_components.insert(2, doc)
+            doc = ""
+
+        return self.send_request('GET', path_components, doc, query_params=query_params)
 
 
 class JsonEncoder(json.JSONEncoder):
