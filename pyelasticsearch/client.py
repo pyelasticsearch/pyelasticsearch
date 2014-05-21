@@ -18,8 +18,8 @@ except ImportError:
     from urllib import urlencode, quote_plus
 
 import requests
-import simplejson as json  # for use_decimal
-from simplejson import JSONDecodeError
+import json
+from json import JSONDecodeError
 
 from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,

@@ -1,6 +1,12 @@
 Changelog
 =========
 
+v0.6.2 (not released yet)
+-------------------------
+
+* Remove dependency on simplejson.
+
+
 v0.6.1 (2013-11-01)
 -------------------
 
