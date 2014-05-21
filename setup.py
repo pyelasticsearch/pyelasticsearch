@@ -56,11 +56,9 @@ setup(
     requires=[  # Needed?
         'six',
         'requests(>=1.0,<3.0)',
-        'simplejson(>=2.1.0)',
     ],
     install_requires=[
         'requests>=1.0,<3.0',
-        'simplejson>=2.1.0',
         'six'
     ],
     tests_require=['mock', 'nose>=1.2.1'],
