@@ -1,4 +1,4 @@
-from requests import Timeout, ConnectionError
+from urllib3.exceptions import TimeoutError as Timeout, ConnectionError
 
 
 class ElasticHttpError(Exception):

@@ -17,9 +17,9 @@ except ImportError:
     # PY2
     from urllib import urlencode, quote_plus
 
-import requests
 import simplejson as json  # for use_decimal
 from simplejson import JSONDecodeError
+from urllib3 import PoolManager
 
 from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
@@ -122,10 +122,9 @@ class ElasticSearch(object):
         urls = [u.rstrip('/') for u in urls]
         self.servers = DowntimePronePool(urls, revival_delay)
         self.revival_delay = revival_delay
-        self.timeout = timeout
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
-        self.session = requests.session()
+        self.pool_manager = PoolManager(timeout=timeout)
         self.json_encoder = JsonEncoder
 
     def _concat(self, items):
@@ -206,7 +205,7 @@ class ElasticSearch(object):
         :arg method: An HTTP method, like "GET"
         :arg path_components: An iterable of path components, to be joined by
             "/"
-        :arg body: The request body
+        :arg body: A map of key/value pairs to be sent as the request body
         :arg query_params: A map of querystring param names to values or
             ``None``
         :arg encode_body: Whether to encode the body of the request as JSON
@@ -219,7 +218,6 @@ class ElasticSearch(object):
                                 iteritems(query_params)))])
 
         request_body = self._encode_json(body) if encode_body else body
-        req_method = getattr(self.session, method.lower())
 
         # We do our own retrying rather than using urllib3's; we want to retry
         # a different node in the cluster if possible, not the same one again
@@ -232,10 +230,15 @@ class ElasticSearch(object):
                 method, url, request_body)
 
             try:
-                resp = req_method(
-                    url,
-                    timeout=self.timeout,
-                    **({'data': request_body} if body else {}))
+                if method == 'GET' and not body:
+                    response = self.pool_manager.urlopen(
+                        method,
+                        url)
+                else:
+                    response = self.pool_manager.urlopen(
+                        method,
+                        url,
+                        body=request_body)
             except (ConnectionError, Timeout):
                 self.servers.mark_dead(server_url)
                 self.logger.info('%s marked as dead for %s seconds.',
@@ -248,10 +251,10 @@ class ElasticSearch(object):
                     self.servers.mark_live(server_url)
                 break
 
-        self.logger.debug('response status: %s', resp.status_code)
-        prepped_response = self._decode_response(resp)
-        if resp.status_code >= 400:
-            self._raise_exception(resp, prepped_response)
+        self.logger.debug('response status: %s', response.status)
+        prepped_response = self._decode_response(response)
+        if response.status >= 400:
+            self._raise_exception(response, prepped_response)
         self.logger.debug('got response %s', prepped_response)
         return prepped_response
 
@@ -260,13 +263,13 @@ class ElasticSearch(object):
         error_message = decoded_body.get('error', decoded_body)
 
         error_class = ElasticHttpError
-        if response.status_code == 404:
+        if response.status == 404:
             error_class = ElasticHttpNotFoundError
         elif (error_message.startswith('IndexAlreadyExistsException') or
               'nested: IndexAlreadyExistsException' in error_message):
             error_class = IndexAlreadyExistsError
 
-        raise error_class(response.status_code, error_message)
+        raise error_class(response.status, error_message)
 
     def _encode_json(self, value):
         """
@@ -277,7 +280,7 @@ class ElasticSearch(object):
     def _decode_response(self, response):
         """Return a native-Python representation of a response's JSON blob."""
         try:
-            json_response = response.json()
+            json_response = json.loads(response.data.decode('utf-8'))
         except JSONDecodeError:
             raise InvalidJsonResponseError(response)
         return json_response

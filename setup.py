@@ -55,11 +55,11 @@ setup(
     ],
     requires=[  # Needed?
         'six',
-        'requests(>=1.0,<3.0)',
+        'urllib3(>=1.8)',
         'simplejson(>=2.1.0)',
     ],
     install_requires=[
-        'requests>=1.0,<3.0',
+        'urllib3>=1.8',
         'simplejson>=2.1.0',
         'six'
     ],
