@@ -19,7 +19,7 @@ except ImportError:
 
 import simplejson as json  # for use_decimal
 from simplejson import JSONDecodeError
-from urllib3 import PoolManager
+from urllib3 import HTTPConnectionPool
 
 from pyelasticsearch.downtime import DowntimePronePool
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
@@ -124,7 +124,7 @@ class ElasticSearch(object):
         self.revival_delay = revival_delay
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
-        self.pool_manager = PoolManager(timeout=timeout)
+        self.pool = HTTPConnectionPool('10.0.2.2', port=9200, timeout=timeout)  # XXX
         self.json_encoder = JsonEncoder
 
     def _concat(self, items):
@@ -231,11 +231,11 @@ class ElasticSearch(object):
 
             try:
                 if method == 'GET' and not body:
-                    response = self.pool_manager.urlopen(
+                    response = self.pool.urlopen(
                         method,
                         url)
                 else:
-                    response = self.pool_manager.urlopen(
+                    response = self.pool.urlopen(
                         method,
                         url,
                         body=request_body)
