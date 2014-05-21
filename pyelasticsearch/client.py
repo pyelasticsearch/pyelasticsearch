@@ -17,6 +17,7 @@ except ImportError:
     # PY2
     from urllib import urlencode, quote_plus
 
+from elasticsearch.transport import Transport
 import simplejson as json  # for use_decimal
 from simplejson import JSONDecodeError
 from urllib3 import HTTPConnectionPool
@@ -124,7 +125,8 @@ class ElasticSearch(object):
         self.revival_delay = revival_delay
         self.max_retries = max_retries
         self.logger = getLogger('pyelasticsearch')
-        self.pool = HTTPConnectionPool('10.0.2.2', port=9200, timeout=timeout)  # XXX
+        self.transport = Transport([{'host': '10.0.2.2', 'port': 9200}],
+                                   timeout=timeout)  # XXX
         self.json_encoder = JsonEncoder
 
     def _concat(self, items):
@@ -211,6 +213,20 @@ class ElasticSearch(object):
         :arg encode_body: Whether to encode the body of the request as JSON
         """
         path = self._join_path(path_components)
+
+        status, prepped_response = self.transport.perform_request(
+            method,
+            path,
+            params=query_params,
+            body=body)
+
+        self.logger.debug('response status: %s', status)
+        if status >= 400:
+            self._raise_exception(response, prepped_response)
+        self.logger.debug('got response %s', prepped_response)
+        return prepped_response
+
+
         if query_params:
             path = '?'.join(
                 [path,
