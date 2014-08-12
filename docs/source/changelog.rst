@@ -1,6 +1,12 @@
 Changelog
 =========
 
+v0.7.1 (2014-08-12)
+-------------------
+
+* Brings tests up to date with ``update_aliases()`` API change.
+
+
 v0.7 (2014-08-12)
 -----------------
 
