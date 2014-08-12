@@ -4,6 +4,8 @@ Changelog
 v0.7 (2014-08-12)
 -----------------
 
+* When an ``id_field`` is specified for ``bulk_index()``, don't index it under
+  its original name as well; use it only as the ``_id``.
 * Rename ``aliases()`` to ``get_aliases()`` for consistency with other
   methods. Original name still works but is deprecated. Add an ``alias`` kwarg
   to the method so you can fetch specific aliases.
