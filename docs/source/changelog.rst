@@ -7,6 +7,15 @@ v0.7 (2014-08-12)
 * Rename ``aliases()`` to ``get_aliases()`` for consistency with other
   methods. Original name still works but is deprecated. Add an ``alias`` kwarg
   to the method so you can fetch specific aliases.
+
+.. warning::
+
+  Backward incompatible:
+
+  * ``update_aliases()`` no longer requires a dict with an ``actions`` key;
+    that much is implied. Just pass the value of that key.
+
+
 v0.6.1 (2013-11-01)
 -------------------
 

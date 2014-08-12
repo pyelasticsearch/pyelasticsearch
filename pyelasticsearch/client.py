@@ -706,11 +706,11 @@ class ElasticSearch(object):
                                  query_params=query_params)
 
     @es_kwargs()
-    def update_aliases(self, settings, query_params=None):
+    def update_aliases(self, actions, query_params=None):
         """
-        Add, remove, or update aliases in bulk.
+        Atomically add, remove, or update aliases in bulk.
 
-        :arg settings: a dictionary specifying the actions to perform
+        :arg actions: A list of the actions to perform
 
         See `ES's admin-indices-aliases API`_.
 
@@ -718,7 +718,8 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
         """
         return self.send_request('POST', ['_aliases'],
-                                 body=settings, query_params=query_params)
+                                 body={'actions': actions},
+                                 query_params=query_params)
 
     @es_kwargs('ignore_unavailable')
     def get_aliases(self, index=None, alias='*', query_params=None):
