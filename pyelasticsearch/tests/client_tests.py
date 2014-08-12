@@ -260,32 +260,20 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def test_alias_index(self):
         self.conn.create_index('test-index')
-        settings = {
-            "actions": [
-                {"add": {"index": "test-index", "alias": "test-alias"}}
-            ]
-        }
-        result = self.conn.update_aliases(settings)
+        actions = [{"add": {"index": "test-index", "alias": "test-alias"}}]
+        result = self.conn.update_aliases(actions)
         self.assert_result_contains(result, {'acknowledged': True, 'ok': True})
 
     def test_alias_nonexistent_index(self):
-        settings = {
-            "actions": [
-                {"add": {"index": "test1", "alias": "alias1"}}
-            ]
-        }
+        actions = [{"add": {"index": "test1", "alias": "alias1"}}]
         assert_raises(ElasticHttpNotFoundError,
-                          self.conn.update_aliases,
-                          settings)
+                      self.conn.update_aliases,
+                      actions)
 
     def test_list_aliases(self):
         self.conn.create_index('test-index')
-        settings = {
-            "actions": [
-                {"add": {"index": "test-index", "alias": "test-alias"}}
-            ]
-        }
-        self.conn.update_aliases(settings)
+        actions = [{"add": {"index": "test-index", "alias": "test-alias"}}]
+        self.conn.update_aliases(actions)
         result = self.conn.aliases('test-index')
         eq_(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
 
