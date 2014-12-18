@@ -1,6 +1,29 @@
 Changelog
 =========
 
+v0.7.1 (2014-08-12)
+-------------------
+
+* Brings tests up to date with ``update_aliases()`` API change.
+
+
+v0.7 (2014-08-12)
+-----------------
+
+* When an ``id_field`` is specified for ``bulk_index()``, don't index it under
+  its original name as well; use it only as the ``_id``.
+* Rename ``aliases()`` to ``get_aliases()`` for consistency with other
+  methods. Original name still works but is deprecated. Add an ``alias`` kwarg
+  to the method so you can fetch specific aliases.
+
+.. warning::
+
+  Backward incompatible:
+
+  * ``update_aliases()`` no longer requires a dict with an ``actions`` key;
+    that much is implied. Just pass the value of that key.
+
+
 v0.6.1 (2013-11-01)
 -------------------
 

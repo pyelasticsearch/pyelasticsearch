@@ -281,8 +281,9 @@ class ElasticSearch(object):
         error_class = ElasticHttpError
         if response.status == 404:
             error_class = ElasticHttpNotFoundError
-        elif (error_message.startswith('IndexAlreadyExistsException') or
-              'nested: IndexAlreadyExistsException' in error_message):
+        elif (hasattr(error_message, 'startswith') and
+              (error_message.startswith('IndexAlreadyExistsException') or
+               'nested: IndexAlreadyExistsException' in error_message)):
             error_class = IndexAlreadyExistsError
 
         raise error_class(response.status, error_message)
@@ -725,11 +726,11 @@ class ElasticSearch(object):
                                  query_params=query_params)
 
     @es_kwargs()
-    def update_aliases(self, settings, query_params=None):
+    def update_aliases(self, actions, query_params=None):
         """
-        Add, remove, or update aliases in bulk.
+        Atomically add, remove, or update aliases in bulk.
 
-        :arg settings: a dictionary specifying the actions to perform
+        :arg actions: A list of the actions to perform
 
         See `ES's admin-indices-aliases API`_.
 
@@ -737,22 +738,32 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
         """
         return self.send_request('POST', ['_aliases'],
-                                 body=settings, query_params=query_params)
+                                 body={'actions': actions},
+                                 query_params=query_params)
 
-    @es_kwargs()
-    def aliases(self, index=None, query_params=None):
+    @es_kwargs('ignore_unavailable')
+    def get_aliases(self, index=None, alias='*', query_params=None):
         """
         Retrieve a listing of aliases
 
-        :arg index: the name of an index or an iterable of indices
+        :arg index: The name of an index or an iterable of indices from which
+            to fetch aliases. If omitted, look in all indices.
+        :arg alias: The name of the alias to return or an iterable of them.
+            Wildcard * is supported. If this arg is omitted, return all aliases.
 
         See `ES's admin-indices-aliases API`_.
 
         .. _`ES's admin-indices-aliases API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
         """
-        return self.send_request('GET', [self._concat(index), '_aliases'],
-                                 query_params=query_params)
+        return self.send_request(
+                'GET',
+                [self._concat(index), '_aliases', self._concat(alias)],
+                 query_params=query_params)
+
+    def aliases(self, *args, **kwargs):
+        # Deprecated.
+        return self.get_aliases(*args, **kwargs)
 
     @es_kwargs()
     def create_index(self, index, settings=None, query_params=None):
