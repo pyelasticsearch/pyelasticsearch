@@ -65,13 +65,17 @@ class IndexingTestCase(ElasticSearchTestCase):
     def test_close_index(self):
         """Make sure a close_index call on an open index reports success."""
         self.conn.create_index('test-index')
+        self.conn.health('text-index', wait_for_status='yellow', timeout=1)
+
         result = self.conn.close_index('test-index')
         self.assert_result_contains(result, {'acknowledged': True, 'ok': True})
 
     def test_open_index(self):
         """Make sure an open_index call on a closed index reports success."""
         self.conn.create_index('test-index')
+        self.conn.health('text-index', wait_for_status='yellow', timeout=1)
         self.conn.close_index('test-index')
+
         result = self.conn.open_index('test-index')
         self.assert_result_contains(result, {'acknowledged': True, 'ok': True})
 
