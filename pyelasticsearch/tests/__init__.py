@@ -4,6 +4,7 @@ Unit tests for pyelasticsearch
 These require an elasticsearch server running on the default port
 (localhost:9200).
 """
+from functools import total_ordering
 import unittest
 
 from nose.tools import eq_
@@ -25,3 +26,17 @@ class ElasticSearchTestCase(unittest.TestCase):
     def assert_result_contains(self, result, expected):
         for (key, value) in expected.items():
             eq_(value, result[key])
+
+
+@total_ordering
+class EqualAnything(object):
+    def __eq__(self, other):
+        return True
+
+    def __lt__(self, other):
+        return True
+
+
+# The WHATEVER singleton is equal to everything. Use this for ignoring
+# specific values which can fluctuate in results comparison tests.
+WHATEVER = EqualAnything()
