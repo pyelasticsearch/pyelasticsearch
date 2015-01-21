@@ -144,6 +144,28 @@ class ElasticSearch(object):
             items = [items]
         return ','.join(i for i in items if i != '_all')
 
+    def _to_query(self, obj):
+        """
+        Convert a native-Python object to a unicode or bytestring
+        representation suitable for a query string.
+        """
+        # Quick and dirty thus far
+        if isinstance(obj, string_types):
+            return obj
+        if isinstance(obj, bool):
+            return 'true' if obj else 'false'
+        if isinstance(obj, integer_types):
+            return str(obj)
+        if isinstance(obj, float):
+            return repr(obj)  # str loses precision.
+        if isinstance(obj, (list, tuple)):
+            return ','.join(self._to_query(o) for o in obj)
+        iso = _iso_datetime(obj)
+        if iso:
+            return iso
+        raise TypeError("_to_query() doesn't know how to represent %r in an ES"
+                        ' query string.' % obj)
+
     def _utf8(self, thing):
         """Convert any arbitrary ``thing`` to a utf-8 bytestring."""
         if isinstance(thing, binary_type):
@@ -196,7 +218,8 @@ class ElasticSearch(object):
         status, prepped_response = self.transport.perform_request(
             method,
             path,
-            params=query_params,
+            params=dict((k, self._utf8(self._to_query(v)))
+                        for k, v in iteritems(query_params)),
             body=body)
 
         if status >= 400:

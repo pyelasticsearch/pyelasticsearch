@@ -4,7 +4,6 @@ import unittest
 from mock import patch
 from nose import SkipTest
 from nose.tools import eq_, ok_, assert_raises
-import requests
 import six
 
 # Test that __all__ is sufficient:
@@ -55,14 +54,11 @@ class KwargsForQueryTests(unittest.TestCase):
         """Integration-test ``index()`` with some decorator-handled arg."""
         def valid_responder(*args, **kwargs):
             """Return an arbitrary successful Response."""
-            response = requests.Response()
-            response._content = six.b('{"some": "json"}')
-            response.status_code = 200
-            return response
+            return 200, {'some': 'json'}
 
         conn = ElasticSearch('http://example.com:9200/')
-        with patch.object(conn.session, 'put') as put:
-            put.side_effect = valid_responder
+        with patch.object(conn.transport, 'perform_request') as perform:
+            perform.side_effect = valid_responder
             conn.index('some_index',
                        'some_type',
                        {'some': 'doc'},
@@ -71,14 +67,15 @@ class KwargsForQueryTests(unittest.TestCase):
                        es_snorkfest=True,
                        es_borkfest='gerbils:great')
 
-        # Make sure all the query string params got into the URL:
-        url = put.call_args[0][0]
-        ok_(
-            url.startswith('http://example.com:9200/some_index/some_type/3?'))
-        ok_('routing=boogie' in url)
-        ok_('snorkfest=true' in url)
-        ok_('borkfest=gerbils%3Agreat' in url)
-        ok_('es_' not in url)  # We stripped the "es_" prefixes.
+        ((_, url), kwargs) = perform.call_args
+
+        eq_(url, '/some_index/some_type/3')
+
+        # Make sure stringification happened, url encoding didn't, and es_
+        # prefixes got stripped:
+        eq_(kwargs['params'], {'routing': 'boogie',
+                               'snorkfest': 'true',  # We must do stringifying.
+                               'borkfest': 'gerbils:great'})  # Urllib3HttpConnection does url escaping.
 
     def test_arg_cross_refs_with_trailing(self):
         """
