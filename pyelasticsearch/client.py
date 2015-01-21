@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from datetime import datetime
 from operator import itemgetter
 from functools import wraps
-from logging import getLogger
 import re
 from six import (iterkeys, binary_type, text_type, string_types, integer_types,
                  iteritems, PY3)
 from six.moves import xrange
+from six.moves.urllib.parse import urlparse
 
 try:
     # PY3
@@ -17,15 +16,11 @@ except ImportError:
     # PY2
     from urllib import urlencode, quote_plus
 
+from elasticsearch.connection_pool import RandomSelector
 from elasticsearch.transport import Transport
 import simplejson as json  # for use_decimal
-from simplejson import JSONDecodeError
-from urllib3 import HTTPConnectionPool
 
-from pyelasticsearch.downtime import DowntimePronePool
-from pyelasticsearch.exceptions import (Timeout, ConnectionError,
-                                        ElasticHttpError,
-                                        InvalidJsonResponseError,
+from pyelasticsearch.exceptions import (ElasticHttpError,
                                         ElasticHttpNotFoundError,
                                         IndexAlreadyExistsError)
 
@@ -107,7 +102,7 @@ class ElasticSearch(object):
     This object is thread-safe. You can create one instance and share it
     among all threads.
     """
-    def __init__(self, urls, timeout=60, max_retries=0, revival_delay=300):
+    def __init__(self, urls, timeout=60, max_retries=0):
         """
         :arg urls: A URL or iterable of URLs of ES nodes. These are full URLs
             with port numbers, like ``http://elasticsearch.example.com:9200``.
@@ -115,19 +110,25 @@ class ElasticSearch(object):
             Timeout
         :arg max_retries: How many other servers to try, in series, after a
             request times out or a connection fails
-        :arg revival_delay: Number of seconds for which to avoid a server after
-            it times out or is uncontactable
         """
         if isinstance(urls, string_types):
             urls = [urls]
         urls = [u.rstrip('/') for u in urls]
-        self.servers = DowntimePronePool(urls, revival_delay)
-        self.revival_delay = revival_delay
         self.max_retries = max_retries
-        self.logger = getLogger('pyelasticsearch')
-        self.transport = Transport([{'host': '10.0.2.2', 'port': 9200}],
-                                   timeout=timeout)  # XXX
         self.json_encoder = JsonEncoder
+
+        # Automatic node sniffing is off for now.
+        parsed_urls = (urlparse(url) for url in urls)
+        self.transport = Transport(
+            [{'host': url.hostname,
+              'port': url.port or 9200,
+              'http_auth': (url.username, url.password) if
+                           url.username or url.password else None}
+             for url in parsed_urls],
+            max_retries=max_retries,
+            retry_on_timeout=True,
+            timeout=timeout,
+            selector_class=RandomSelector)
 
     def _concat(self, items):
         """
@@ -142,28 +143,6 @@ class ElasticSearch(object):
         if isinstance(items, string_types):
             items = [items]
         return ','.join(i for i in items if i != '_all')
-
-    def _to_query(self, obj):
-        """
-        Convert a native-Python object to a unicode or bytestring
-        representation suitable for a query string.
-        """
-        # Quick and dirty thus far
-        if isinstance(obj, string_types):
-            return obj
-        if isinstance(obj, bool):
-            return 'true' if obj else 'false'
-        if isinstance(obj, integer_types):
-            return str(obj)
-        if isinstance(obj, float):
-            return repr(obj)  # str loses precision.
-        if isinstance(obj, (list, tuple)):
-            return ','.join(self._to_query(o) for o in obj)
-        iso = _iso_datetime(obj)
-        if iso:
-            return iso
-        raise TypeError("_to_query() doesn't know how to represent %r in an ES"
-                        ' query string.' % obj)
 
     def _utf8(self, thing):
         """Convert any arbitrary ``thing`` to a utf-8 bytestring."""
@@ -220,59 +199,10 @@ class ElasticSearch(object):
             params=query_params,
             body=body)
 
-        self.logger.debug('response status: %s', status)
         if status >= 400:
             self._raise_exception(response, prepped_response)
-        self.logger.debug('got response %s', prepped_response)
         return prepped_response
 
-
-        if query_params:
-            path = '?'.join(
-                [path,
-                 urlencode(dict((k, self._utf8(self._to_query(v))) for k, v in
-                                iteritems(query_params)))])
-
-        request_body = self._encode_json(body) if encode_body else body
-
-        # We do our own retrying rather than using urllib3's; we want to retry
-        # a different node in the cluster if possible, not the same one again
-        # (which may be down).
-        for attempt in xrange(self.max_retries + 1):
-            server_url, was_dead = self.servers.get()
-            url = server_url + path
-            self.logger.debug(
-                "Making a request equivalent to this: curl -X%s '%s' -d '%s'",
-                method, url, request_body)
-
-            try:
-                if method == 'GET' and not body:
-                    response = self.pool.urlopen(
-                        method,
-                        url)
-                else:
-                    response = self.pool.urlopen(
-                        method,
-                        url,
-                        body=request_body)
-            except (ConnectionError, Timeout):
-                self.servers.mark_dead(server_url)
-                self.logger.info('%s marked as dead for %s seconds.',
-                                 server_url,
-                                 self.revival_delay)
-                if attempt >= self.max_retries:
-                    raise
-            else:
-                if was_dead:
-                    self.servers.mark_live(server_url)
-                break
-
-        self.logger.debug('response status: %s', response.status)
-        prepped_response = self._decode_response(response)
-        if response.status >= 400:
-            self._raise_exception(response, prepped_response)
-        self.logger.debug('got response %s', prepped_response)
-        return prepped_response
 
     def _raise_exception(self, response, decoded_body):
         """Raise an exception based on an error-indicating response from ES."""
@@ -293,14 +223,6 @@ class ElasticSearch(object):
         Convert a Python value to a form suitable for ElasticSearch's JSON DSL.
         """
         return json.dumps(value, cls=self.json_encoder, use_decimal=True)
-
-    def _decode_response(self, response):
-        """Return a native-Python representation of a response's JSON blob."""
-        try:
-            json_response = json.loads(response.data.decode('utf-8'))
-        except JSONDecodeError:
-            raise InvalidJsonResponseError(response)
-        return json_response
 
     ## REST API
 

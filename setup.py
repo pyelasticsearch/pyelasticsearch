@@ -53,17 +53,13 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
-    requires=[  # Needed?
-        'six',
-        'urllib3(>=1.8)',
-        'simplejson(>=2.1.0)',
-    ],
     install_requires=[
+        'elasticsearch>=1.0.0,<2.0.0',
         'urllib3>=1.8',
         'simplejson>=2.1.0',
         'six'
     ],
     tests_require=['mock', 'nose>=1.2.1'],
     test_suite='nose.collector',
-    url='http://github.com/rhec/pyelasticsearch'
+    url='http://github.com/pyelasticsearch/pyelasticsearch'
 )

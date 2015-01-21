@@ -1,6 +1,18 @@
 Changelog
 =========
 
+v0.8.0
+------
+
+* Make bulk indexing (and likely other network things) 15 times faster by
+  switching to elasticsearch-py's transport layer (which in turn borrows a lot
+  from our own downtime pool code).
+* Drop compatibility with elasticsearch < 1.0.
+* Remove InvalidJsonResponseError.
+* Change from the logger "pyelasticsearch" to "elasticsearch.trace".
+* Remove ``revival_delay`` param from ElasticSearch object.
+
+
 v0.7.1 (2014-08-12)
 -------------------
 
