@@ -193,8 +193,7 @@ class ElasticSearch(object):
                      method,
                      path_components,
                      body='',
-                     query_params=None,
-                     encode_body=True):
+                     query_params=None):
         """
         Send an HTTP request to ES, and return the JSON-decoded response.
 
@@ -214,16 +213,18 @@ class ElasticSearch(object):
         :arg method: An HTTP method, like "GET"
         :arg path_components: An iterable of path components, to be joined by
             "/"
-        :arg body: A map of key/value pairs to be sent as the request body
+        :arg body: A map of key/value pairs to be sent as the JSON request
+            body. Alternatively, a string to be sent verbatim, without further
+            JSON encoding.
         :arg query_params: A map of querystring param names to values or
             ``None``
-        :arg encode_body: Whether to encode the body of the request as JSON
         """
         path = self._join_path(path_components)
 
         # We wrap to use pyelasticsearch's exception hierarchy for backward
         # compatibility:
         try:
+            # This implicitly converts dicts to JSON. Strings are left alone:
             _, prepped_response = self._transport.perform_request(
                 method,
                 path,
@@ -361,7 +362,6 @@ class ElasticSearch(object):
         return self.send_request('POST',
                                  ['_bulk'],
                                  body,
-                                 encode_body=False,
                                  query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')

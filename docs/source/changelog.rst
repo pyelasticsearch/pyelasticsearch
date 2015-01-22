@@ -11,6 +11,8 @@ v0.8.0
 * Remove InvalidJsonResponseError.
 * Change from the logger "pyelasticsearch" to "elasticsearch.trace".
 * Remove ``revival_delay`` param from ElasticSearch object.
+* Remove ``encode_body`` param from ``send_request()``. Now all dicts are
+  JSON-encoded, and all strings are left alone.
 
 
 v0.7.1 (2014-08-12)
