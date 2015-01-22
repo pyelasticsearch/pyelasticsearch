@@ -2,14 +2,14 @@
 import sys
 import unittest
 
-from mock import patch
+from mock import ANY, patch
 from nose.tools import eq_, ok_, assert_raises, assert_not_equal
 import requests
 import six
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
-from pyelasticsearch.tests import ElasticSearchTestCase, WHATEVER, eq_one_of
+from pyelasticsearch.tests import ElasticSearchTestCase
 
 
 class IndexingTestCase(ElasticSearchTestCase):
@@ -352,7 +352,7 @@ class SearchTestCase(ElasticSearchTestCase):
 
     def test_search_by_field(self):
         result = self.conn.search('name:joe', index='test-index')
-        self.assert_result_contains(result, {'hits': {'hits': [{'_score': WHATEVER, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': WHATEVER}})
+        self.assert_result_contains(result, {'hits': {'hits': [{'_score': ANY, '_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index'}], 'total': 1, 'max_score': ANY}})
 
     def test_search_string_paginated(self):
         with patch.object(self.conn, 'send_request') as send_request:
@@ -392,7 +392,7 @@ class SearchTestCase(ElasticSearchTestCase):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Test'}, id=3)
         self.conn.refresh(['test-index'])
         result = self.conn.more_like_this('test-index', 'test-type', 1, ['name'], min_term_freq=1, min_doc_freq=1)
-        self.assert_result_contains(result, {'hits': {'hits': [{'_score': WHATEVER, '_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1, 'max_score': WHATEVER}})
+        self.assert_result_contains(result, {'hits': {'hits': [{'_score': ANY, '_type': 'test-type', '_id': '3', '_source': {'name': 'Joe Test'}, '_index': 'test-index'}], 'total': 1, 'max_score': ANY}})
 
     def test_mlt_with_body(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Test', 'age': 22}, id=2)
@@ -414,7 +414,7 @@ class SearchTestCase(ElasticSearchTestCase):
             }
         result = self.conn.more_like_this('test-index', 'test-type', 1, ['name'], body=body, min_term_freq=1, min_doc_freq=1)
         self.assert_result_contains(result,
-                {'hits': {'hits': [{'_score': WHATEVER, '_type': 'test-type', '_id': '3', '_source': {'age': 16, 'name': 'Joe Justin'}, '_index': 'test-index'}], 'total': 1, 'max_score': WHATEVER}})
+                {'hits': {'hits': [{'_score': ANY, '_type': 'test-type', '_id': '3', '_source': {'age': 16, 'name': 'Joe Justin'}, '_index': 'test-index'}], 'total': 1, 'max_score': ANY}})
 
     def test_mlt_fields(self):
         self.conn.index('test-index', 'test-type', {'name': 'Angus', 'sport': 'football'}, id=3)
@@ -425,7 +425,7 @@ class SearchTestCase(ElasticSearchTestCase):
 
         result = self.conn.more_like_this('test-index', 'test-type', 3, ['sport'], min_term_freq=1, min_doc_freq=1)
         self.assert_result_contains(result,
-                {u'hits': {u'hits': [{u'_score': WHATEVER, u'_type': u'test-type', u'_id': u'4', u'_source': {u'sport': u'football', u'name': u'Cam'}, u'_index': u'test-index'}], u'total': 1, u'max_score': WHATEVER}})
+                {u'hits': {u'hits': [{u'_score': ANY, u'_type': u'test-type', u'_id': u'4', u'_source': {u'sport': u'football', u'name': u'Cam'}, u'_index': u'test-index'}], u'total': 1, u'max_score': ANY}})
 
 
 class DangerousOperationTests(ElasticSearchTestCase):
