@@ -261,11 +261,6 @@ class IndexingTestCase(ElasticSearchTestCase):
         conn = ElasticSearch('http://localhost:1009200/')
         assert_raises(ConnectionError, conn.count, '*:*')
 
-        # Test invalid JSON.
-        resp = requests.Response()
-        resp._content = six.b('{"busted" "json" "that": ["is] " wrong')
-        assert_raises(InvalidJsonResponseError, conn._decode_response, resp)
-
     def test_update(self):
         """Smoke-test the ``update()`` API."""
         SCRIPT = 'ctx._source.thing += count'

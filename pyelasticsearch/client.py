@@ -17,6 +17,8 @@ except ImportError:
     from urllib import urlencode, quote_plus
 
 from elasticsearch.connection_pool import RandomSelector
+from elasticsearch.exceptions import (ConnectionError, ConnectionTimeout,
+                                      TransportError)
 from elasticsearch.transport import Transport
 import simplejson as json  # for use_decimal
 
@@ -205,6 +207,11 @@ class ElasticSearch(object):
         Retry the request on different servers if the first one is down and
         ``self.max_retries`` > 0.
 
+        On failure, raise an
+        :class:`~pyelasticsearch.exceptions.ElasticHttpError`, a
+        :class:`~pyelasticsearch.exceptions.ConnectionError`, or a
+        :class:`~pyelasticsearch.exceptions.Timeout`.
+
         :arg method: An HTTP method, like "GET"
         :arg path_components: An iterable of path components, to be joined by
             "/"
@@ -215,31 +222,36 @@ class ElasticSearch(object):
         """
         path = self._join_path(path_components)
 
-        status, prepped_response = self.transport.perform_request(
-            method,
-            path,
-            params=dict((k, self._utf8(self._to_query(v)))
-                        for k, v in iteritems(query_params)),
-            body=body)
+        # We wrap to use pyelasticsearch's exception hierarchy for backward
+        # compatibility:
+        try:
+            _, prepped_response = self.transport.perform_request(
+                method,
+                path,
+                params=dict((k, self._utf8(self._to_query(v)))
+                            for k, v in iteritems(query_params)),
+                body=body)
+        except (ConnectionError, ConnectionTimeout) as exc:
+            # Pull the urllib3-native exception out, and raise it:
+            raise exc.info
+        except TransportError as exc:
+            status = exc.args[0]
+            error_message = exc.args[1]
+            self._raise_exception(status, error_message)
 
-        if status >= 400:
-            self._raise_exception(response, prepped_response)
         return prepped_response
 
-
-    def _raise_exception(self, response, decoded_body):
+    def _raise_exception(self, status, error_message):
         """Raise an exception based on an error-indicating response from ES."""
-        error_message = decoded_body.get('error', decoded_body)
-
         error_class = ElasticHttpError
-        if response.status == 404:
+        if status == 404:
             error_class = ElasticHttpNotFoundError
         elif (hasattr(error_message, 'startswith') and
               (error_message.startswith('IndexAlreadyExistsException') or
                'nested: IndexAlreadyExistsException' in error_message)):
             error_class = IndexAlreadyExistsError
 
-        raise error_class(response.status, error_message)
+        raise error_class(status, error_message)
 
     def _encode_json(self, value):
         """
