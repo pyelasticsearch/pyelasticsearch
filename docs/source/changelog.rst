@@ -4,15 +4,20 @@ Changelog
 v0.8.0
 ------
 
-* Make bulk indexing (and likely other network things) 15 times faster by
-  switching to elasticsearch-py's transport layer (which in turn borrows a lot
-  from our own downtime pool code).
-* Drop compatibility with elasticsearch < 1.0.
-* Remove InvalidJsonResponseError.
-* Change from the logger "pyelasticsearch" to "elasticsearch.trace".
-* Remove ``revival_delay`` param from ElasticSearch object.
-* Remove ``encode_body`` param from ``send_request()``. Now all dicts are
-  JSON-encoded, and all strings are left alone.
+* Switch to elasticsearch-py's transport and downtime-pooling machinery,
+  much of which was borrowed from us anyway.
+* Make bulk indexing (and likely other network things) 15 times faster.
+
+.. warning::
+
+  Backward incompatible:
+
+  * Drop compatibility with elasticsearch < 1.0.
+  * Remove InvalidJsonResponseError.
+  * Change from the logger "pyelasticsearch" to "elasticsearch.trace".
+  * Remove ``revival_delay`` param from ElasticSearch object.
+  * Remove ``encode_body`` param from ``send_request()``. Now all dicts are
+    JSON-encoded, and all strings are left alone.
 
 
 v0.7.1 (2014-08-12)
