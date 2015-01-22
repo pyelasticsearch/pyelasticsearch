@@ -1,11 +1,7 @@
 # coding=utf-8
-import sys
-import unittest
 
 from mock import ANY, patch
 from nose.tools import eq_, ok_, assert_raises, assert_not_equal
-import requests
-import six
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *

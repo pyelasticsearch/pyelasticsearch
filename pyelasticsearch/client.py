@@ -7,14 +7,7 @@ import re
 from six import (iterkeys, binary_type, text_type, string_types, integer_types,
                  iteritems, PY3)
 from six.moves import xrange
-from six.moves.urllib.parse import urlparse
-
-try:
-    # PY3
-    from urllib.parse import urlencode, quote_plus
-except ImportError:
-    # PY2
-    from urllib import urlencode, quote_plus
+from six.moves.urllib.parse import urlparse, urlencode, quote_plus
 
 from elasticsearch.connection_pool import RandomSelector
 from elasticsearch.exceptions import (ConnectionError, ConnectionTimeout,
