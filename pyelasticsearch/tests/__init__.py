@@ -4,7 +4,6 @@ Unit tests for pyelasticsearch
 These require an elasticsearch server running on the default port
 (localhost:9200).
 """
-from functools import total_ordering
 import unittest
 
 from nose.tools import eq_
