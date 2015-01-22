@@ -116,6 +116,7 @@ Contents
 
    features
    api
+   elasticsearch-py
    migrate
    changelog
    dev
