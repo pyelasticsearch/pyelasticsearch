@@ -53,6 +53,12 @@ In general, pyelasticsearch focuses on...
   official client. If you have unusual needs, we might not be for you.
   Otherwise, enjoy having less verbose code.
 
+* Safety
+
+  If something fails, it always raises an exception, making it hard to
+  accidentally ignore. elasticsearch-py doesn't always do this: you need to
+  check for errors explicitly when using its bulk indexing helper.
+
 * Better documentation
 
   You should never need to read the source code to figure out what to do.
