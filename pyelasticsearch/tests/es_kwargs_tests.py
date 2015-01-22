@@ -57,7 +57,7 @@ class KwargsForQueryTests(unittest.TestCase):
             return 200, {'some': 'json'}
 
         conn = ElasticSearch('http://example.com:9200/')
-        with patch.object(conn.transport, 'perform_request') as perform:
+        with patch.object(conn._transport, 'perform_request') as perform:
             perform.side_effect = valid_responder
             conn.index('some_index',
                        'some_type',

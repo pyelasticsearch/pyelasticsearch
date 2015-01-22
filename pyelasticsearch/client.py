@@ -121,7 +121,7 @@ class ElasticSearch(object):
 
         # Automatic node sniffing is off for now.
         parsed_urls = (urlparse(url) for url in urls)
-        self.transport = Transport(
+        self._transport = Transport(
             [{'host': url.hostname,
               'port': url.port or 9200,
               'http_auth': (url.username, url.password) if
@@ -225,7 +225,7 @@ class ElasticSearch(object):
         # We wrap to use pyelasticsearch's exception hierarchy for backward
         # compatibility:
         try:
-            _, prepped_response = self.transport.perform_request(
+            _, prepped_response = self._transport.perform_request(
                 method,
                 path,
                 params=dict((k, self._utf8(self._to_query(v)))
