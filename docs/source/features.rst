@@ -38,6 +38,8 @@ if ``max_retries`` was set to something greater than zero at construction. If
 try sending requests to them, marking them alive if they respond.
 
 
+.. _forward-compatibility-kwargs:
+
 Forward-Compatibility Kwargs
 ============================
 

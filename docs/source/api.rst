@@ -114,21 +114,17 @@ exceptions:
 Debugging
 =========
 
-pyelasticsearch logs to the ``pyelasticsearch`` logger using the
-Python logging module. If you configure that to show DEBUG-level
-messages, then it'll show the requests in curl form, responses, and
-when it marks servers as dead.
-
-Additionally, pyelasticsearch uses Requests which logs to the
-``requests`` logger using the Python logging module. If you configure
-that to show INFO-level messages, then you'll see all that stuff.
+pyelasticsearch logs to the ``elasticsearch.trace`` logger using the Python
+logging module. If you configure that to show INFO-level messages, then it'll
+show the requests in curl form and their responses. To see when a server is
+marked as dead, follow the ``elasticsearch`` logger.
 
 ::
 
     import logging
 
-    logging.getLogger('pyelasticsearch').setLevel(logging.DEBUG)
-    logging.getLogger('requests').setLevel(logging.DEBUG)
+    logging.getLogger('elasticsearch.trace').setLevel(logging.INFO)
+    logging.getLogger('elasticsearch').setLevel(logging.INFO)
 
 
 .. Note::
@@ -143,16 +139,10 @@ that to show INFO-level messages, then you'll see all that stuff.
 
 pyelasticsearch will log lines like::
 
-    DEBUG:pyelasticsearch:Making a request equivalent to this: curl
+    INFO:elasticsearch.trace: curl
     -XGET 'http://localhost:9200/fooindex/testdoc/_search' -d '{"fa
     cets": {"topics": {"terms": {"field": "topics"}}}}'
 
 
 You can copy and paste the curl line and it'll work on the command
 line.
-
-.. Note::
-
-   If you add a ``pretty=1`` to the query string of the url that
-   you're curling, then ElasticSearch will return a prettified
-   response that's easier to read.

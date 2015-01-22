@@ -116,6 +116,7 @@ Contents
 
    features
    api
+   elasticsearch-py
    migrate
    changelog
    dev
@@ -127,4 +128,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

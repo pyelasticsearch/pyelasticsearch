@@ -191,47 +191,32 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.put_mapping('test-index', 'test-type', mapping)
 
         result = self.conn.get_mapping(index=['test-index'], doc_type=['test-type'])
-        eq_one_of(
-            lambda: result == {'test-type': {'properties': {'name': {'type': 'string', 'store': True}}}},  # ES 0.90,
-            lambda: result == {u'test-index': {u'mappings': {u'test-type': {u'properties': {u'name': {u'type': u'string', u'store': True}}}}}}  # ES 1.0+
-        )
+        eq_(result, {u'test-index': {u'mappings': {u'test-type': {u'properties': {u'name': {u'type': u'string', u'store': True}}}}}})
 
     def test_index_status(self):
         self.conn.create_index('another-index')
         result = self.conn.status('another-index')
         self.conn.delete_index('another-index')
         ok_('indices' in result)
-        eq_one_of(
-            lambda: result['ok'] == True,  # ES 0.90
-            lambda: result['_shards']['failed'] == 0  # ES 1.0+
-        )
+        eq_(result['_shards']['failed'], 0)
 
     def test_index_flush(self):
         self.conn.create_index('another-index')
         result = self.conn.flush('another-index')
         self.conn.delete_index('another-index')
-        eq_one_of(
-            lambda: result['ok'] == True,  # ES 0.90
-            lambda: result['_shards']['failed'] == 0  # ES 1.0+
-        )
+        eq_(result['_shards']['failed'], 0)
 
     def test_index_refresh(self):
         self.conn.create_index('another-index')
         result = self.conn.refresh('another-index')
         self.conn.delete_index('another-index')
-        eq_one_of(
-            lambda: result['ok'] == True,  # ES 0.90
-            lambda: result['_shards']['failed'] == 0  # ES 1.0+
-        )
+        eq_(result['_shards']['failed'], 0)
 
     def test_index_optimize(self):
         self.conn.create_index('another-index')
         result = self.conn.optimize('another-index')
         self.conn.delete_index('another-index')
-        eq_one_of(
-            lambda: result['ok'] == True,  # ES 0.90
-            lambda: result['_shards']['failed'] == 0  # ES 1.0+
-        )
+        eq_(result['_shards']['failed'], 0)
 
     def test_bulk_index(self):
         # Try counting the docs in a nonexistent index:
@@ -243,14 +228,8 @@ class IndexingTestCase(ElasticSearchTestCase):
         ]
         result = self.conn.bulk_index('test-index', 'test-type', docs)
         eq_(len(result['items']), 2)
-        eq_one_of(
-            lambda: result['items'][0]['create']['ok'] == True, # ES < 1.0
-            lambda: result['items'][0]['create']['status'] == 201  # ES >= 1.0
-        )
-        eq_one_of(
-            lambda: result['items'][1]['index']['ok'] == True,  # ES < 1.0
-            lambda: result['items'][1]['index']['status'] == 201  # ES >= 1.0
-        )
+        eq_(result['items'][0]['create']['status'], 201)
+        eq_(result['items'][1]['index']['status'], 201)
         eq_(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
         eq_(self.conn.count('*:*',
@@ -260,11 +239,6 @@ class IndexingTestCase(ElasticSearchTestCase):
         # Wrong port.
         conn = ElasticSearch('http://localhost:1009200/')
         assert_raises(ConnectionError, conn.count, '*:*')
-
-        # Test invalid JSON.
-        resp = requests.Response()
-        resp._content = six.b('{"busted" "json" "that": ["is] " wrong')
-        assert_raises(InvalidJsonResponseError, conn._decode_response, resp)
 
     def test_update(self):
         """Smoke-test the ``update()`` API."""
@@ -362,24 +336,15 @@ class SearchTestCase(ElasticSearchTestCase):
 
     def test_multi_get_simple(self):
         result = self.conn.multi_get([1], index='test-index', doc_type='test-type')
-        eq_one_of(
-            lambda: self.assert_result_contains(result, {'docs': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index', "_version": 1, "exists": True}]}),  # ES 0.90
-            lambda: {u'docs': [{u'_type': u'test-type', u'_source': {u'name': u'Joe Tester'}, u'_index': u'test-index', u'_version': 1, u'found': True, u'_id': u'1'}]}  # ES 1.0+
-        )
+        self.assert_result_contains(result, {u'docs': [{u'_type': u'test-type', u'_source': {u'name': u'Joe Tester'}, u'_index': u'test-index', u'_version': 1, u'found': True, u'_id': u'1'}]})
 
     def test_multi_get_mix(self):
         result = self.conn.multi_get([{'_type': 'test-type', '_id': 1}], index='test-index')
-        eq_one_of(
-            lambda: self.assert_result_contains(result, {'docs': [{'_type': 'test-type', '_id': '1', '_source': {'name': 'Joe Tester'}, '_index': 'test-index', "_version": 1, "exists": True}]}),  # ES 0.90
-            lambda: self.assert_result_contains(result, {u'docs': [{u'_type': u'test-type', u'_source': {u'name': u'Joe Tester'}, u'_index': u'test-index', u'_version': 1, u'found': True, u'_id': u'1'}]})  # ES 1.0+
-        )
+        self.assert_result_contains(result, {u'docs': [{u'_type': u'test-type', u'_source': {u'name': u'Joe Tester'}, u'_index': u'test-index', u'_version': 1, u'found': True, u'_id': u'1'}]})
 
     def test_multi_get_custom(self):
         result = self.conn.multi_get([{'_type': 'test-type', '_id': 1, 'fields': ['name'], '_index': 'test-index'}])
-        eq_one_of(
-            lambda: self.assert_result_contains(result, {'docs': [{'_type': 'test-type', '_id': '1', 'fields': {'name': 'Joe Tester'}, '_index': 'test-index', "_version": 1, "exists": True}]}),  # ES 0.90
-            lambda: self.assert_result_contains(result, {'docs': [{'_type': 'test-type', '_id': '1', 'fields': {'name': ['Joe Tester']}, '_index': 'test-index', "_version": 1, "found": True}]})  # ES 1.0+
-        )
+        self.assert_result_contains(result, {'docs': [{'_type': 'test-type', '_id': '1', 'fields': {'name': ['Joe Tester']}, '_index': 'test-index', "_version": 1, "found": True}]})
 
     def test_get_count_by_search(self):
         result = self.conn.count('name:joe', index='test-index')

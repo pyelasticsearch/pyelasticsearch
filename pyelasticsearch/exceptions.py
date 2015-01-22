@@ -1,4 +1,4 @@
-from requests import Timeout, ConnectionError
+from urllib3.exceptions import TimeoutError as Timeout, ConnectionError
 
 
 class ElasticHttpError(Exception):
@@ -33,15 +33,3 @@ class ElasticHttpNotFoundError(ElasticHttpError):
 
 class IndexAlreadyExistsError(ElasticHttpError):
     """Exception raised on an attempt to create an index that already exists"""
-
-
-class InvalidJsonResponseError(Exception):
-    """
-    Exception raised in the unlikely event that ES returns a non-JSON response
-    """
-    @property
-    def response(self):
-        return self.args[0]
-
-    def __unicode__(self):
-        return u'Invalid JSON returned from ES: %r' % (self.response,)
