@@ -116,7 +116,6 @@ class ElasticSearch(object):
         if isinstance(urls, string_types):
             urls = [urls]
         urls = [u.rstrip('/') for u in urls]
-        self.max_retries = max_retries
         self.json_encoder = JsonEncoder
 
         # Automatic node sniffing is off for now.
@@ -205,7 +204,7 @@ class ElasticSearch(object):
         and retrying.
 
         Retry the request on different servers if the first one is down and
-        ``self.max_retries`` > 0.
+        the ``max_retries`` constructor arg was > 0.
 
         On failure, raise an
         :class:`~pyelasticsearch.exceptions.ElasticHttpError`, a
