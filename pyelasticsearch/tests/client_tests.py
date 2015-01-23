@@ -296,6 +296,10 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def test_percolate(self):
         self.conn.create_index('test-index')
+        self.conn.put_mapping(
+            'test-index',
+            'test-type',
+            {'test-type': {'properties': {'name': {'type': 'string'}}}})
 
         # Index a few queries in the percolator
         result = self.conn.index(
