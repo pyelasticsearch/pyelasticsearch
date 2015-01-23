@@ -8,11 +8,12 @@ v0.8.0
   much of which was borrowed from us anyway.
 * Make bulk indexing (and likely other network things) 15 times faster.
 
-.. warning::
+.. note::
 
   Backward incompatible:
 
   * Drop compatibility with elasticsearch < 1.0.
+  * Redo cluster_state() to work with ES 1.0 and later. Arguments have changed.
   * Remove InvalidJsonResponseError.
   * Change from the logger "pyelasticsearch" to "elasticsearch.trace".
   * Remove ``revival_delay`` param from ElasticSearch object.
@@ -35,7 +36,7 @@ v0.7 (2014-08-12)
   methods. Original name still works but is deprecated. Add an ``alias`` kwarg
   to the method so you can fetch specific aliases.
 
-.. warning::
+.. note::
 
   Backward incompatible:
 
@@ -56,7 +57,7 @@ v0.6.1 (2013-11-01)
 v0.6 (2013-07-23)
 -----------------
 
-.. warning::
+.. note::
 
   Note the change in behavior of ``bulk_index()`` in this release. This change
   probably brings it more in line with your expectations. But double check,
@@ -150,7 +151,7 @@ Many thanks to Erik Rose for almost completely rewriting the API to follow
 best practices, improve the API user experience, and make pyelasticsearch
 future-proof.
 
-.. warning::
+.. note::
 
   This release is **backward-incompatible** in numerous ways, please
   read the following section carefully. If in doubt, you can easily stick

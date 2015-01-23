@@ -32,7 +32,7 @@ so it'll be hard to miss.
 
     .. automethod:: close_index(index)
 
-    .. automethod:: cluster_state([other kwargs listed below])
+    .. automethod:: cluster_state(metric='_all', index='_all'[, other kwargs listed below])
 
     .. automethod:: count(query[, other kwargs listed below])
 

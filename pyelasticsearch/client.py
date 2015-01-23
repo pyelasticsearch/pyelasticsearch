@@ -925,14 +925,16 @@ class ElasticSearch(object):
             ['_cluster', 'health', self._concat(index)],
             query_params=query_params)
 
-    @es_kwargs('filter_nodes', 'filter_routing_table', 'filter_metadata',
-               'filter_blocks', 'filter_indices')
-    def cluster_state(self, query_params=None):
+    @es_kwargs('local')
+    def cluster_state(self, metric='_all', index='_all', query_params=None):
         """
-        The cluster state API allows to get comprehensive state
-        information of the whole cluster.
+        Return state information about the cluster.
 
-        (Insert es_kwargs here.)
+        :arg metric: Which metric to return: one of "version", "master_node",
+            "nodes", "routing_table", "meatadata", or "blocks", an iterable
+            of them, or a comma-delimited string of them. Defaults to all
+            metrics.
+        :arg index: An index or iterable of indexes to return info about
 
         See `ES's cluster-state API`_ for more detail.
 
@@ -940,7 +942,9 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/admin-cluster-state.html
         """
         return self.send_request(
-            'GET', ['_cluster', 'state'], query_params=query_params)
+            'GET',
+            ['_cluster', 'state', self._concat(metric), self._concat(index)],
+            query_params=query_params)
 
     @es_kwargs()
     def percolate(self, index, doc_type, doc, query_params=None):

@@ -109,9 +109,11 @@ class IndexingTestCase(ElasticSearchTestCase):
             'GET', ['_cluster', 'health', ''], query_params={})
 
     def test_cluster_state(self):
-        result = self.conn.cluster_state(filter_routing_table=True)
-        ok_('nodes' in result)
-        self.assertFalse('routing_table' in result)
+        """Make sure "_all" works for an index specifier and metric filtering
+        works."""
+        result = self.conn.cluster_state(metric='routing_table')
+        ok_('routing_table' in result)
+        ok_('master_node' not in result)
 
     def test_delete_by_id(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
