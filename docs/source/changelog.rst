@@ -7,6 +7,7 @@ v1.0 (2015-01-23)
 * Switch to elasticsearch-py's transport and downtime-pooling machinery,
   much of which was borrowed from us anyway.
 * Make bulk indexing (and likely other network things) 15 times faster.
+* Add a comparison with the official client to the docs.
 * Fix ``delete_by_query()`` to work with ES 1.0 and later.
 * Bring ``percolate()`` es_kwargs up to date.
 * Fix all tests that were failing on modern versions of ES.
