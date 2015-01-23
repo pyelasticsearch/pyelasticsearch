@@ -299,27 +299,27 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         # Index a few queries in the percolator
         result = self.conn.index(
-            '_percolator',
             'test-index',
+            '.percolator',
             {'query': {'match': {'name': 'Joe'}}},
             id='id_1')
         result = self.conn.index(
-            '_percolator',
             'test-index',
+            '.percolator',
             {'query': {'match': {'name': 'not_that_guy'}}},
             id='id_2')
 
         # Percolate a document that should match query ID 1:
         document = {'doc': {'name': 'Joe'}}
-        result = self.conn.percolate('test-index','test-type', document)
-        self.assert_result_contains(result, {'matches': ['id_1'], 'ok': True})
+        result = self.conn.percolate('test-index', 'test-type', document)
+        self.assert_result_contains(
+            result,
+            {'matches': [{'_id': 'id_1', '_index': 'test-index'}]})
 
         # Percolate a document that shouldn't match any queries
         document = { 'doc': {'name': 'blah'} }
         result = self.conn.percolate('test-index', 'test-type', document)
-        self.assert_result_contains(result, {'matches': [], 'ok': True})
-
-        self.conn.delete_index('_percolator')
+        self.assert_result_contains(result, {'matches': []})
 
 
 class SearchTestCase(ElasticSearchTestCase):

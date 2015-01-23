@@ -8,6 +8,9 @@ v0.8.0
   much of which was borrowed from us anyway.
 * Make bulk indexing (and likely other network things) 15 times faster.
 * Fix ``delete_by_query()`` to work with ES 1.0 and later.
+* Bring ``percolate()`` es_kwargs up to date.
+* Fix all tests that were failing on modern versions of ES.
+* Tolerate errors that are non-strings and create exceptions for them properly.
 
 .. note::
 

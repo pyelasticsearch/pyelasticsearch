@@ -946,7 +946,8 @@ class ElasticSearch(object):
             ['_cluster', 'state', self._concat(metric), self._concat(index)],
             query_params=query_params)
 
-    @es_kwargs()
+    @es_kwargs('routing', 'preference', 'ignore_unavailable',
+               'percolate_format')
     def percolate(self, index, doc_type, doc, query_params=None):
         """
         Run a JSON document through the registered percolator queries, and
@@ -966,7 +967,8 @@ class ElasticSearch(object):
         """
         return self.send_request('GET',
                                  [index, doc_type, '_percolate'], 
-                                 doc, query_params=query_params)
+                                 doc,
+                                 query_params=query_params)
 
 
 class JsonEncoder(json.JSONEncoder):
