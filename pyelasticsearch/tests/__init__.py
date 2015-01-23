@@ -2,7 +2,7 @@
 Unit tests for pyelasticsearch
 
 These require an elasticsearch server running on the default port
-(localhost:9200).
+(127.0.0.1:9200).
 """
 import unittest
 
@@ -14,7 +14,7 @@ from pyelasticsearch import *
 
 class ElasticSearchTestCase(unittest.TestCase):
     def setUp(self):
-        self.conn = ElasticSearch('http://localhost:9200/')
+        self.conn = ElasticSearch('http://127.0.0.1:9200/')
 
     def tearDown(self):
         try:
