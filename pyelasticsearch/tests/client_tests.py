@@ -236,7 +236,7 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def test_error_handling(self):
         # Wrong port.
-        conn = ElasticSearch('http://localhost:1009200/')
+        conn = ElasticSearch('http://localhost:3355/')
         assert_raises(ConnectionError, conn.count, '*:*')
 
     def test_update(self):
