@@ -1,8 +1,8 @@
 Changelog
 =========
 
-v0.8.0
-------
+v1.0 (2015-01-23)
+-----------------
 
 * Switch to elasticsearch-py's transport and downtime-pooling machinery,
   much of which was borrowed from us anyway.
@@ -17,7 +17,8 @@ v0.8.0
   Backward incompatible:
 
   * Drop compatibility with elasticsearch < 1.0.
-  * Redo cluster_state() to work with ES 1.0 and later. Arguments have changed.
+  * Redo ``cluster_state()`` to work with ES 1.0 and later. Arguments have
+    changed.
   * InvalidJsonResponseError no longer provides access to the HTTP response
     (in the ``response`` property): just the bad data (the ``input`` property).
   * Change from the logger "pyelasticsearch" to "elasticsearch.trace".
