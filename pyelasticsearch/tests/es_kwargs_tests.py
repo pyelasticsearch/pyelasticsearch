@@ -4,7 +4,7 @@ import unittest
 from mock import patch
 from nose import SkipTest
 from nose.tools import eq_, ok_, assert_raises
-import six
+from six import PY3, b
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
@@ -28,7 +28,7 @@ class KwargsForQueryTests(unittest.TestCase):
         assert_raises(TypeError, to_query, object())
 
         # do not use unittest.skipIf because of python 2.6
-        if not six.PY3:
+        if not PY3:
             eq_(to_query(long(4)), '4')
 
 
@@ -73,9 +73,9 @@ class KwargsForQueryTests(unittest.TestCase):
 
         # Make sure stringification happened, url encoding didn't, and es_
         # prefixes got stripped:
-        eq_(kwargs['params'], {'routing': 'boogie',
-                               'snorkfest': 'true',  # We must do stringifying.
-                               'borkfest': 'gerbils:great'})  # Urllib3HttpConnection does url escaping.
+        eq_(kwargs['params'], {'routing': b('boogie'),
+                               'snorkfest': b('true'),  # We must do stringifying.
+                               'borkfest': b('gerbils:great')})  # Urllib3HttpConnection does url escaping.
 
     def test_arg_cross_refs_with_trailing(self):
         """
