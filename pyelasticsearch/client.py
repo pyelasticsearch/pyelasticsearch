@@ -11,13 +11,14 @@ from six.moves.urllib.parse import urlparse, urlencode, quote_plus
 
 from elasticsearch.connection_pool import RandomSelector
 from elasticsearch.exceptions import (ConnectionError, ConnectionTimeout,
-                                      TransportError)
+                                      TransportError, SerializationError)
 from elasticsearch.transport import Transport
 import simplejson as json  # for use_decimal
 
 from pyelasticsearch.exceptions import (ElasticHttpError,
                                         ElasticHttpNotFoundError,
-                                        IndexAlreadyExistsError)
+                                        IndexAlreadyExistsError,
+                                        InvalidJsonResponseError)
 
 
 def _add_es_kwarg_docs(params, method):
@@ -224,6 +225,8 @@ class ElasticSearch(object):
                 params=dict((k, self._utf8(self._to_query(v)))
                             for k, v in iteritems(query_params)),
                 body=body)
+        except SerializationError as exc:
+            raise InvalidJsonResponseError(exc.args[0])
         except (ConnectionError, ConnectionTimeout) as exc:
             # Pull the urllib3-native exception out, and raise it:
             raise exc.info

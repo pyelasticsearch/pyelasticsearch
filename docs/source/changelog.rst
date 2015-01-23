@@ -18,7 +18,8 @@ v0.8.0
 
   * Drop compatibility with elasticsearch < 1.0.
   * Redo cluster_state() to work with ES 1.0 and later. Arguments have changed.
-  * Remove InvalidJsonResponseError.
+  * InvalidJsonResponseError no longer provides access to the HTTP response
+    (in the ``response`` property): just the bad data (the ``input`` property).
   * Change from the logger "pyelasticsearch" to "elasticsearch.trace".
   * Remove ``revival_delay`` param from ElasticSearch object.
   * Remove ``encode_body`` param from ``send_request()``. Now all dicts are

@@ -4,7 +4,8 @@ from pyelasticsearch.client import ElasticSearch
 from pyelasticsearch.exceptions import (Timeout, ConnectionError,
                                         ElasticHttpError,
                                         ElasticHttpNotFoundError,
-                                        IndexAlreadyExistsError)
+                                        IndexAlreadyExistsError,
+                                        InvalidJsonResponseError)
 
 __author__ = 'Erik Rose'
 __all__ = ['ElasticSearch', 'ElasticHttpError', 'Timeout', 'ConnectionError',

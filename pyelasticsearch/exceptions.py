@@ -33,3 +33,16 @@ class ElasticHttpNotFoundError(ElasticHttpError):
 
 class IndexAlreadyExistsError(ElasticHttpError):
     """Exception raised on an attempt to create an index that already exists"""
+
+
+class InvalidJsonResponseError(Exception):
+    """
+    Exception raised in the unlikely event that ES returns a non-JSON response
+    """
+    @property
+    def input(self):
+        """Return the data we attempted to convert to JSON."""
+        return self.args[0]
+
+    def __unicode__(self):
+        return u'Invalid JSON returned from ES: %r' % (self.input,)
