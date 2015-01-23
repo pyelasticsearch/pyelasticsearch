@@ -420,7 +420,7 @@ class ElasticSearch(object):
             query_params['q'] = query
             body = ''
         else:
-            body = query
+            body = {'query': query}
         return self.send_request(
             'DELETE',
             [self._concat(index), self._concat(doc_type), '_query'],

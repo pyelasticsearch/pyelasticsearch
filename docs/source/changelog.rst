@@ -7,6 +7,7 @@ v0.8.0
 * Switch to elasticsearch-py's transport and downtime-pooling machinery,
   much of which was borrowed from us anyway.
 * Make bulk indexing (and likely other network things) 15 times faster.
+* Fix ``delete_by_query()`` to work with ES 1.0 and later.
 
 .. note::
 

@@ -145,17 +145,18 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.conn.index('test-index', 'test-type', {'name': 'Bill Baloney'}, id=2)
         self.conn.index('test-index', 'test-type', {'name': 'Horace Humdinger'}, id=3)
-        self.conn.refresh(['test-index'])
 
         self.conn.refresh(['test-index'])
         result = self.conn.count('*:*', index=['test-index'])
         self.assert_result_contains(result, {'count': 3})
 
         result = self.conn.delete_by_query('test-index', 'test-type', {'query_string': {'query': 'name:joe OR name:bill'}})
-        self.assert_result_contains(result, {'ok': True})
+
+        eq_(result['_indices']['test-index']['_shards']['failed'], 0)
 
         self.conn.refresh(['test-index'])
         result = self.conn.count('*:*', index=['test-index'])
+        # Only Horace should be left:
         self.assert_result_contains(result, {'count': 1})
 
     def test_delete_index(self):
