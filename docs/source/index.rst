@@ -70,7 +70,7 @@ Perform a simple search::
 
 Perform a search using the `elasticsearch query DSL`_:
 
-.. _`elasticsearch query DSL`: http://www.elasticsearch.org/guide/reference/query-dsl
+.. _`elasticsearch query DSL`: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html
 
 ::
 
