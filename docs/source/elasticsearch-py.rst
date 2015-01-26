@@ -24,9 +24,9 @@ Which Should You Use?
 =====================
 
 The official Python client borrows much design—and code—from pyelasticsearch.
-Starting in 0.8.0, we return the favor, using elasticsearch-py's
-transport layer rather than maintaining its own. The important differences
-remain at the API level.
+Starting in 1.0, we return the favor, using elasticsearch-py's transport layer
+rather than maintaining its own. The important differences remain at the API
+level.
 
 In general, pyelasticsearch focuses on...
 

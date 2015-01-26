@@ -31,7 +31,7 @@ setup(
     description='Flexible, high-scale API to elasticsearch',
     long_description=read('README.rst') + '\n\n' +
                      '\n'.join(read(join('docs', 'source', 'changelog.rst'))
-                                   .splitlines()[1:]),
+                                   .splitlines()[2:]),
     author='Robert Eanes',
     author_email='python@robsinbox.com',
     maintainer='Erik Rose',
@@ -63,5 +63,5 @@ setup(
     ],
     tests_require=['mock', 'nose>=1.2.1'],
     test_suite='nose.collector',
-    url='http://github.com/pyelasticsearch/pyelasticsearch'
+    url='https://github.com/pyelasticsearch/pyelasticsearch'
 )
