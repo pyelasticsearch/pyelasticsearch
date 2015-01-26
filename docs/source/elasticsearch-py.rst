@@ -46,8 +46,6 @@ In general, pyelasticsearch focuses on...
   indexing, where speed is most often a concern, and it complicates
   troubleshooting, proxying, and setup.
 
-  Another example: we retry a query by default if a timeout occurs.
-
   The tradeoff here is that we don't expose as many knobs to twiddle as the
   official client. If you have unusual needs, we might not be for you.
   Otherwise, you can enjoy less verbose code.
