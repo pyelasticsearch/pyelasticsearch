@@ -318,7 +318,7 @@ class ElasticSearch(object):
 
     @es_kwargs('consistency', 'refresh')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   parent_field='_parent', query_params=None):
+                   parent_field='_parent', percolate = None, query_params=None):
         """
         Index a list of documents as efficiently as possible.
 
@@ -330,6 +330,8 @@ class ElasticSearch(object):
             from document before indexing.
         :arg parent_field: The field of each document that holds its parent ID,
             if any. Removed from document before indexing. 
+        :arg percolate: The name of the registered percolator query to execute
+            against on document indexing (can be "*")
 
         See `ES's bulk API`_ for more detail.
 
@@ -349,6 +351,9 @@ class ElasticSearch(object):
 
             if doc.get(parent_field) is not None:
                 action['index']['_parent'] = doc.pop(parent_field)
+
+            if percolate is not None:
+                action['index']['_percolate'] = percolate
 
             body_bits.append(self._encode_json(action))
             body_bits.append(self._encode_json(doc))
