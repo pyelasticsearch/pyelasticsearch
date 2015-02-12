@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v1.2
+----
+* Add ``doc_as_upsert()`` arg to ``update()``.
+
 v1.1 (2015-02-12)
 -----------------
 * Introduce new bulk API, supporting all types of bulk operations (index,
