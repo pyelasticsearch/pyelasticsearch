@@ -14,7 +14,7 @@ from pyelasticsearch import *
 
 class ElasticSearchTestCase(unittest.TestCase):
     def setUp(self):
-        self.conn = ElasticSearch('http://localhost:9200/')
+        self.conn = ElasticSearch()
 
     def tearDown(self):
         try:

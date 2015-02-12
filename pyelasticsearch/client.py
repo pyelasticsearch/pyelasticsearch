@@ -98,7 +98,7 @@ class ElasticSearch(object):
     This object is thread-safe. You can create one instance and share it
     among all threads.
     """
-    def __init__(self, urls, timeout=60, max_retries=0):
+    def __init__(self, urls='http://localhost:9200', timeout=60, max_retries=0):
         """
         :arg urls: A URL or iterable of URLs of ES nodes. These are full URLs
             with port numbers, like ``http://elasticsearch.example.com:9200``.
