@@ -2,14 +2,19 @@ pyelasticsearch
 ===============
 
 pyelasticsearch is a clean, future-proof, high-scale API to elasticsearch. It
-provides features like...
+provides...
 
-* Transparent conversion of Python data types to and from JSON
-* Translating HTTP status codes representing failure into exceptions
+* Transparent conversion of Python data types to and from JSON, including
+  datetimes and the arbitrary-precision Decimal type
+* Translating HTTP failure status codes into exceptions
 * Connection pooling
-* Load balancing of requests across nodes in a cluster
+* HTTP authentication
+* Load balancing across nodes in a cluster
 * Failed-node marking to avoid downed nodes for a period
 * Optional automatic retrying of failed requests
+* Thread safety
+* Loosely coupled design, letting you customize things like JSON encoding and
+  bulk indexing
 
 For more on our philosophy and history, see :doc:`elasticsearch-py`.
 
@@ -18,17 +23,36 @@ A Taste of the API
 ------------------
 
 Make a pooling, balancing, all-singing, all-dancing connection object::
+
   >>> from pyelasticsearch import ElasticSearch
   >>> es = ElasticSearch('http://localhost:9200/')
 
-Index some documents::
+Index a document::
 
-  >>> es.index("contacts", "person", {"name":"Joe Tester", "age": 25, "title": "QA Master"}, id=1)
+  >>> es.index('contacts',
+  ...          'person',
+  ...          {'name': 'Joe Tester', 'age': 25, 'title': 'QA Master'},
+  ...           id=1)
   {u'_type': u'person', u'_id': u'1', u'ok': True, u'_version': 1, u'_index': u'contacts'}
-  >>> es.index("contacts", "person", {"name":"Jessica Coder", "age": 32, "title": "Programmer"}, id=2)
-  {u'_type': u'person', u'_id': u'2', u'ok': True, u'_version': 1, u'_index': u'contacts'}
-  >>> es.index("contacts", "person", {"name":"Freddy Tester", "age": 29, "title": "Office Assistant"}, id=3)
-  {u'_type': u'person', u'_id': u'3', u'ok': True, u'_version': 1, u'_index': u'contacts'}
+
+Index a couple more documents, this time in a single request using the
+bulk-indexing API::
+
+  >>>  docs = [{'id': 2, 'name': 'Jessica Coder', 'age': 32, 'title': 'Programmer'},
+  ...          {'id': 3, 'name': 'Freddy Tester', 'age': 29, 'title': 'Office Assistant'}]
+  >>>  es.bulk((es.index_op(doc, id=doc.pop('id')) for doc in docs),
+  ...          index='contacts',
+  ...          doc_type='person')
+
+If we had many documents and wanted to chunk them for performance,
+:func:`~pyelasticsearch.bulk_chunks()` would easily rise to the task,
+dividing either at a certain number of documents per batch or, for curated
+platforms like Google App Engine, at a certain number of bytes. Thanks to
+the decoupled design, you can even substitute your own batching function if
+you have unusual needs. Bulk indexing is the most demanding ES task in most
+applications, so we provide very thorough tools for representing operations,
+optimizing wire traffic, and dealing with errors. See
+:meth:`~pyelasticsearch.ElasticSearch.bulk()` for more.
 
 Refresh the index to pick up the latest::
 
@@ -74,22 +98,23 @@ Perform a search using the `elasticsearch query DSL`_:
 
 ::
 
-  >>> query = {'query': {
-  ...             'filtered': {
-  ...                 'query': {
-  ...                     'query_string': {'query': 'name:tester'}
-  ...                 },
-  ...                 'filter': {
-  ...                     'range': {
-  ...                         'age': {
-  ...                             'from': 27,
-  ...                             'to': 37,
-  ...                         },
+  >>> query = {
+  ...     'query': {
+  ...         'filtered': {
+  ...             'query': {
+  ...                 'query_string': {'query': 'name:tester'}
+  ...             },
+  ...             'filter': {
+  ...                 'range': {
+  ...                     'age': {
+  ...                         'from': 27,
+  ...                         'to': 37,
   ...                     },
   ...                 },
   ...             },
   ...         },
-  ...     }
+  ...     },
+  ... }
   >>> es.search(query, index='contacts')
   {u'_shards': {u'failed': 0, u'successful': 42, u'total': 42},
    u'hits': {u'hits': [{u'_id': u'3',
@@ -109,6 +134,7 @@ Delete the index::
   >>> es.delete_index('contacts')
   {u'acknowledged': True, u'ok': True}
 
+For more, see the full :doc:`api`.
 
 Contents
 --------

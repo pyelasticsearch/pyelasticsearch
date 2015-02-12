@@ -94,6 +94,19 @@ def es_kwargs(*args_to_convert):
     return decorator
 
 
+class JsonEncoder(json.JSONEncoder):
+    def default(self, value):
+        """Convert more Python data types to ES-understandable JSON."""
+        iso = _iso_datetime(value)
+        if iso:
+            return iso
+        if not PY3 and isinstance(value, str):
+            return unicode(value, errors='replace')  # TODO: Be stricter.
+        if isinstance(value, set):
+            return list(value)
+        return super(JsonEncoder, self).default(value)
+
+
 class ElasticSearch(object):
     """
     An object which manages connections to elasticsearch and acts as a
@@ -102,10 +115,17 @@ class ElasticSearch(object):
     This object is thread-safe. You can create one instance and share it
     among all threads.
     """
+    #: You can set this attribute on an instance to customize JSON encoding.
+    #: The stock JsonEncoder class maps Python datetimes to ES-style datetimes
+    #: and Python sets to ES lists. You can subclass it to add more.
+    json_encoder = JsonEncoder
+
     def __init__(self, urls='http://localhost:9200', timeout=60, max_retries=0):
         """
         :arg urls: A URL or iterable of URLs of ES nodes. These are full URLs
             with port numbers, like ``http://elasticsearch.example.com:9200``.
+            To do HTTP basic authentication, use RFC-2617-style URLs like
+            ``http://someuser:somepassword@example.com:9200``.
         :arg timeout: Number of seconds to wait for each request before raising
             Timeout
         :arg max_retries: How many other servers to try, in series, after a
@@ -114,7 +134,6 @@ class ElasticSearch(object):
         if isinstance(urls, string_types):
             urls = [urls]
         urls = [u.rstrip('/') for u in urls]
-        self.json_encoder = JsonEncoder
 
         # Automatic node sniffing is off for now.
         parsed_urls = (urlparse(url) for url in urls)
@@ -274,7 +293,7 @@ class ElasticSearch(object):
             the document
         :arg id: The ID to give the document. Leave blank to make one up.
         :arg overwrite_existing: Whether we should overwrite existing documents
-            of the same ID and doctype
+            of the same ID and doc type
         :arg routing: A value hashed to determine which shard this indexing
             request is routed to
         :arg parent: The ID of a parent document, which leads this document to
@@ -628,7 +647,7 @@ class ElasticSearch(object):
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete_all(self, index, doc_type, query_params=None):
         """
-        Delete all documents of the given doctype from an index.
+        Delete all documents of the given doc type from an index.
 
         :arg index: The name of the index from which to delete. ES does not
             support this being empty or "_all" or a comma-delimited list of
@@ -699,7 +718,7 @@ class ElasticSearch(object):
             an id (int or string). IDs are taken to be document IDs. Dicts are
             passed through the Multi Get API essentially verbatim, except that
             any missing ``_type``, ``_index``, or ``fields`` keys are filled in
-            from the defaults given in the ``index``, ``doc_type``, and
+            from the defaults given in the ``doc_type``, ``index``, and
             ``fields`` args.
         :arg index: Default index name from which to retrieve
         :arg doc_type: Default type of document to get
@@ -1211,22 +1230,9 @@ class ElasticSearch(object):
             http://www.elasticsearch.org/guide/reference/api/percolate/
         """
         return self.send_request('GET',
-                                 [index, doc_type, '_percolate'], 
+                                 [index, doc_type, '_percolate'],
                                  doc,
                                  query_params=query_params)
-
-
-class JsonEncoder(json.JSONEncoder):
-    def default(self, value):
-        """Convert more Python data types to ES-understandable JSON."""
-        iso = _iso_datetime(value)
-        if iso:
-            return iso
-        if not PY3 and isinstance(value, str):
-            return unicode(value, errors='replace')  # TODO: Be stricter.
-        if isinstance(value, set):
-            return list(value)
-        return super(JsonEncoder, self).default(value)
 
 
 def _iso_datetime(value):

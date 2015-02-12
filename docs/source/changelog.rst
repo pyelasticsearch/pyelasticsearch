@@ -1,6 +1,23 @@
 Changelog
 =========
 
+v1.1 (2015-02-12)
+-----------------
+* Introduce new bulk API, supporting all types of bulk operations (index,
+  update, create, and delete), providing chunking via ``bulk_chunks()``, and
+  introducing per-action error-handling. All errors raise exceptions--even
+  individual failed operations--and the exceptions expose enough data to
+  identify operations for retrying or reporting. The design is decoupled in
+  case you want to create your own chunkers or operation builders.
+* Deprecate ``bulk_index()`` in favor of the more capable ``bulk()``.
+* Make one last update to ``bulk_index()``. It now catches individual
+  operation failures, raising ``BulkError``. Also add the ``index_field`` and
+  ``type_field`` args, allowing you to index across different indices and doc
+  types within one request.
+* ``ElasticSearch`` object now defaults to http://localhost:9200/ if you don't provide any node URLs.
+* Improve docs: give a better overview on the front page, and document how to
+  customize JSON encoding.
+
 v1.0 (2015-01-23)
 -----------------
 

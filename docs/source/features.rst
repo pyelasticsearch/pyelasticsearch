@@ -6,14 +6,17 @@ JSON Conversion
 ===============
 
 pyelasticsearch converts transparently between Python datastructures and JSON.
-In request bodies, all the standard conversions are made: strings, numeric
-types, nulls, etc. In addition, we convert ``datetime`` and ``date`` instances
-to the format ES understands: ``2012-02-23T14:26:01``. ``date`` objects are
-taken to represent midnight on their day.
 
-A future release will convert more types, like datetimes, to Python in
-responses.
+* In request bodies, all the standard conversions are made: strings, numeric
+  types, nulls, etc.
+* We convert ``datetime`` and ``date`` instances to the format ES understands:
+  ``2012-02-23T14:26:01``. ``date`` objects are taken to represent midnight on
+  their day.
+* Python sets are converted to ES lists.
 
+You can customize JSON conversion by setting the
+:attr:`~pyelasticsearch.ElasticSearch.json_encoder` attribute on an
+ElasticSearch object.
 
 Connection Pooling
 ==================
@@ -28,14 +31,15 @@ connections to each node equal to the number of threads.
 Load-balancing and Failover
 ===========================
 
-An ElasticSearch object can take a list of node URLs on construction. This lets
-us balance load and maintain availability when nodes go down: pyelasticsearch
-will randomly choose a server URL for each request. If a node fails to respond
-before a timeout period elapses, it is assumed down and not tried again for
-awhile. Meanwhile, pyelasticsearch will retry the request on a different node
-if ``max_retries`` was set to something greater than zero at construction. If
-*all* nodes are marked as down, pyelasticsearch will loosen its standards and
-try sending requests to them, marking them alive if they respond.
+An :class:`~pyelasticsearch.ElasticSearch` object can take a list of node URLs
+on construction. This lets us balance load and maintain availability when
+nodes go down: pyelasticsearch will randomly choose a server URL for each
+request. If a node fails to respond before a timeout period elapses, it is
+assumed down and not tried again for awhile. Meanwhile, pyelasticsearch will
+retry the request on a different node if ``max_retries`` was set to something
+greater than zero at construction. If *all* nodes are marked as down,
+pyelasticsearch will loosen its standards and try sending requests to them,
+marking them alive if they respond.
 
 
 .. _forward-compatibility-kwargs:

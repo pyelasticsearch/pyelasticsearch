@@ -13,11 +13,10 @@ forward compatibility and will be unprefixed and converted to strings as
 discussed in :doc:`features`.
 
 
-ElasticSearch API
-=================
+ElasticSearch Class
+===================
 
 .. py:module:: pyelasticsearch
-
 
 Unless otherwise indicated, methods return the JSON-decoded response sent by
 elasticsearch. This way, you don't lose any part of the return value, no matter
@@ -26,9 +25,34 @@ so it'll be hard to miss.
 
 .. autoclass:: ElasticSearch
 
-    .. automethod:: aliases(index=None[, other kwargs listed below])
+    .. autoattribute:: json_encoder
+
+Bulk Indexing Methods
+---------------------
+
+.. class:: ElasticSearch
+
+    .. automethod:: bulk(actions, index=None, doc_type=None[, other kwargs listed below])
+
+    .. automethod:: index_op
+
+    .. automethod:: delete_op
+
+    .. automethod:: update_op
 
     .. automethod:: bulk_index(index, doc_type, docs, id_field='id', parent_field='_parent'[, other kwargs listed below])
+
+There's also a helper function, outside the ElasticSearch class:
+
+.. autofunction:: bulk_chunks
+
+
+Other Methods
+-------------
+
+.. class:: ElasticSearch
+
+    .. automethod:: aliases(index=None[, other kwargs listed below])
 
     .. automethod:: close_index(index)
 
@@ -91,6 +115,8 @@ so it'll be hard to miss.
     .. automethod:: update_settings(index, settings)
 
 
+.. _error-handling:
+
 Error Handling
 ==============
 
@@ -129,8 +155,7 @@ marked as dead, follow the ``elasticsearch`` logger.
 
 .. Note::
 
-   This assumes that logging is already set up with something like
-   this::
+   This assumes that logging is already set up with something like this::
 
        import logging
 
@@ -144,5 +169,4 @@ pyelasticsearch will log lines like::
     cets": {"topics": {"terms": {"field": "topics"}}}}'
 
 
-You can copy and paste the curl line and it'll work on the command
-line.
+You can copy and paste the curl line, and it'll work on the command line.
