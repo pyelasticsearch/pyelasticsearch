@@ -1,5 +1,11 @@
+===============
 pyelasticsearch
 ===============
+
+.. image:: https://travis-ci.org/pyelasticsearch/pyelasticsearch.png
+   :alt: Build Status
+   :align: right
+   :target: https://travis-ci.org/pyelasticsearch/pyelasticsearch
 
 pyelasticsearch is a clean, future-proof, high-scale API to elasticsearch. It
 provides...
@@ -20,7 +26,7 @@ For more on our philosophy and history, see :doc:`elasticsearch-py`.
 
 
 A Taste of the API
-------------------
+==================
 
 Make a pooling, balancing, all-singing, all-dancing connection object::
 
@@ -137,7 +143,7 @@ Delete the index::
 For more, see the full :doc:`api`.
 
 Contents
---------
+========
 
 .. toctree::
    :maxdepth: 2
@@ -151,7 +157,7 @@ Contents
 
 
 Indices and tables
-------------------
+==================
 
 * :ref:`genindex`
 * :ref:`modindex`

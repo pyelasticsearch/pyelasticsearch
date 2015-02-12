@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import codecs
 import re
 from os.path import join, dirname
@@ -16,6 +18,25 @@ def read(filename):
     return codecs.open(join(dirname(__file__), filename), 'r').read()
 
 
+def until_toc(text):
+    """Return the part of ``text`` that comes before the "Contents" heading."""
+    contents_position = text.index('\nContents\n')
+    return text[:contents_position]
+
+
+def replace_links(text):
+    """Fix Sphinx links so rst2html doesn't choke on them on the PyPI page."""
+    return (text
+        .replace(':doc:`elasticsearch-py`',
+                 u'`Comparison with elasticsearch-py, the “Official Client” <https://pyelasticsearch.readthedocs.org/en/latest/elasticsearch-py/>`_')
+        .replace(':doc:`api`',
+                 '`API Documentation <https://pyelasticsearch.readthedocs.org/en/latest/api/>`_')
+        .replace(':func:`~pyelasticsearch.bulk_chunks()`',
+                 '`bulk_chunks() <https://pyelasticsearch.readthedocs.org/en/latest/api/#pyelasticsearch.bulk_chunks>`_')
+        .replace(':meth:`~pyelasticsearch.ElasticSearch.bulk()`',
+                 '`bulk() <https://pyelasticsearch.readthedocs.org/en/latest/api/#pyelasticsearch.ElasticSearch.bulk>`_'))
+
+
 def find_version(file_path):
     version_file = read(file_path)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
@@ -29,9 +50,10 @@ setup(
     name='pyelasticsearch',
     version=find_version(join('pyelasticsearch', '__init__.py')),
     description='Flexible, high-scale API to elasticsearch',
-    long_description=read('README.rst') + '\n\n' +
-                     '\n'.join(read(join('docs', 'source', 'changelog.rst'))
-                                   .splitlines()[2:]),
+    long_description=(
+        until_toc(replace_links(read('docs/source/index.rst')))
+        + '\n\n'
+        + '\n'.join(read(join('docs', 'source', 'changelog.rst')).splitlines()[1:])),
     author='Robert Eanes',
     author_email='python@robsinbox.com',
     maintainer='Erik Rose',
