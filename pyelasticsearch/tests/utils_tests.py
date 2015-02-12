@@ -41,8 +41,17 @@ class BulkChunksTests(TestCase):
         """
         Make sure byte-based limits work.
 
-        The last document is allowed to overshoot the limit.
+        The last document is not allowed to overshoot the limit.
         """
-        actions = ['o', 'hello', 'chimpanzees']
+        actions = ['o', 'hi', 'good', 'chimpanzees']
         chunks = bulk_chunks(actions, bytes_per_chunk=5)
-        eq_(list(chunks), [['o', 'hello'], ['chimpanzees']])
+        eq_(list(chunks), [['o', 'hi'], ['good'], ['chimpanzees']])
+
+    def test_bytes_first_too_big(self):
+        """
+        Don't yield an empty chunk if the first item is over the byte limit on
+        its own.
+        """
+        actions = ['chimpanzees', 'hi', 'ho']
+        chunks = bulk_chunks(actions, bytes_per_chunk=6)
+        eq_(list(chunks), [['chimpanzees'], ['hi', 'ho']])
