@@ -18,7 +18,8 @@ import simplejson as json  # for use_decimal
 from pyelasticsearch.exceptions import (ElasticHttpError,
                                         ElasticHttpNotFoundError,
                                         IndexAlreadyExistsError,
-                                        InvalidJsonResponseError)
+                                        InvalidJsonResponseError,
+                                        BulkError)
 
 
 def _add_es_kwarg_docs(params, method):
@@ -78,8 +79,11 @@ def es_kwargs(*args_to_convert):
         @wraps(func)
         def decorate(*args, **kwargs):
             # Make kwargs the map of normal kwargs and query_params the map of
-            # kwargs destined for query string params:
-            query_params = {}
+            # kwargs destined for query string params.
+
+            # Let one @es_kwargs-wrapped function call another:
+            query_params = kwargs.pop('query_params', {})
+
             for k in list(iterkeys(kwargs)):  # Make a copy; we mutate kwargs.
                 if k.startswith('es_'):
                     query_params[k[3:]] = kwargs.pop(k)
@@ -316,49 +320,287 @@ class ElasticSearch(object):
                                  doc,
                                  query_params)
 
-    @es_kwargs('consistency', 'refresh')
+    @es_kwargs('consistency', 'refresh', 'replication', 'routing', 'timeout')
+    def bulk(self, actions, index=None, doc_type=None, query_params=None):
+        """
+        Perform multiple index, delete, create, or update actions per request.
+
+        Used with helper routines :meth:`index_op()`, :meth:`delete_op()`, and
+        :meth:`update_op()`, this provides an efficient, readable way to do
+        large-scale changes. This contrived example illustrates the structure::
+
+            es.bulk([es.index_op({'title': 'All About Cats', 'pages': 20}),
+                     es.index_op({'title': 'And Rats', 'pages': 47}),
+                     es.index_op({'title': 'And Bats', 'pages': 23})],
+                    doc_type='book',
+                    index='library')
+
+        More often, you'll want to index (or delete or update) a larger number
+        of documents. In those cases, yield your documents from a generator,
+        and use :func:`~pyelasticsearch.bulk_chunks()` to divide them into
+        multiple requests::
+
+            from pyelasticsearch import bulk_chunks
+
+            def documents():
+                for book in books:
+                    yield es.index_op({'title': book.title, 'pages': book.pages})
+                    # index_op() also takes kwargs like index= and id= in case
+                    # you want more control.
+                    #
+                    # You could also yield some delete_ops or update_ops here.
+
+            # bulk_chunks() breaks your documents into smaller requests for speed:
+            for chunk in bulk_chunks(documents(),
+                                     docs_per_batch=500,
+                                     bytes_per_batch=10000):
+                # We specify a default index and doc type here so we don't
+                # have to repeat them in every operation:
+                es.bulk(chunk, doc_type='book', index='library')
+
+        :arg actions: An iterable of bulk actions, generally the output of
+            :func:`~pyelasticsearch.bulk_chunks()` but sometimes a list
+            of calls to :meth:`index_op()`, :meth:`delete_op()`, and
+            :meth:`update_op()` directly. Specifically, an iterable of
+            JSON-encoded bytestrings that can be joined with newlines and
+            sent to ES.
+        :arg index: Default index to operate on
+        :arg doc_type: Default type of document to operate on. Cannot be
+            specified without ``index``.
+
+        Return the decoded JSON response on success.
+
+        Raise :class:`~pyelasticsearch.exceptions.BulkError` if any of the
+        individual actions fail. The exception provides enough about the
+        failed actions to identify them for retrying.
+
+        Sometimes there is an error with the request in general, not with
+        any individual actions. If there is a connection error, timeout,
+        or other transport error, a more general exception will be raised, as
+        with other methods; see :ref:`error-handling`.
+
+        See `ES's bulk API`_ for more detail.
+
+        .. _`ES's bulk API`:
+            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+        """
+        # To summarize the flow: index_op() encodes a bytestring.
+        #                        bulk_chunks() groups.
+        #                        bulk() joins with \n.
+
+        if doc_type is not None and index is None:
+            raise ValueError(
+                'Please also pass `index` if you pass `doc_type`.')
+
+        def is_error(item):
+            for op, subdict in iteritems(item):
+                break
+            return not 200 <= subdict.get('status', 999) < 300
+
+        response = self.send_request('POST',
+                                     [index, doc_type, '_bulk'],
+                                     body='\n'.join(actions) + '\n',
+                                     query_params=query_params)
+
+        # Sometimes the request worked, but individual actions fail:
+        if response.get('errors', True):  # Try a shortcut to avoid looking
+                                          # at every item on success.
+            errors, successes = [], []
+            for item in response['items']:
+                if is_error(item):
+                    errors.append(item)
+                else:
+                    successes.append(item)
+            if errors:
+                raise BulkError(errors, successes)
+        return response
+
+    def index_op(self, doc, doc_type=None, overwrite_existing=True, **meta):
+        """
+        Return a document-indexing operation that can be passed to
+        :meth:`bulk()`. (See there for examples.)
+
+        Specifically, return a 2-line, JSON-encoded bytestring.
+
+        :arg doc: A mapping of property names to values.
+        :arg doc_type: The type of the document to index, if different from
+            the one you pass to :meth:`bulk()`
+        :arg overwrite_existing: Whether we should overwrite existing
+            documents of the same ID and doc type. (If False, this does a
+            `create` operation.)
+        :arg meta: Other args controlling how the document is indexed,
+            like ``id`` (most common), ``index`` (next most common),
+            ``version``, and ``routing``. See `ES's bulk API`_ for details on
+            these.
+
+        .. _`ES's bulk API`:
+            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+
+        """
+        operation = 'index' if overwrite_existing else 'create'
+        return self._bulk_op(operation, doc=doc, meta=meta, doc_type=doc_type)
+
+    def delete_op(self, doc_type=None, **meta):
+        """
+        Return a document-deleting operation that can be passed to
+        :meth:`bulk()`. ::
+
+            def actions():
+                ...
+                yield es.delete_op(id=7)
+                yield es.delete_op(id=9,
+                                   index='some-non-default-index',
+                                   doc_type='some-non-default-type')
+                ...
+
+            es.bulk(actions(), ...)
+
+        Specifically, return a JSON-encoded bytestring.
+
+        :arg doc_type: The type of the document to delete, if different
+            from the one passed to :meth:`bulk()`
+        :arg meta: A description of what document to delete and how to do it.
+            Example: ``{"index": "library", "id": 2, "version": 4}``.  See
+            `ES's bulk API`_ for a list of all the options.
+
+        .. _`ES's bulk API`:
+            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+
+        """
+        return self._bulk_op('delete', meta=meta, doc_type=doc_type)
+
+    def update_op(self, doc=None, doc_type=None, upsert=None,
+                  doc_as_upsert=None, script=None, params=None, lang=None,
+                  **meta):
+        """
+        Return a document-updating operation that can be passed to
+        :meth:`bulk()`. ::
+
+            def actions():
+                ...
+                yield es.update_op(doc={'pages': 4},
+                                   id=7,
+                                   version=21)
+                ...
+
+            es.bulk(actions(), ...)
+
+        Specifically, return a JSON-encoded bytestring.
+
+        :arg doc: A partial document to be merged into the existing document
+        :arg doc_type: The type of the document to update, if different
+            from the one passed to :meth:`bulk()`
+        :arg upsert: The content for the new document created if the
+            document does not exist
+        :arg script: The script to be used to update the document
+        :arg params: A dict of the params to be put in scope of the script
+        :arg lang: The language of the script. Omit to use the default,
+            specified by ``script.default_lang``.
+        :arg meta: Other args controlling what document to update and how
+            to do it, like ``id``, ``index``, and ``retry_on_conflict``,
+            destined for the action line itself rather than the payload.  See
+            `ES's bulk API`_ for details on these.
+
+        .. _`ES's bulk API`:
+            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+
+        """
+        payload = dict((k, v) for k, v in [('doc', doc), ('upsert', upsert),
+                                  ('doc_as_upsert', doc_as_upsert),
+                                  ('script', script), ('params', params),
+                                  ('lang', lang)] if v is not None)
+        return self._bulk_op('update',
+                             doc=payload,
+                             meta=meta,
+                             doc_type=doc_type)
+
+    def _bulk_op(self, operation, doc=None, meta=None, doc_type=None):
+        """
+        Return an arbitrary bulk indexing operation as a bytestring.
+
+        :arg operation: One of 'index', 'delete', 'update', or 'create'
+        :arg doc: A mapping of fields
+        :arg meta: A mapping of underscore-prefixed fields with special
+            meaning to ES, like ``_id`` and ``_type``
+        :arg doc_type: The value that is to become the ``_type`` field of
+            the action line. We go to special trouble to keep the name
+            "doc_type" for consistency with other routines.
+        """
+        def underscore_keys(d):
+            """Return a dict with every key prefixed by an underscore."""
+            return dict(('_%s' % k, v) for k, v in iteritems(d))
+
+        if meta is None:
+            meta = {}
+        if doc_type is not None:
+            meta['type'] = doc_type
+
+        ret = self._encode_json({operation: underscore_keys(meta)})
+        if doc is not None:
+            ret += '\n' + self._encode_json(doc)
+        return ret
+
+    @es_kwargs('consistency', 'refresh', 'replication', 'routing', 'timeout')
     def bulk_index(self, index, doc_type, docs, id_field='id',
-                   parent_field='_parent', query_params=None):
+                   parent_field='_parent', index_field='_index',
+                   type_field='_type', query_params=None):
         """
         Index a list of documents as efficiently as possible.
 
-        :arg index: The name of the index to which to add the document
+        .. note::
+
+            This is deprecated in favor of :meth:`bulk()`, which supports all
+            types of bulk actions, not just indexing, is compatible with
+            :func:`~pyelasticsearch.bulk_chunks()` for batching, and has a
+            simpler, more flexible design.
+
+        :arg index: The name of the index to which to add the document. Pass
+            None if you will specify indices individual in each doc.
         :arg doc_type: The type of the document
         :arg docs: An iterable of Python mapping objects, convertible to JSON,
             representing documents to index
         :arg id_field: The field of each document that holds its ID. Removed
             from document before indexing.
         :arg parent_field: The field of each document that holds its parent ID,
-            if any. Removed from document before indexing. 
+            if any. Removed from document before indexing.
+        :arg index_field: The field of each document that holds the index to
+            put it into, if different from the ``index`` arg. Removed from
+            document before indexing.
+        :arg type_field: The field of each document that holds the doc type it
+            should become, if different from the ``doc_type`` arg. Removed from
+            the document before indexing.
+
+        Raise :class:`~pyelasticsearch.exceptions.BulkError` if the request as
+        a whole succeeded but some of the individual actions failed. You can
+        pull enough about the failed actions out of the exception to identify
+        them for retrying.
 
         See `ES's bulk API`_ for more detail.
 
         .. _`ES's bulk API`:
-            http://www.elasticsearch.org/guide/reference/api/bulk.html
+            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
         """
-        body_bits = []
-
         if not docs:
             raise ValueError('No documents provided for bulk indexing!')
 
-        for doc in docs:
-            action = {'index': {'_index': index, '_type': doc_type}}
+        meta_fields = [(index_field, 'index'),
+                       (id_field, 'id'),
+                       (parent_field, 'parent')]
 
-            if doc.get(id_field) is not None:
-                action['index']['_id'] = doc.pop(id_field)
+        def encoded_docs():
+            for doc in docs:
+                action = {}
+                for doc_key, bulk_key in meta_fields:
+                    if doc.get(doc_key) is not None:
+                        action[bulk_key] = doc.pop(doc_key)
+                yield self.index_op(doc,
+                                    doc_type=doc.pop(type_field, None),
+                                    **action)
 
-            if doc.get(parent_field) is not None:
-                action['index']['_parent'] = doc.pop(parent_field)
-
-            body_bits.append(self._encode_json(action))
-            body_bits.append(self._encode_json(doc))
-
-        # Need the trailing newline.
-        body = '\n'.join(body_bits) + '\n'
-        return self.send_request('POST',
-                                 ['_bulk'],
-                                 body,
-                                 query_params=query_params)
+        return self.bulk(encoded_docs(),
+                         index=index,
+                         doc_type=doc_type,
+                         query_params=query_params)
 
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete(self, index, doc_type, id, query_params=None):

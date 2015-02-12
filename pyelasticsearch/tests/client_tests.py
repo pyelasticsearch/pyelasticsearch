@@ -231,8 +231,73 @@ class IndexingTestCase(ElasticSearchTestCase):
         eq_(result['items'][1]['index']['status'], 201)
         eq_(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
-        eq_(self.conn.count('*:*',
-                                         index=['test-index'])['count'], 2)
+        eq_(self.conn.count('*:*', index=['test-index'])['count'], 2)
+
+    def test_bulk(self):
+        es = self.conn
+
+        # Test index and create and multiple operations in a batch:
+        result = es.bulk([es.index_op(dict(title='Pride and Prejudice and Zombies',
+                                           pages=200),
+                                      id=5),
+                          es.index_op(dict(title='Sense and Sensibility and Seamonsters',
+                                           pages=200),
+                                      id=6),
+                          es.index_op(dict(title='San Franscisco Landline Phonebook',
+                                           pages=3),
+                                      id=7,
+                                      overwrite_existing=False)],
+                        index='test-index',
+                        doc_type='book')
+        eq_(result['items'], [{'index': {'_id': '5',
+                                         '_index': 'test-index',
+                                         '_type': 'book',
+                                         '_version': 1,
+                                         'status': 201}},
+                              {'index': {'_id': '6',
+                                         '_index': 'test-index',
+                                         '_type': 'book',
+                                         '_version': 1,
+                                         'status': 201}},
+                              {'create': {'_id': '7',
+                                         '_index': 'test-index',
+                                         '_type': 'book',
+                                         '_version': 1,
+                                         'status': 201}}])
+
+        # Test the error handling:
+        try:
+            es.bulk([es.index_op(dict(pages=4),
+                                 id=7,
+                                 version=2)],
+                    index='test-index',
+                    doc_type='book')
+        except BulkError as exc:
+            eq_(exc.successes, [])
+            eq_(exc.errors, [{'index': {'status': 409,
+                                        '_type': 'book',
+                                        '_id': '7',
+                                        'error': ANY,
+                                        '_index': 'test-index'}}])
+        else:
+            self.fail("bulk() didn't raise BulkError when a version conflict happened.")
+
+        # Test updating:
+        response = es.bulk([es.update_op(doc=dict(pages=4),
+                              id=7)],
+                           index='test-index',
+                           doc_type='book')
+        eq_(response['items'], [{'update': {'_id': '7',
+                                            '_index': 'test-index',
+                                            '_type': 'book',
+                                            '_version': 2,
+                                            'status': 200}}])
+
+        # Test delete and index=None and doc_type=None:
+        response = es.bulk([es.delete_op(index='test-index',
+                                         doc_type='book',
+                                         id=id) for id in [5, 6, 7]])
+        eq_(self.conn.count('*:*', index=['test-index'])['count'], 0)
 
     def test_error_handling(self):
         # Wrong port.
