@@ -2,9 +2,15 @@
 Changelog
 =========
 
-v1.2
-----
+v1.2 (2015-03-06)
+-----------------
+* Make sure the Content-Length header gets set when calling ``create_index()``
+  with no explicit ``settings`` arg. This solves 411s when using nginx as a
+  proxy.
 * Add ``doc_as_upsert()`` arg to ``update()``.
+* Make ``bulk_chunks()`` compute perfectly optimal results, no longer ever
+  exceeding the byte limit unless a single document is over the limit on its own.
+
 
 v1.1 (2015-02-12)
 -----------------

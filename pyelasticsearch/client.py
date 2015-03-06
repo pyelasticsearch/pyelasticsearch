@@ -998,7 +998,7 @@ class ElasticSearch(object):
         .. _`ES's create-index API`:
             http://www.elasticsearch.org/guide/reference/api/admin-indices-create-index.html
         """
-        return self.send_request('PUT', [index], body=settings,
+        return self.send_request('PUT', [index], body=settings or {},
                                  query_params=query_params)
 
     @es_kwargs()
