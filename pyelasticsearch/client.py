@@ -371,8 +371,8 @@ class ElasticSearch(object):
 
             # bulk_chunks() breaks your documents into smaller requests for speed:
             for chunk in bulk_chunks(documents(),
-                                     docs_per_batch=500,
-                                     bytes_per_batch=10000):
+                                     docs_per_chunk=500,
+                                     bytes_per_chunk=10000):
                 # We specify a default index and doc type here so we don't
                 # have to repeat them in every operation:
                 es.bulk(chunk, doc_type='book', index='library')
