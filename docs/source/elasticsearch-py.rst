@@ -44,7 +44,8 @@ In general, pyelasticsearch focuses on...
   the right one. Thrift, the leading alternative, yields a 15% speed boost but
   only when using many small requests. It doesn't help at all for bulk
   indexing, where speed is most often a concern, and it complicates
-  troubleshooting, proxying, and setup.
+  troubleshooting, proxying, and setup. In fact, it's deprecated in ES 1.5 and
+  will be removed in 2.0.
 
   The tradeoff here is that we don't expose as many knobs to twiddle as the
   official client. If you have unusual needs, we might not be for you.
