@@ -6,6 +6,8 @@ v1.2.1 (2015-04-09)
 -------------------
 * Update ES doc links, now that Elastic has changed domains and reorganized
   its docs.
+* Require elasticsearch lib 1.3 or greater, as that's when it started exposing
+  ``ConnectionTimeout``.
 
 
 v1.2 (2015-03-06)
