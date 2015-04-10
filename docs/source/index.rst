@@ -12,7 +12,7 @@ provides...
 
 * Transparent conversion of Python data types to and from JSON, including
   datetimes and the arbitrary-precision Decimal type
-* Translating HTTP failure status codes into exceptions
+* Translation of HTTP failure status codes into exceptions
 * Connection pooling
 * HTTP authentication
 * Load balancing across nodes in a cluster
