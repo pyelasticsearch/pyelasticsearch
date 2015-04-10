@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v1.2.2 (2015-04-10)
+-------------------
+* Correct a typo in the ``bulk()`` docs.
+
+
 v1.2.1 (2015-04-09)
 -------------------
 * Update ES doc links, now that Elastic has changed domains and reorganized
