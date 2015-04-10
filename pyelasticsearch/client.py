@@ -319,7 +319,7 @@ class ElasticSearch(object):
         See `ES's index API`_ for more detail.
 
         .. _`ES's index API`:
-            http://www.elasticsearch.org/guide/reference/api/index_.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
         """
         # :arg query_params: A map of other querystring params to pass along to
         # ES. This lets you use future ES features without waiting for an
@@ -401,7 +401,7 @@ class ElasticSearch(object):
         See `ES's bulk API`_ for more detail.
 
         .. _`ES's bulk API`:
-            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
         """
         # To summarize the flow: index_op() encodes a bytestring.
         #                        bulk_chunks() groups.
@@ -453,7 +453,7 @@ class ElasticSearch(object):
             these.
 
         .. _`ES's bulk API`:
-            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
 
         """
         operation = 'index' if overwrite_existing else 'create'
@@ -483,7 +483,7 @@ class ElasticSearch(object):
             `ES's bulk API`_ for a list of all the options.
 
         .. _`ES's bulk API`:
-            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
 
         """
         return self._bulk_op('delete', meta=meta, doc_type=doc_type)
@@ -521,7 +521,7 @@ class ElasticSearch(object):
             `ES's bulk API`_ for details on these.
 
         .. _`ES's bulk API`:
-            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
 
         """
         payload = dict((k, v) for k, v in [('doc', doc), ('upsert', upsert),
@@ -597,7 +597,7 @@ class ElasticSearch(object):
         See `ES's bulk API`_ for more detail.
 
         .. _`ES's bulk API`:
-            http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-bulk.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
         """
         if not docs:
             raise ValueError('No documents provided for bulk indexing!')
@@ -633,7 +633,7 @@ class ElasticSearch(object):
         See `ES's delete API`_ for more detail.
 
         .. _`ES's delete API`:
-            http://www.elasticsearch.org/guide/reference/api/delete.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html
         """
         # id should never be None, and it's not particular dangerous
         # (equivalent to deleting a doc with ID "None", but it's almost
@@ -657,7 +657,7 @@ class ElasticSearch(object):
         See `ES's delete API`_ for more detail.
 
         .. _`ES's delete API`:
-            http://www.elasticsearch.org/guide/reference/api/delete.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html
         """
         return self.send_request('DELETE', [index, doc_type],
                                  query_params=query_params)
@@ -678,7 +678,7 @@ class ElasticSearch(object):
         See `ES's delete-by-query API`_ for more detail.
 
         .. _`ES's delete-by-query API`:
-            http://www.elasticsearch.org/guide/reference/api/delete-by-query.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete-by-query.html
         """
         if isinstance(query, string_types) and 'q' not in query_params:
             query_params['q'] = query
@@ -703,7 +703,7 @@ class ElasticSearch(object):
         See `ES's get API`_ for more detail.
 
         .. _`ES's get API`:
-            http://www.elasticsearch.org/guide/reference/api/get.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
         """
         return self.send_request('GET', [index, doc_type, id],
                                  query_params=query_params)
@@ -727,7 +727,7 @@ class ElasticSearch(object):
         See `ES's Multi Get API`_ for more detail.
 
         .. _`ES's Multi Get API`:
-            http://www.elasticsearch.org/guide/reference/api/multi-get.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-multi-get.html
         """
         doc_template = dict(
             filter(
@@ -766,6 +766,11 @@ class ElasticSearch(object):
             does not exist
         :arg doc_as_upsert: The provided document will be inserted if the 
             document does not already exist
+
+        See `ES's Update API`_ for more detail.
+
+        .. _`ES's Update API`:
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html
         """
         if script is None and doc is None and upsert is None:
             raise TypeError('At least one of the script, doc, or upsert '
@@ -823,7 +828,7 @@ class ElasticSearch(object):
         See `ES's search API`_ for more detail.
 
         .. _`ES's search API`:
-            http://www.elasticsearch.org/guide/reference/api/search/
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/_the_search_api.html
         """
         return self._search_or_count('_search', query, **kwargs)
 
@@ -843,7 +848,7 @@ class ElasticSearch(object):
         See `ES's count API`_ for more detail.
 
         .. _`ES's count API`:
-            http://www.elasticsearch.org/guide/reference/api/count.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/search-count.html
         """
         return self._search_or_count('_count', query, **kwargs)
 
@@ -860,7 +865,7 @@ class ElasticSearch(object):
         See `ES's get-mapping API`_ for more detail.
 
         .. _`ES's get-mapping API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-get-mapping.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-get-mapping.html
         """
         # TODO: Think about turning index=None into _all if doc_type is non-
         # None, per the ES doc page.
@@ -883,7 +888,7 @@ class ElasticSearch(object):
         See `ES's put-mapping API`_ for more detail.
 
         .. _`ES's put-mapping API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-put-mapping.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html
         """
         # TODO: Perhaps add a put_all_mappings() for consistency and so we
         # don't need to expose the "_all" magic string. We haven't done it yet
@@ -917,7 +922,7 @@ class ElasticSearch(object):
         See `ES's more-like-this API`_ for more detail.
 
         .. _`ES's more-like-this API`:
-            http://www.elasticsearch.org/guide/reference/api/more-like-this.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/search-more-like-this.html
         """
         query_params['mlt_fields'] = self._concat(mlt_fields)
         return self.send_request('GET',
@@ -937,7 +942,7 @@ class ElasticSearch(object):
         See `ES's index-status API`_ for more detail.
 
         .. _`ES's index-status API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-status.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-status.html
         """
         return self.send_request('GET', [self._concat(index), '_status'],
                                  query_params=query_params)
@@ -949,10 +954,10 @@ class ElasticSearch(object):
 
         :arg actions: A list of the actions to perform
 
-        See `ES's admin-indices-aliases API`_.
+        See `ES's indices-aliases API`_.
 
-        .. _`ES's admin-indices-aliases API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
+        .. _`ES's indices-aliases API`:
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
         """
         return self.send_request('POST', ['_aliases'],
                                  body={'actions': actions},
@@ -968,10 +973,10 @@ class ElasticSearch(object):
         :arg alias: The name of the alias to return or an iterable of them.
             Wildcard * is supported. If this arg is omitted, return all aliases.
 
-        See `ES's admin-indices-aliases API`_.
+        See `ES's indices-aliases API`_.
 
-        .. _`ES's admin-indices-aliases API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-aliases.html
+        .. _`ES's indices-aliases API`:
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
         """
         return self.send_request(
                 'GET',
@@ -996,7 +1001,7 @@ class ElasticSearch(object):
         See `ES's create-index API`_ for more detail.
 
         .. _`ES's create-index API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-create-index.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
         """
         return self.send_request('PUT', [index], body=settings or {},
                                  query_params=query_params)
@@ -1014,7 +1019,7 @@ class ElasticSearch(object):
         See `ES's delete-index API`_ for more detail.
 
         .. _`ES's delete-index API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-delete-index.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-delete-index.html
         """
         if not index:
             raise ValueError('No indexes specified. To delete all indexes, use'
@@ -1036,7 +1041,7 @@ class ElasticSearch(object):
         See `ES's close-index API`_ for more detail.
 
         .. _`ES's close-index API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-open-close.html
         """
         return self.send_request('POST', [index, '_close'],
                                  query_params=query_params)
@@ -1051,7 +1056,7 @@ class ElasticSearch(object):
         See `ES's open-index API`_ for more detail.
 
         .. _`ES's open-index API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-open-close.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-open-close.html
         """
         return self.send_request('POST', [index, '_open'],
                                  query_params=query_params)
@@ -1066,7 +1071,7 @@ class ElasticSearch(object):
         See `ES's get-settings API`_ for more detail.
 
         .. _`ES's get-settings API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-get-settings.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-get-settings.html
         """
         return self.send_request('GET',
                                  [self._concat(index), '_settings'],
@@ -1083,7 +1088,7 @@ class ElasticSearch(object):
         See `ES's update-settings API`_ for more detail.
 
         .. _`ES's update-settings API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-update-settings.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html
         """
         if not index:
             raise ValueError('No indexes specified. To update all indexes, use'
@@ -1105,7 +1110,7 @@ class ElasticSearch(object):
         See `ES's update-settings API`_ for more detail.
 
         .. _`ES's update-settings API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-update-settings.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html
         """
         return self.send_request('PUT', ['_settings'], body=settings,
                                  query_params=query_params)
@@ -1120,7 +1125,7 @@ class ElasticSearch(object):
         See `ES's flush API`_ for more detail.
 
         .. _`ES's flush API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-flush.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-flush.html
         """
         return self.send_request('POST',
                                  [self._concat(index), '_flush'],
@@ -1136,7 +1141,7 @@ class ElasticSearch(object):
         See `ES's refresh API`_ for more detail.
 
         .. _`ES's refresh API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-refresh.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-refresh.html
         """
         return self.send_request('POST', [self._concat(index), '_refresh'],
                                  query_params=query_params)
@@ -1169,7 +1174,7 @@ class ElasticSearch(object):
         See `ES's optimize API`_ for more detail.
 
         .. _`ES's optimize API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-indices-optimize.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-optimize.html
         """
         return self.send_request('POST',
                                  [self._concat(index), '_optimize'],
@@ -1186,7 +1191,7 @@ class ElasticSearch(object):
         See `ES's cluster-health API`_ for more detail.
 
         .. _`ES's cluster-health API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-cluster-health.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html
         """
         return self.send_request(
             'GET',
@@ -1207,7 +1212,7 @@ class ElasticSearch(object):
         See `ES's cluster-state API`_ for more detail.
 
         .. _`ES's cluster-state API`:
-            http://www.elasticsearch.org/guide/reference/api/admin-cluster-state.html
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-state.html
         """
         return self.send_request(
             'GET',
@@ -1231,7 +1236,7 @@ class ElasticSearch(object):
         for more detail.
 
         .. _`ES's percolate API`:
-            http://www.elasticsearch.org/guide/reference/api/percolate/
+            http://www.elastic.co/guide/en/elasticsearch/reference/current/search-percolate.html#_percolate_api
         """
         return self.send_request('GET',
                                  [index, doc_type, '_percolate'],
