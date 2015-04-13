@@ -12,7 +12,7 @@ from six.moves.urllib.parse import urlparse, urlencode, quote_plus
 from elasticsearch.connection_pool import RandomSelector
 from elasticsearch.exceptions import (ConnectionError, ConnectionTimeout,
                                       TransportError, SerializationError)
-from elasticsearch.transport import Transport
+from elasticsearch import Elasticsearch
 import simplejson as json  # for use_decimal
 
 from pyelasticsearch.exceptions import (ElasticHttpError,
@@ -144,7 +144,8 @@ class ElasticSearch(object):
             selector_class=RandomSelector
         )
         opts.update(kwargs)
-        self._transport = Transport(
+
+        self._raw_client = Elasticsearch(
             [{'host': url.hostname,
               'port': url.port or 9200,
               'http_auth': (url.username, url.password) if
@@ -152,6 +153,11 @@ class ElasticSearch(object):
              for url in parsed_urls],
             **opts
         )
+        self._transport = self._raw_client.transport
+
+    @property
+    def raw_client(self):
+        return self._raw_client
 
     def _concat(self, items):
         """

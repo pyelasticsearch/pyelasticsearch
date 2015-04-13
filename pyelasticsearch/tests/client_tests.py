@@ -4,6 +4,8 @@ from mock import ANY, patch
 from unittest import TestCase
 from nose.tools import eq_, ok_, assert_raises, assert_not_equal
 
+from elasticsearch import Elasticsearch
+
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
 from pyelasticsearch.tests import ElasticSearchTestCase
@@ -13,6 +15,10 @@ class TestClient(TestCase):
     def test_kwargs_are_passed_to_transport(self):
         es = ElasticSearch(retry_on_timeout=False)
         ok_(not es._transport.retry_on_timeout)
+
+    def test_raw_client_is_exposed(self):
+        es = ElasticSearch()
+        ok_(isinstance(es.raw_client, Elasticsearch))
 
 
 class IndexingTestCase(ElasticSearchTestCase):
