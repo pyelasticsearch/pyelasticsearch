@@ -120,7 +120,7 @@ class ElasticSearch(object):
     #: and Python sets to ES lists. You can subclass it to add more.
     json_encoder = JsonEncoder
 
-    def __init__(self, urls='http://localhost:9200', timeout=60, max_retries=0):
+    def __init__(self, urls='http://localhost:9200', timeout=60, max_retries=0, **kwargs):
         """
         :arg urls: A URL or iterable of URLs of ES nodes. These are full URLs
             with port numbers, like ``http://elasticsearch.example.com:9200``.
@@ -137,16 +137,21 @@ class ElasticSearch(object):
 
         # Automatic node sniffing is off for now.
         parsed_urls = (urlparse(url) for url in urls)
+        opts = dict(
+            max_retries=max_retries,
+            retry_on_timeout=True,
+            timeout=timeout,
+            selector_class=RandomSelector
+        )
+        opts.update(kwargs)
         self._transport = Transport(
             [{'host': url.hostname,
               'port': url.port or 9200,
               'http_auth': (url.username, url.password) if
                            url.username or url.password else None}
              for url in parsed_urls],
-            max_retries=max_retries,
-            retry_on_timeout=True,
-            timeout=timeout,
-            selector_class=RandomSelector)
+            **opts
+        )
 
     def _concat(self, items):
         """
