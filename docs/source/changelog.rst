@@ -2,6 +2,13 @@
 Changelog
 =========
 
+v1.2.3 (2015-04-17)
+-------------------
+* Make ``delete_all_indexes()`` work.
+* Fix a bug in which specifying ``_all`` as an index name sometimes caused
+  doctype names to be treated as index names.
+
+
 v1.2.2 (2015-04-10)
 -------------------
 * Correct a typo in the ``bulk()`` docs.

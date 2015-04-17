@@ -520,7 +520,7 @@ class DangerousOperationTests(ElasticSearchTestCase):
         """Make sure ``delete_all_indexes()`` sends the right request."""
         with patch.object(self.conn, 'send_request') as send_request:
             self.conn.delete_all_indexes()
-        send_request.assert_called_once_with('DELETE', [''], query_params={})
+        send_request.assert_called_once_with('DELETE', ['_all'], query_params={})
 
     def update_settings_no_args(self):
         """

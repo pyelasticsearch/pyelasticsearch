@@ -150,17 +150,15 @@ class ElasticSearch(object):
 
     def _concat(self, items):
         """
-        Return a comma-delimited concatenation of the elements of ``items``,
-        with any occurrences of "_all" omitted.
+        Return a comma-delimited concatenation of the elements of ``items``.
 
         If ``items`` is a string, promote it to a 1-item list.
         """
-        # TODO: Why strip out _all?
         if items is None:
             return ''
         if isinstance(items, string_types):
             items = [items]
-        return ','.join(i for i in items if i != '_all')
+        return ','.join(items)
 
     def _to_query(self, obj):
         """
