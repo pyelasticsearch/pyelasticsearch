@@ -37,19 +37,6 @@ In general, pyelasticsearch focuses on...
   nested inside ``es.indices.create(<index name>)``, an artifact of code
   organization. The tradeoff for added design thought is that the project moves slower.
 
-* Good defaults and simple interfaces
-
-  For example, there is only a single transport, HTTP, but it is almost always
-  the right one. Thrift, the leading alternative, yields a 15% speed boost but
-  only when using many small requests. It doesn't help at all for bulk
-  indexing, where speed is most often a concern, and it complicates
-  troubleshooting, proxying, and setup. In fact, it's deprecated in ES 1.5 and
-  will be removed in 2.0.
-
-  The tradeoff here is that we don't expose as many knobs to twiddle as the
-  official client. If you have unusual needs, we might not be for you.
-  Otherwise, you can enjoy less verbose code.
-
 * Safety
 
   If something fails, it always raises an exception, making it hard to
@@ -63,12 +50,6 @@ In general, pyelasticsearch focuses on...
   ``update_all_settings()`` method if you want to do this.
 
 * Better documentation
-
-  You should never need to read the source code to figure out what to do. In
-  order to twiddle many of the aforementioned knobs in elasticsearch-py, you
-  must squirrel kwargs down through multiple undocumented layers, from
-  constructor to constructor, until something finally understands them. On the
-  way, it's often unclear what's public and what's private.
 
   Our top-level docs are comprehensive with regard to our API, we link to the
   ES docs for details about their system, and we try to respect the Law of
