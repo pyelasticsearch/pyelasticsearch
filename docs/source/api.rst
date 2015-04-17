@@ -23,6 +23,11 @@ elasticsearch. This way, you don't lose any part of the return value, no matter
 how esoteric. But fear not: if there was an error, an exception will be raised,
 so it'll be hard to miss.
 
+pyelasticsearch is built on top of the official client (see
+:doc:`elasticsearch-py` for more information on differences) which it exposes
+as `raw_client` attribute. Use this in case you need to access an API not
+supported by pyelasticsearch.
+
 .. autoclass:: ElasticSearch
 
     .. autoattribute:: json_encoder
