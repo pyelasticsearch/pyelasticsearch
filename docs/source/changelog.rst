@@ -2,6 +2,12 @@
 Changelog
 =========
 
+v1.2.4 (2015-05-21)
+-------------------
+* Don't crash when the ``query_params`` kwarg is omitted from calls to
+  ``send_request()``.
+
+
 v1.2.3 (2015-04-17)
 -------------------
 * Make ``delete_all_indexes()`` work.

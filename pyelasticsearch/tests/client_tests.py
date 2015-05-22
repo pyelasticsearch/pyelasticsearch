@@ -390,6 +390,11 @@ class IndexingTestCase(ElasticSearchTestCase):
         result = self.conn.percolate('test-index', 'test-type', document)
         self.assert_result_contains(result, {'matches': []})
 
+    def test_send_request_without_query_params(self):
+        """Demonstrate that omitting the query_params kwarg to send_request
+        doesn't try to call iteritems() on None."""
+        self.conn.send_request('GET', [])
+
 
 class SearchTestCase(ElasticSearchTestCase):
     def setUp(self):

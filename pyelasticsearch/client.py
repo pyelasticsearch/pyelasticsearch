@@ -234,6 +234,8 @@ class ElasticSearch(object):
         :arg query_params: A map of querystring param names to values or
             ``None``
         """
+        if query_params is None:
+            query_params = {}
         path = self._join_path(path_components)
 
         # We wrap to use pyelasticsearch's exception hierarchy for backward
