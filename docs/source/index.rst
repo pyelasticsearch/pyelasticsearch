@@ -14,7 +14,7 @@ provides...
   datetimes and the arbitrary-precision Decimal type
 * Translation of HTTP failure status codes into exceptions
 * Connection pooling
-* HTTP authentication
+* HTTP basic auth and HTTPS support
 * Load balancing across nodes in a cluster
 * Failed-node marking to avoid downed nodes for a period
 * Optional automatic retrying of failed requests

@@ -78,6 +78,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
     install_requires=[
+        'certifi',
         'elasticsearch>=1.3.0,<2.0.0',
         'urllib3>=1.8,<2.0',
         'simplejson>=3.0',

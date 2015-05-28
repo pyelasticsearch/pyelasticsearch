@@ -9,6 +9,7 @@ from six import (iterkeys, binary_type, text_type, string_types, integer_types,
 from six.moves import xrange
 from six.moves.urllib.parse import urlparse, urlencode, quote_plus
 
+import certifi
 from elasticsearch.connection_pool import RandomSelector
 from elasticsearch.exceptions import (ConnectionError, ConnectionTimeout,
                                       TransportError, SerializationError)
@@ -120,16 +121,30 @@ class ElasticSearch(object):
     #: and Python sets to ES lists. You can subclass it to add more.
     json_encoder = JsonEncoder
 
-    def __init__(self, urls='http://localhost:9200', timeout=60, max_retries=0):
+    def __init__(self,
+                 urls='http://localhost',
+                 timeout=60,
+                 max_retries=0,
+                 port=9200,
+                 username=None,
+                 password=None):
         """
-        :arg urls: A URL or iterable of URLs of ES nodes. These are full URLs
-            with port numbers, like ``http://elasticsearch.example.com:9200``.
-            To do HTTP basic authentication, use RFC-2617-style URLs like
-            ``http://someuser:somepassword@example.com:9200``.
+        :arg urls: A URL or iterable of URLs of ES nodes. These can be full
+            URLs with port numbers, like
+            ``http://elasticsearch.example.com:9200``, or you can pass the
+            port separately using the ``port`` kwarg. To do HTTP basic
+            authentication, you can use RFC-2617-style URLs like
+            ``http://someuser:somepassword@example.com:9200`` or the separate
+            ``username`` and ``password`` kwargs below.
         :arg timeout: Number of seconds to wait for each request before raising
             Timeout
         :arg max_retries: How many other servers to try, in series, after a
             request times out or a connection fails
+        :arg username: Authentication username to send via HTTP basic auth
+        :arg password: Password to use in HTTP basic auth. If a username and
+            password are embedded in a URL, those are favored.
+        :arg port: The default port to connect on, for URLs that don't include
+            an explicit port
         """
         if isinstance(urls, string_types):
             urls = [urls]
@@ -137,11 +152,16 @@ class ElasticSearch(object):
 
         # Automatic node sniffing is off for now.
         parsed_urls = (urlparse(url) for url in urls)
+        ca_cert_path = certifi.where()
+        auth_default = None if username is None else (username, password)
         self._transport = Transport(
             [{'host': url.hostname,
-              'port': url.port or 9200,
+              'port': url.port or port,
               'http_auth': (url.username, url.password) if
-                           url.username or url.password else None}
+                           url.username or url.password else auth_default,
+              'use_ssl': url.scheme == 'https',
+              'verify_certs': True,
+              'ca_certs': ca_cert_path}
              for url in parsed_urls],
             max_retries=max_retries,
             retry_on_timeout=True,

@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v1.3
+----
+* Add support for HTTPS.
+
+
 v1.2.4 (2015-05-21)
 -------------------
 * Don't crash when the ``query_params`` kwarg is omitted from calls to
