@@ -5,6 +5,8 @@ Changelog
 v1.3
 ----
 * Add support for HTTPS.
+* Add username, password, and port kwargs to the constructor so you don't have
+  to repeat their values if they're the same across many servers.
 
 
 v1.2.4 (2015-05-21)
