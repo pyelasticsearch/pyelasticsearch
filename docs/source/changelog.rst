@@ -2,6 +2,12 @@
 Changelog
 =========
 
+v1.4
+----
+* Add support for custom certificate authorities via the ``ca_certs`` arg to
+  the ``ElasticSearch`` constructor.
+* Add support for client certificates via the ``client_cert`` arg.
+
 v1.3
 ----
 * Add support for HTTPS.

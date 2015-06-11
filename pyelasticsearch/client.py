@@ -127,7 +127,9 @@ class ElasticSearch(object):
                  max_retries=0,
                  port=9200,
                  username=None,
-                 password=None):
+                 password=None,
+                 ca_certs=certifi.where(),
+                 client_cert=None):
         """
         :arg urls: A URL or iterable of URLs of ES nodes. These can be full
             URLs with port numbers, like
@@ -145,6 +147,10 @@ class ElasticSearch(object):
             password are embedded in a URL, those are favored.
         :arg port: The default port to connect on, for URLs that don't include
             an explicit port
+        :arg ca_certs: A path to a bundle of CA certificates to trust. The
+            default is to use Mozilla's bundle, the same one used by Firefox.
+        :arg client_cert: A certificate to authenticate the client to the
+            server
         """
         if isinstance(urls, string_types):
             urls = [urls]
@@ -152,7 +158,6 @@ class ElasticSearch(object):
 
         # Automatic node sniffing is off for now.
         parsed_urls = (urlparse(url) for url in urls)
-        ca_cert_path = certifi.where()
         auth_default = None if username is None else (username, password)
         self._transport = Transport(
             [{'host': url.hostname,
@@ -161,7 +166,8 @@ class ElasticSearch(object):
                            url.username or url.password else auth_default,
               'use_ssl': url.scheme == 'https',
               'verify_certs': True,
-              'ca_certs': ca_cert_path}
+              'ca_certs': ca_certs,
+              'cert_file': client_cert}
              for url in parsed_urls],
             max_retries=max_retries,
             retry_on_timeout=True,
