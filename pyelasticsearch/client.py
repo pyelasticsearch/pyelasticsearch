@@ -157,7 +157,16 @@ class ElasticSearch(object):
         urls = [u.rstrip('/') for u in urls]
 
         # Automatic node sniffing is off for now.
-        parsed_urls = (urlparse(url) for url in urls)
+        parsed_urls = [urlparse(url) for url in urls]
+        root_paths = set(url.path for url in parsed_urls)
+        if len(root_paths) > 1:
+            # Because there are connections to multiple hosts and we can't
+            # specify a different root path for each connection we only allow
+            # a single root path. This is likely to be / for most users
+            # but does allow for a common different path if say proxies are
+            # in use.
+            raise ValueError("URLs with different roots not supported.")
+        self.root_path = root_paths.pop()
         auth_default = None if username is None else (username, password)
         self._transport = Transport(
             [{'host': url.hostname,
@@ -228,6 +237,10 @@ class ElasticSearch(object):
 
         if not path.startswith('/'):
             path = '/' + path
+        if self.root_path:
+            path = self.root_path + path
+            if not path.startswith('/'):
+                path = '/' + path
         return path
 
     def send_request(self,
