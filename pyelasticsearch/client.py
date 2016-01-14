@@ -162,6 +162,7 @@ class ElasticSearch(object):
         self._transport = Transport(
             [{'host': url.hostname,
               'port': url.port or port,
+              'url_prefix': url.path,
               'http_auth': (url.username, url.password) if
                            url.username or url.password else auth_default,
               'use_ssl': url.scheme == 'https',
