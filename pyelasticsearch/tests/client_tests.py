@@ -1,5 +1,7 @@
 # coding=utf-8
 
+from unittest import TestCase
+
 from mock import ANY, patch
 from nose.tools import eq_, ok_, assert_raises, assert_not_equal
 
@@ -540,3 +542,31 @@ class DangerousOperationTests(ElasticSearchTestCase):
             self.conn.update_all_settings({'joe': 'bob'})
         send_request.assert_called_once_with(
             'PUT', ['_settings'], body={'joe': 'bob'})
+
+
+class PathTests(TestCase):
+    """
+    Tests that confirm path munging works as expected
+    """
+    def test_default_root(self):
+        conn = ElasticSearch()
+        eq_(conn.root_path, '')
+
+    def test_root_set(self):
+        conn = ElasticSearch(urls='http://localhost/some/path')
+        eq_(conn.root_path, '/some/path')
+
+    def test_multiple_root_set(self):
+        conn = ElasticSearch(urls=['http://localhost/some/path',
+                                   'http://otherhost/some/path'])
+        eq_(conn.root_path, '/some/path')
+
+    def test_multiple_invalid_root_set(self):
+        assert_raises(ValueError,
+                      ElasticSearch(urls=['http://localhost/some/path',
+                                          'http://otherhost/some/other/path'])
+
+    def test_root_path_join(self):
+        conn = ElasticSearch(urls='http://localhost/some/path')
+        joined = conn._join_path(['/foo', 'bar'])
+        eq_(joined, '/some/path/foo/bar')
