@@ -1270,6 +1270,20 @@ class ElasticSearch(object):
                                  doc,
                                  query_params=query_params)
 
+    def percolator(self, index, name, query):
+        """
+        Register specific definition for percolator query
+        """
+        response = self.send_request('PUT', ['_percolator', index, name], query)
+        return response
+
+    def percolate(self, index, doc_type, doc, **query_params):
+        """
+        This percolates the document and excutes a query on a specific index & type.
+        """
+        response = self.send_request('GET', [index, doc_type, "_percolate"], doc, **query_params)
+        return response
+
 
 def _iso_datetime(value):
     """
