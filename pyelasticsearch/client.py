@@ -648,6 +648,47 @@ class ElasticSearch(object):
                          doc_type=doc_type,
                          query_params=query_params)
 
+    @es_kwargs('consistency', 'refresh')
+    def bulk_update(self, index, doc_type, docs, id_field='id',
+                    query_params=None):
+        """
+        Update a list of documents as efficiently as possible.
+
+        :arg index: The name of the index to which to add the document
+        :arg doc_type: The type of the document
+        :arg docs: An iterable of Python mapping objects, convertible to JSON,
+            representing documents to index
+        :arg id_field: The field of each document that holds its ID
+
+        See `ES's bulk API`_ for more detail.
+
+        .. _`ES's bulk API`:
+            http://www.elasticsearch.org/guide/reference/api/bulk.html
+        """
+        body_bits = []
+
+        if not docs:
+            raise ValueError('No documents provided for bulk indexing!')
+
+        for doc in docs:
+            action = {'update': {'_index': index, '_type': doc_type}}
+
+            if doc.get(id_field) is not None:
+                action['update']['_id'] = doc[id_field]
+                doc.pop(id_field)
+
+            body_bits.append(self._encode_json(action))
+            body_bits.append(self._encode_json(doc))
+
+        # Need the trailing newline.
+        body = '\n'.join(body_bits) + '\n'
+        return self.send_request('POST',
+                                 ['_bulk'],
+                                 body,
+                                 encode_body=False,
+                                 query_params=query_params)
+
+
     @es_kwargs('routing', 'parent', 'replication', 'consistency', 'refresh')
     def delete(self, index, doc_type, id, query_params=None):
         """
