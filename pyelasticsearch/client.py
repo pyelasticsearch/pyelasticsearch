@@ -859,6 +859,51 @@ class ElasticSearch(object):
         """
         return self._search_or_count('_search', query, **kwargs)
 
+    @es_kwargs('search_type', 'preference', 'routing')
+    def multi_search(self, queries, indexes=None, query_params=None):
+        """
+        Execute a multi search query.
+
+        :arg queries: A list of dictionaries that will convert to ES's query DSL or a
+            string that will serve as a textual query to be passed as the ``q``
+            query string parameter
+        :arg indexes: An iterable, each element of which must be an index name
+
+        See `ES's Multi Search API`_ for more details.
+
+        .. _`ES's Multi Search API`:
+            http://www.elasticsearch.org/guide/reference/api/multi-search.html
+        """
+
+        body_bits = []
+
+        if not queries:
+            raise ValueError('No query is given.')
+
+        if not isinstance(queries, list):
+            raise TypeError('queries parameter must be a list.')
+
+        if indexes is None or (len(indexes) != len(queries)):
+            self.logger.warning('Either indexes is None or the number of given \
+                                indexes doesn\'t match the number of given \
+                                queries. Indexes will be empty.')
+            indexes = [{} for _ in queries]
+
+        for i, query in enumerate(queries):
+            index = {'index': indexes[i]}
+
+            body_bits.append(self._encode_json(index))
+            body_bits.append(self._encode_json(query))
+
+        # Need the trailing newline.
+        body = '\n'.join(body_bits) + '\n'
+
+        return self.send_request('GET',
+                                ['_msearch'],
+                                body,
+                                encode_body=False,
+                                query_params=query_params)
+
     @es_kwargs('df', 'analyzer', 'default_operator', 'source', 'routing')
     def count(self, query, **kwargs):
         """
