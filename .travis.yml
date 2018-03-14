@@ -1,15 +1,23 @@
 language: python
 
-services:
-  - elasticsearch
+env:
+  - ESEARCH_VERSION=1.7.4 ESEARCH_PATH=.
+
+# wait for elastic search start
+before_script:
+  - sleep 10
 
 python:
-  - 2.6
   - 2.7
   - 3.3
+  - 3.4
+  - 3.6
   - pypy
 
 install:
   - pip install .
+  - sh esearch.service install
 
-script: python setup.py test
+script:
+  - sh esearch.service start
+  - python setup.py test

@@ -1,10 +1,12 @@
 from datetime import datetime, date
 import unittest
 
-from mock import patch
-from nose import SkipTest
-from nose.tools import eq_, ok_, assert_raises
 from six import PY3, b
+
+if PY3:
+    from unittest.mock import patch
+else:
+    from mock import patch
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
@@ -17,20 +19,20 @@ class KwargsForQueryTests(unittest.TestCase):
     def test_to_query(self):
         """Test the thing that translates objects to query string text."""
         to_query = ElasticSearch('http://localhost:9200/')._to_query
-        eq_(to_query(4), '4')
-        eq_(to_query(4.5), '4.5')
-        eq_(to_query(True), 'true')
-        eq_(to_query(('4', 'hi', 'thomas')), '4,hi,thomas')
-        eq_(to_query(datetime(2000, 1, 2, 12, 34, 56)),
+        self.assertEqual(to_query(4), '4')
+        self.assertEqual(to_query(4.5), '4.5')
+        self.assertEqual(to_query(True), 'true')
+        self.assertEqual(to_query(('4', 'hi', 'thomas')), '4,hi,thomas')
+        self.assertEqual(to_query(datetime(2000, 1, 2, 12, 34, 56)),
                          '2000-01-02T12:34:56')
-        eq_(to_query(date(2000, 1, 2)),
+        self.assertEqual(to_query(date(2000, 1, 2)),
                          '2000-01-02T00:00:00')
-        assert_raises(TypeError, to_query, object())
+        with self.assertRaises(TypeError):
+            to_query(object())
 
         # do not use unittest.skipIf because of python 2.6
         if not PY3:
-            eq_(to_query(long(4)), '4')
-
+            self.assertEqual(to_query(long(4)), '4')
 
     def test_es_kwargs(self):
         """
@@ -46,9 +48,9 @@ class KwargsForQueryTests(unittest.TestCase):
         """
             return doc, query_params, other_kwarg
 
-        eq_(index(3, refresh=True, es_timeout=7, other_kwarg=1),
+        self.assertEqual(index(3, refresh=True, es_timeout=7, other_kwarg=1),
                          (3, {'refresh': True, 'timeout': 7}, 1))
-        eq_(index.__name__, 'index')
+        self.assertEqual(index.__name__, 'index')
 
     def test_index(self):
         """Integration-test ``index()`` with some decorator-handled arg."""
@@ -69,13 +71,13 @@ class KwargsForQueryTests(unittest.TestCase):
 
         ((_, url), kwargs) = perform.call_args
 
-        eq_(url, '/some_index/some_type/3')
+        self.assertEqual(url, '/some_index/some_type/3')
 
         # Make sure stringification happened, url encoding didn't, and es_
         # prefixes got stripped:
-        eq_(kwargs['params'], {'routing': b('boogie'),
-                               'snorkfest': b('true'),  # We must do stringifying.
-                               'borkfest': b('gerbils:great')})  # Urllib3HttpConnection does url escaping.
+        self.assertEqual(kwargs['params'], {'routing': b('boogie'),
+                                            'snorkfest': b('true'),  # We must do stringifying.
+                                            'borkfest': b('gerbils:great')})  # Urllib3HttpConnection does url escaping.
 
     def test_arg_cross_refs_with_trailing(self):
         """
@@ -95,11 +97,11 @@ class KwargsForQueryTests(unittest.TestCase):
         """
 
         if some_method.__doc__ is None:
-            raise SkipTest("This test doesn't work under python -OO.")
+            raise unittest.SkipTest("This test doesn't work under python -OO.")
 
         # Make sure it adds (only) the undocumented args and preserves anything
         # that comes after the args block:
-        eq_(
+        self.assertEqual(
             some_method.__doc__,
             """
         Do stuff.
@@ -125,9 +127,9 @@ class KwargsForQueryTests(unittest.TestCase):
         """
 
         if some_method.__doc__ is None:
-            raise SkipTest("This test doesn't work under python -OO.")
+            raise unittest.SkipTest("This test doesn't work under python -OO.")
 
-        eq_(
+        self.assertEqual(
             some_method.__doc__,
             """
         Do stuff.

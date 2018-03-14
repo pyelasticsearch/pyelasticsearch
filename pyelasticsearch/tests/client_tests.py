@@ -1,7 +1,11 @@
 # coding=utf-8
 
-from mock import ANY, patch
-from nose.tools import eq_, ok_, assert_raises, assert_not_equal
+from six import PY3
+
+if PY3:
+    from unittest.mock import ANY, patch
+else:
+    from mock import ANY, patch
 
 # Test that __all__ is sufficient:
 from pyelasticsearch import *
@@ -33,7 +37,7 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         # Make sure it comes back out intact:
         result = self.conn.get('test-index', 'test-type', unicode_id)
-        eq_(result['_source']['name'], unicode_name)
+        self.assertEqual(result['_source']['name'], unicode_name)
 
         # TODO: Test the proper encoding of query param values. Examining them
         # in the debugger shows they're right.
@@ -48,11 +52,11 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.assert_result_contains(result,
             {'_type': 'test-type', '_index': 'test-index'})
         # should have an id of some value assigned.
-        ok_('_id' in result and result['_id'])
+        self.assertTrue('_id' in result and result['_id'])
         # should not generate the same id twice
         result2 = self.conn.index(
             'test-index', 'test-type', {'name': 'Barny Tester'})
-        assert_not_equal(result['_id'], result2['_id'])
+        self.assertNotEqual(result['_id'], result2['_id'])
 
     def test_explicit_index_create(self):
         result = self.conn.create_index('test-index')
@@ -61,7 +65,7 @@ class IndexingTestCase(ElasticSearchTestCase):
     def test_close_index(self):
         """Make sure a close_index call on an open index reports success."""
         self.conn.create_index('test-index')
-        self.conn.health('text-index', wait_for_status='yellow', timeout=1)
+        self.conn.health('text-index', wait_for_status='yellow', timeout=10)
 
         result = self.conn.close_index('test-index')
         self.assert_result_contains(result, {'acknowledged': True})
@@ -69,7 +73,7 @@ class IndexingTestCase(ElasticSearchTestCase):
     def test_open_index(self):
         """Make sure an open_index call on a closed index reports success."""
         self.conn.create_index('test-index')
-        self.conn.health('text-index', wait_for_status='yellow', timeout=1)
+        self.conn.health('text-index', wait_for_status='yellow', timeout=10)
         self.conn.close_index('test-index')
 
         result = self.conn.open_index('test-index')
@@ -78,8 +82,8 @@ class IndexingTestCase(ElasticSearchTestCase):
     def test_get_settings(self):
         self.conn.create_index('test-index')
         result = self.conn.get_settings('test-index')
-        ok_('test-index' in result)
-        ok_('settings' in result['test-index'])
+        self.assertTrue('test-index' in result)
+        self.assertTrue('settings' in result['test-index'])
 
     def test_update_settings(self):
         """Make sure ``update_settings()`` sends the expected request."""
@@ -112,8 +116,8 @@ class IndexingTestCase(ElasticSearchTestCase):
         """Make sure "_all" works for an index specifier and metric filtering
         works."""
         result = self.conn.cluster_state(metric='routing_table')
-        ok_('routing_table' in result)
-        ok_('master_node' not in result)
+        self.assertTrue('routing_table' in result)
+        self.assertTrue('master_node' not in result)
 
     def test_delete_by_id(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
@@ -130,10 +134,11 @@ class IndexingTestCase(ElasticSearchTestCase):
     def test_delete_by_id_without_id(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
         self.conn.refresh(['test-index'])
-        assert_raises(
-            ValueError, self.conn.delete, 'test-index', 'test-type', '')
-        assert_raises(
-            ValueError, self.conn.delete, 'test-index', 'test-type', None)
+        with self.assertRaises(ValueError):
+            self.conn.delete('test-index', 'test-type', '')
+
+        with self.assertRaises(ValueError):
+            self.conn.delete('test-index', 'test-type', None)
 
     def test_delete_by_doc_type(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Tester'}, id=1)
@@ -152,7 +157,7 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         result = self.conn.delete_by_query('test-index', 'test-type', {'query_string': {'query': 'name:joe OR name:bill'}})
 
-        eq_(result['_indices']['test-index']['_shards']['failed'], 0)
+        self.assertEqual(result['_indices']['test-index']['_shards']['failed'], 0)
 
         self.conn.refresh(['test-index'])
         result = self.conn.count('*:*', index=['test-index'])
@@ -168,16 +173,16 @@ class IndexingTestCase(ElasticSearchTestCase):
         """
         Deleting a nonexistent index should raise ElasticHttpNotFoundError.
         """
-        assert_raises(ElasticHttpNotFoundError,
-                          self.conn.delete_index,
-                          'nonexistent-index')
+        with self.assertRaises(ElasticHttpNotFoundError):
+            self.conn.delete_index('nonexistent-index')
 
     def test_cannot_create_existing_index(self):
         self.conn.create_index('another-index')
-        assert_raises(
-            IndexAlreadyExistsError, self.conn.create_index, 'another-index')
+        with self.assertRaises(IndexAlreadyExistsError):
+            self.conn.create_index('another-index')
         self.conn.delete_index('another-index')
-        assert_raises(ElasticHttpError, self.conn.delete_index, 'another-index')
+        with self.assertRaises(ElasticHttpError):
+            self.conn.delete_index('another-index')
 
     def test_put_mapping(self):
         result = self.conn.create_index('test-index')
@@ -190,48 +195,49 @@ class IndexingTestCase(ElasticSearchTestCase):
         self.conn.put_mapping('test-index', 'test-type', mapping)
 
         result = self.conn.get_mapping(index=['test-index'], doc_type=['test-type'])
-        eq_(result, {u'test-index': {u'mappings': {u'test-type': {u'properties': {u'name': {u'type': u'string', u'store': True}}}}}})
+        self.assertEqual(result, {u'test-index': {u'mappings': {u'test-type': {u'properties': {u'name': {u'type': u'string', u'store': True}}}}}})
 
     def test_index_status(self):
         self.conn.create_index('another-index')
         result = self.conn.status('another-index')
         self.conn.delete_index('another-index')
-        ok_('indices' in result)
-        eq_(result['_shards']['failed'], 0)
+        self.assertTrue('indices' in result)
+        self.assertEqual(result['_shards']['failed'], 0)
 
     def test_index_flush(self):
         self.conn.create_index('another-index')
         result = self.conn.flush('another-index')
         self.conn.delete_index('another-index')
-        eq_(result['_shards']['failed'], 0)
+        self.assertEqual(result['_shards']['failed'], 0)
 
     def test_index_refresh(self):
         self.conn.create_index('another-index')
         result = self.conn.refresh('another-index')
         self.conn.delete_index('another-index')
-        eq_(result['_shards']['failed'], 0)
+        self.assertEqual(result['_shards']['failed'], 0)
 
     def test_index_optimize(self):
         self.conn.create_index('another-index')
         result = self.conn.optimize('another-index')
         self.conn.delete_index('another-index')
-        eq_(result['_shards']['failed'], 0)
+        self.assertEqual(result['_shards']['failed'], 0)
 
     def test_bulk_index(self):
         # Try counting the docs in a nonexistent index:
-        assert_raises(ElasticHttpError, self.conn.count, '*:*', index=['test-index'])
+        with self.assertRaises(ElasticHttpError):
+            self.conn.count('*:*', index=['test-index'])
 
         docs = [
             {'name': 'Joe Tester'},
             {'name': 'Bill Baloney', 'id': 303},
         ]
         result = self.conn.bulk_index('test-index', 'test-type', docs)
-        eq_(len(result['items']), 2)
-        eq_(result['items'][0]['create']['status'], 201)
-        eq_(result['items'][1]['index']['status'], 201)
-        eq_(result['items'][1]['index']['_id'], '303')
+        self.assertEqual(len(result['items']), 2)
+        self.assertEqual(result['items'][0]['create']['status'], 201)
+        self.assertEqual(result['items'][1]['index']['status'], 201)
+        self.assertEqual(result['items'][1]['index']['_id'], '303')
         self.conn.refresh()
-        eq_(self.conn.count('*:*', index=['test-index'])['count'], 2)
+        self.assertEqual(self.conn.count('*:*', index=['test-index'])['count'], 2)
 
     def test_bulk(self):
         es = self.conn
@@ -249,21 +255,22 @@ class IndexingTestCase(ElasticSearchTestCase):
                                       overwrite_existing=False)],
                         index='test-index',
                         doc_type='book')
-        eq_(result['items'], [{'index': {'_id': '5',
-                                         '_index': 'test-index',
-                                         '_type': 'book',
-                                         '_version': 1,
-                                         'status': 201}},
-                              {'index': {'_id': '6',
-                                         '_index': 'test-index',
-                                         '_type': 'book',
-                                         '_version': 1,
-                                         'status': 201}},
-                              {'create': {'_id': '7',
-                                         '_index': 'test-index',
-                                         '_type': 'book',
-                                         '_version': 1,
-                                         'status': 201}}])
+        self.assertEqual(result['items'], [
+            {'index': {'_id': '5',
+                       '_index': 'test-index',
+                       '_type': 'book',
+                       '_version': 1,
+                       'status': 201}},
+            {'index': {'_id': '6',
+                       '_index': 'test-index',
+                       '_type': 'book',
+                       '_version': 1,
+                      'status': 201}},
+            {'create': {'_id': '7',
+                        '_index': 'test-index',
+                        '_type': 'book',
+                        '_version': 1,
+                        'status': 201}}])
 
         # Test the error handling:
         try:
@@ -273,12 +280,12 @@ class IndexingTestCase(ElasticSearchTestCase):
                     index='test-index',
                     doc_type='book')
         except BulkError as exc:
-            eq_(exc.successes, [])
-            eq_(exc.errors, [{'index': {'status': 409,
-                                        '_type': 'book',
-                                        '_id': '7',
-                                        'error': ANY,
-                                        '_index': 'test-index'}}])
+            self.assertEqual(exc.successes, [])
+            self.assertEqual(exc.errors, [{'index': {'status': 409,
+                                                     '_type': 'book',
+                                                     '_id': '7',
+                                                     'error': ANY,
+                                                     '_index': 'test-index'}}])
         else:
             self.fail("bulk() didn't raise BulkError when a version conflict happened.")
 
@@ -287,22 +294,23 @@ class IndexingTestCase(ElasticSearchTestCase):
                               id=7)],
                            index='test-index',
                            doc_type='book')
-        eq_(response['items'], [{'update': {'_id': '7',
-                                            '_index': 'test-index',
-                                            '_type': 'book',
-                                            '_version': 2,
-                                            'status': 200}}])
+        self.assertEqual(response['items'], [{'update': {'_id': '7',
+                                                         '_index': 'test-index',
+                                                         '_type': 'book',
+                                                         '_version': 2,
+                                                         'status': 200}}])
 
         # Test delete and index=None and doc_type=None:
         response = es.bulk([es.delete_op(index='test-index',
                                          doc_type='book',
                                          id=id) for id in [5, 6, 7]])
-        eq_(self.conn.count('*:*', index=['test-index'])['count'], 0)
+        self.assertEqual(self.conn.count('*:*', index=['test-index'])['count'], 0)
 
     def test_error_handling(self):
         # Wrong port.
         conn = ElasticSearch('http://localhost:3355/')
-        assert_raises(ConnectionError, conn.count, '*:*')
+        with self.assertRaises(ConnectionError):
+            conn.count('*:*')
 
     def test_update(self):
         """Smoke-test the ``update()`` API."""
@@ -333,21 +341,20 @@ class IndexingTestCase(ElasticSearchTestCase):
 
     def test_alias_nonexistent_index(self):
         actions = [{"add": {"index": "test1", "alias": "alias1"}}]
-        assert_raises(ElasticHttpNotFoundError,
-                      self.conn.update_aliases,
-                      actions)
+        with self.assertRaises(ElasticHttpNotFoundError):
+            self.conn.update_aliases(actions)
 
     def test_list_aliases(self):
         self.conn.create_index('test-index')
         actions = [{"add": {"index": "test-index", "alias": "test-alias"}}]
         self.conn.update_aliases(actions)
         result = self.conn.aliases('test-index')
-        eq_(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
+        self.assertEqual(result, {u'test-index': {u'aliases': {u'test-alias': {}}}})
 
     def test_empty_path_segments(self):
         """'' segments passed to ``_join_path`` should be omitted."""
         # Call _join_path like get_mapping might if called with no params:
-        eq_(self.conn._join_path(['', '', '_mapping']),
+        self.assertEqual(self.conn._join_path(['', '', '_mapping']),
                          '/_mapping')
 
     def test_0_path_segments(self):
@@ -356,7 +363,7 @@ class IndexingTestCase(ElasticSearchTestCase):
 
         This is so doc IDs that are 0 work.
         """
-        eq_(self.conn._join_path([0, '_mapping']),
+        self.assertEqual(self.conn._join_path([0, '_mapping']),
                          '/0/_mapping')
 
     def test_percolate(self):
@@ -459,7 +466,7 @@ class SearchTestCase(ElasticSearchTestCase):
                 },
             }
         result = self.conn.search(query, index=['test-index'], doc_type=['test-type'])
-        ok_(result.get('hits').get('hits').__len__() > 0, str(result))
+        self.assertTrue(result.get('hits').get('hits').__len__() > 0, str(result))
 
     def test_mlt(self):
         self.conn.index('test-index', 'test-type', {'name': 'Joe Test'}, id=3)
@@ -519,7 +526,8 @@ class DangerousOperationTests(ElasticSearchTestCase):
         """
         ``delete_index()`` should raise ValueError if no indexes are given.
         """
-        assert_raises(ValueError, self.conn.delete_index, [])
+        with self.assertRaises(ValueError):
+            self.conn.delete_index([])
 
     def test_delete_all_indexes(self):
         """Make sure ``delete_all_indexes()`` sends the right request."""
@@ -532,7 +540,8 @@ class DangerousOperationTests(ElasticSearchTestCase):
         ``update_settings()`` should refuse to update *all* indexes when none
         are given.
         """
-        assert_raises(ValueError, self.conn.update_settings, [], {'b': 4})
+        with self.assertRaises(ValueError):
+            self.conn.update_settings([], {'b': 4})
 
     def update_all_settings(self):
         """Make sure ``update_all_settings()`` sends the right request."""
