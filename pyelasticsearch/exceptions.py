@@ -1,4 +1,9 @@
-from urllib3.exceptions import TimeoutError as Timeout, ConnectionError
+from urllib3.exceptions import TimeoutError as Timeout
+
+try:
+    from urllib3.exceptions import NewConnectionError as ConnectionError
+except ImportError:
+    from urllib3.exceptions import ConnectionError
 
 
 class ElasticHttpError(Exception):

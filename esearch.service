@@ -1,0 +1,67 @@
+#!/bin/sh
+
+ESEARCH_DEFAULT_PATH=$(pwd)/.elasticsearch
+ESEARCH_DEFAULT_VERSION="1.7.4"
+
+ESEARCH_PATH=${ESEARCH_PATH:-$ESEARCH_DEFAULT_PATH}
+ESEARCH_VERSION=${ESEARCH_VERSION:-$ESEARCH_DEFAULT_VERSION}
+ESEARCH_BOOT_WAIT=10
+ESEARCH_REPOSITORY=https://download.elastic.co/elasticsearch/elasticsearch
+
+esearch_install() {
+    local _version="${1:-$ESEARCH_VERSION}"
+
+    if test ! -e "$ESEARCH_PATH/elasticsearch-$_version"; then
+        echo "Install elasticsearch $_version to $ESEARCH_PATH..."
+        mkdir -p $ESEARCH_PATH
+        (cd "$ESEARCH_PATH" && curl "$ESEARCH_REPOSITORY/elasticsearch-$_version.tar.gz" -#|tar xz);
+    else
+        echo "Elasticsearch $_version already installed..."
+    fi
+}
+
+esearch_start() {
+    local _version="${1:-$ESEARCH_VERSION}"
+
+    if test -e "$ESEARCH_PATH/.esearch.pid"; then
+        echo "Elasticsearch server is already running..."
+        return
+    fi
+
+    if test -e "$ESEARCH_PATH/elasticsearch-$_version"; then
+        echo "Run elasticsearch $_version ($ESEARCH_PATH/.esearch.pid)...\n"
+        echo $ESEARCH_PATH/elasticsearch-$_version/bin/elasticsearch
+        $ESEARCH_PATH/elasticsearch-$_version/bin/elasticsearch & echo $! > $ESEARCH_PATH/.esearch.pid;
+        sleep $ESEARCH_BOOT_WAIT;
+    else
+        echo "No such elasticsearch server $_version available..."
+        exit 1;
+    fi
+}
+
+esearch_stop() {
+    local _pidfile=$ESEARCH_PATH/.esearch.pid
+
+    if test -e $_pidfile; then
+        local _pid=$(cat "$_pidfile")
+        echo "Shutdown elasticsearch server (PID=$_pid)..."
+        (kill -9 $_pid)
+        rm $_pidfile;
+    else
+        echo "Elasticsearch server is not running"
+    fi
+}
+
+case $1 in
+    start)
+        esearch_start $2;;
+    stop)
+        esearch_stop;;
+    restart)
+        (esearch_stop)
+        esearch_start $2;;
+    install)
+        esearch_install $2;;
+    *)
+        echo "esearch.service [start|stop|restart|install] [version]";;
+esac

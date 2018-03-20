@@ -2,6 +2,7 @@ include LICENSE
 include README.rst
 include AUTHORS
 include tox.ini
+include requirements.txt
 include docs/Makefile
 include docs/make.bat
 include docs/source/*.rst
