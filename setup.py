@@ -2,7 +2,7 @@
 
 import codecs
 import re
-from six import PY2
+import sys
 
 from os.path import join, dirname
 
@@ -14,6 +14,9 @@ except ImportError:
     pass
 
 from setuptools import setup, find_packages
+
+
+PY2 = (sys.version_info < (3,0))
 
 
 def read(filename):
