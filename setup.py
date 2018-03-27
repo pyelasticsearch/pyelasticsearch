@@ -2,6 +2,8 @@
 
 import codecs
 import re
+from sys import version_info
+
 from os.path import join, dirname
 
 # Prevent spurious errors during `python setup.py test`, a la
@@ -12,6 +14,9 @@ except ImportError:
     pass
 
 from setuptools import setup, find_packages
+
+
+PY2 = version_info < (3, 0)
 
 
 def read(filename):
@@ -46,6 +51,11 @@ def find_version(file_path):
     raise RuntimeError('Unable to find version string.')
 
 
+def install_requirements(file_path):
+    with open(file_path, 'r') as reqs:
+        return [line for line in (l.strip() for l in reqs) if line]
+
+
 setup(
     name='pyelasticsearch',
     version=find_version(join('pyelasticsearch', '__init__.py')),
@@ -69,22 +79,16 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         # simplejson doesn't support 3.1 or 3.2.
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
     ],
-    install_requires=[
-        'certifi',
-        'elasticsearch>=1.3.0,<2.0.0',
-        'urllib3>=1.8,<2.0',
-        'simplejson>=3.0',
-        'six>=1.4.0,<2.0'
-    ],
-    tests_require=['mock', 'nose>=1.2.1'],
-    test_suite='nose.collector',
+    install_requires=install_requirements('requirements.txt'),
+    tests_require=['mock'] if PY2 else [],
+    test_suite='pyelasticsearch.tests',
     url='https://github.com/pyelasticsearch/pyelasticsearch'
 )

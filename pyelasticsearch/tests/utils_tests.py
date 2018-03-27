@@ -1,6 +1,5 @@
 from unittest import TestCase
 
-from nose.tools import eq_
 from six.moves import xrange
 
 from pyelasticsearch import bulk_chunks
@@ -17,25 +16,25 @@ class BulkChunksTests(TestCase):
         """Make sure action iterators shorter than 1 chunk work."""
         actions = self.str_xrange(1)  # just 0
         chunks = bulk_chunks(actions, docs_per_chunk=2)
-        eq_(list(chunks), [['0']])
+        self.assertEqual(list(chunks), [['0']])
 
     def test_over(self):
         """Make sure action iterators longer than 1 chunk work."""
         actions = self.str_xrange(7)
         chunks = bulk_chunks(actions, docs_per_chunk=3)
-        eq_(list(chunks), [['0', '1', '2'], ['3', '4', '5'], ['6']])
+        self.assertEqual(list(chunks), [['0', '1', '2'], ['3', '4', '5'], ['6']])
 
     def test_on(self):
         """Make sure action iterators that end on a chunk boundary work."""
         actions = self.str_xrange(4)
         chunks = bulk_chunks(actions, docs_per_chunk=2)
-        eq_(list(chunks), [['0', '1'], ['2', '3']])
+        self.assertEqual(list(chunks), [['0', '1'], ['2', '3']])
 
     def test_none(self):
         """Make sure empty action iterators work."""
         actions = self.str_xrange(0)
         chunks = bulk_chunks(actions, docs_per_chunk=2)
-        eq_(list(chunks), [])
+        self.assertEqual(list(chunks), [])
 
     def test_bytes(self):
         """
@@ -45,7 +44,7 @@ class BulkChunksTests(TestCase):
         """
         actions = ['o', 'hi', 'good', 'chimpanzees']
         chunks = bulk_chunks(actions, bytes_per_chunk=5)
-        eq_(list(chunks), [['o', 'hi'], ['good'], ['chimpanzees']])
+        self.assertEqual(list(chunks), [['o', 'hi'], ['good'], ['chimpanzees']])
 
     def test_bytes_first_too_big(self):
         """
@@ -54,4 +53,4 @@ class BulkChunksTests(TestCase):
         """
         actions = ['chimpanzees', 'hi', 'ho']
         chunks = bulk_chunks(actions, bytes_per_chunk=6)
-        eq_(list(chunks), [['chimpanzees'], ['hi', 'ho']])
+        self.assertEqual(list(chunks), [['chimpanzees'], ['hi', 'ho']])

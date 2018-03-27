@@ -293,6 +293,7 @@ class ElasticSearch(object):
             error_class = ElasticHttpNotFoundError
         elif (hasattr(error_message, 'startswith') and
               (error_message.startswith('IndexAlreadyExistsException') or
+               error_message.startswith('index_already_exists_exception') or
                'nested: IndexAlreadyExistsException' in error_message)):
             error_class = IndexAlreadyExistsError
 
