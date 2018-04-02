@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v1.4.1 (2018-04-02)
+------
+* Recognize new "index already exists" spelling so we raise the right
+  exceptions. Close #195.
+* Fix CI setup.
+* Drop Python 2.6 support.
+* Drop nose for testing.
+
 v1.4
 ----
 * Add support for custom certificate authorities via the ``ca_certs`` arg to
