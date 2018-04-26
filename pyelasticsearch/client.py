@@ -303,8 +303,13 @@ class ElasticSearch(object):
         """
         Convert a Python value to a form suitable for ElasticSearch's JSON DSL.
         """
-        return json.dumps(value, cls=self.json_encoder, use_decimal=True)
-
+        try:
+            return json.dumps(value, cls=self.json_encoder, use_decimal=True)
+        except:
+            # Trying with 'latin1' when UnicodeDecodeErrors take place. Just a bypass:
+            #   UnicodeDecodeError: 'utf8' codec can't decode bytes in position XX-XX: invalid continuation byte
+            return json.dumps(value, cls=self.json_encoder, use_decimal=True, encoding='latin1')
+            
     ## REST API
 
     @es_kwargs('routing', 'parent', 'timestamp', 'ttl', 'percolate',
