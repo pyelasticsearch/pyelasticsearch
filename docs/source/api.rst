@@ -100,6 +100,8 @@ Other Methods
 
     .. automethod:: refresh(index=None)
 
+    .. automethod:: scroll([, other kwargs listed below])
+
     .. automethod:: search(query[, other kwargs listed below])
 
     .. automethod:: send_request
