@@ -10,10 +10,10 @@ from six.moves import xrange
 from six.moves.urllib.parse import urlparse, urlencode, quote_plus
 
 import certifi
-from elasticsearch.connection_pool import RandomSelector
-from elasticsearch.exceptions import (ConnectionError, ConnectionTimeout,
+from elasticsearch1.connection_pool import RandomSelector
+from elasticsearch1.exceptions import (ConnectionError, ConnectionTimeout,
                                       TransportError, SerializationError)
-from elasticsearch.transport import Transport
+from elasticsearch1.transport import Transport
 import simplejson as json  # for use_decimal
 
 from pyelasticsearch.exceptions import (ElasticHttpError,
